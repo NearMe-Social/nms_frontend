@@ -50,7 +50,7 @@
                             </button>
 
                             <ul v-if="isGenderOpen" class="select-menu" role="listbox" aria-label="Select your gender">
-                                <li v-for="option in genderOptions" :key="option.value" role="option" :aria-selected="gender === option.value">
+                                <li v-for="option in genderOptions" :key="option.value" role="option" :aria-selected="(gender === option.value).toString()">
                                     <button
                                         type="button"
                                         class="select-option"
