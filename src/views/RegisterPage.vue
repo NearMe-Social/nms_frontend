@@ -35,15 +35,34 @@
 
                     <div class="form-group">
                         <label for="gender">Select your gender</label>
-                        <div class="input-wrapper select-wrapper">
-                            <select id="gender" v-model="gender" required>
-                                <option value="" disabled>Select your gender</option>
-                                <option value="female">Female</option>
-                                <option value="male">Male</option>
-                                <option value="non-binary">Non-binary</option>
-                                <option value="prefer-not">Prefer not to say</option>
-                            </select>
+                        <div class="input-wrapper custom-select" ref="genderDropdownRef" :class="{ 'is-open': isGenderOpen }">
+                            <button
+                                id="gender"
+                                type="button"
+                                class="select-trigger"
+                                :class="{ 'is-placeholder': !gender }"
+                                aria-haspopup="listbox"
+                                :aria-expanded="isGenderOpen.toString()"
+                                @click="toggleGenderDropdown"
+                            >
+                                <span>{{ selectedGenderLabel }}</span>
+                                <span class="select-chevron" :class="{ 'is-open': isGenderOpen }">▾</span>
+                            </button>
+
+                            <ul v-if="isGenderOpen" class="select-menu" role="listbox" aria-label="Select your gender">
+                                <li v-for="option in genderOptions" :key="option.value" role="option" :aria-selected="gender === option.value">
+                                    <button
+                                        type="button"
+                                        class="select-option"
+                                        :class="{ 'is-selected': gender === option.value }"
+                                        @click="selectGender(option.value)"
+                                    >
+                                        {{ option.label }}
+                                    </button>
+                                </li>
+                            </ul>
                         </div>
+                        <p v-if="genderError" class="field-error">{{ genderError }}</p>
                     </div>
 
                     <div class="form-group">
@@ -74,7 +93,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
@@ -85,8 +104,57 @@ const birthday = ref('')
 const gender = ref('')
 const contact = ref('')
 const password = ref('')
+const isGenderOpen = ref(false)
+const genderError = ref('')
+const genderDropdownRef = ref<HTMLElement | null>(null)
+
+const genderOptions = [
+    { value: 'female', label: 'Female' },
+    { value: 'male', label: 'Male' },
+    { value: 'non-binary', label: 'Non-binary' },
+    { value: 'prefer-not', label: 'Prefer not to say' },
+]
+
+const selectedGenderLabel = computed(() => {
+    return genderOptions.find((option) => option.value === gender.value)?.label || 'Select your gender'
+})
+
+function toggleGenderDropdown() {
+    isGenderOpen.value = !isGenderOpen.value
+}
+
+function selectGender(value: string) {
+    gender.value = value
+    genderError.value = ''
+    isGenderOpen.value = false
+}
+
+function closeGenderDropdownOnOutsideClick(event: MouseEvent) {
+    if (!genderDropdownRef.value) {
+        return
+    }
+
+    const target = event.target as Node
+    if (!genderDropdownRef.value.contains(target)) {
+        isGenderOpen.value = false
+    }
+}
+
+onMounted(() => {
+    document.addEventListener('pointerdown', closeGenderDropdownOnOutsideClick)
+})
+
+onBeforeUnmount(() => {
+    document.removeEventListener('pointerdown', closeGenderDropdownOnOutsideClick)
+})
 
 function handleRegister() {
+    if (!gender.value) {
+        genderError.value = 'Please select your gender.'
+        isGenderOpen.value = true
+        return
+    }
+
     console.log('register', {
         firstName: firstName.value,
         lastName: lastName.value,
@@ -104,14 +172,14 @@ function goToLogin() {
 <style scoped>
 .register-page {
     min-height: 100vh;
-    background: radial-gradient(circle at top, #f9f7f4 60%, #ebe4dd 100%);
     display: flex;
     flex-direction: column;
     font-family: 'Poppins', 'Inter', sans-serif;
+    padding-inline: 0;
 }
 
 .register-header {
-    padding: 20px 48px 0;
+    padding: clamp(16px, 3vw, 24px) clamp(20px, 6vw, 56px) 0;
     font-size: 1.5rem;
     letter-spacing: 0.5px;
     color: #1f1720;
@@ -122,40 +190,40 @@ function goToLogin() {
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 20px 16px 60px;
+    padding: clamp(16px, 3vw, 24px) clamp(14px, 4vw, 24px) clamp(40px, 7vw, 64px);
 }
 
 .register-card {
     width: min(560px, 100%);
-    background: #fff;
-    border-radius: 28px;
-    padding: 48px 56px 40px;
-    box-shadow: 0 35px 65px rgba(81, 61, 52, 0.18);
+    padding: clamp(30px, 4vw, 48px) clamp(20px, 6vw, 56px) clamp(26px, 4vw, 40px);
     text-align: left;
+    box-sizing: border-box;
 }
 
 .card-title {
-    font-size: 2rem;
+    font-size: clamp(1.5rem, 5vw, 2rem);
     margin-bottom: 6px;
     color: #231c23;
+    line-height: 1.2;
 }
 
 .card-subtitle {
-    font-size: 1rem;
+    font-size: clamp(0.92rem, 2.6vw, 1rem);
     color: #6c6067;
-    margin-bottom: 32px;
+    margin-bottom: clamp(24px, 4vw, 32px);
+    line-height: 1.45;
 }
 
 .register-form {
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: clamp(14px, 2.5vw, 20px);
 }
 
 .two-column {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 20px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: clamp(12px, 2.5vw, 20px);
 }
 
 .form-group label {
@@ -173,6 +241,7 @@ function goToLogin() {
     border-radius: 16px;
     background: #f7f4f0;
     padding: 12px 16px;
+    box-sizing: border-box;
 }
 
 .input-wrapper input,
@@ -180,7 +249,7 @@ function goToLogin() {
     width: 100%;
     border: none;
     background: transparent;
-    font-size: 0.95rem;
+    font-size: 1rem;
     color: #3a2f35;
 }
 
@@ -189,28 +258,103 @@ function goToLogin() {
     outline: none;
 }
 
-.select-wrapper {
-    padding-right: 40px;
+.custom-select {
+    padding: 0;
     position: relative;
+    overflow: visible;
 }
 
-.select-wrapper::after {
-    content: '▾';
+.custom-select.is-open {
+    border-color: #bfa57e;
+    box-shadow: 0 0 0 3px rgba(191, 165, 126, 0.18);
+}
+
+.select-trigger {
+    width: 100%;
+    border: none;
+    background: transparent;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 16px;
+    font-size: 1rem;
+    color: #2f232a;
+    text-align: left;
+    cursor: pointer;
+}
+
+.select-trigger.is-placeholder {
+    color: #7d6f78;
+}
+
+.select-trigger:focus-visible {
+    outline: none;
+}
+
+.select-chevron {
+    color: #8f7e86;
+    font-size: 0.88rem;
+    transition: transform 0.16s ease;
+}
+
+.select-chevron.is-open {
+    transform: rotate(180deg);
+}
+
+.select-menu {
+    list-style: none;
     position: absolute;
-    right: 16px;
-    top: 50%;
-    transform: translateY(-50%);
-    color: #9b8e95;
-    pointer-events: none;
-    font-size: 0.9rem;
+    top: calc(100% + 8px);
+    left: 0;
+    right: 0;
+    margin: 0;
+    padding: 6px;
+    background: #fff;
+    border: 1px solid #d8cfc6;
+    border-radius: 14px;
+    box-shadow: 0 14px 26px rgba(53, 35, 15, 0.2);
+    max-height: 220px;
+    overflow-y: auto;
+    z-index: 20;
+}
+
+.select-option {
+    width: 100%;
+    border: none;
+    border-radius: 10px;
+    padding: 10px 12px;
+    background: transparent;
+    color: #3a2f35;
+    font-size: 0.96rem;
+    text-align: left;
+    cursor: pointer;
+}
+
+.select-option:hover,
+.select-option:focus-visible {
+    background: #f4eee8;
+    outline: none;
+}
+
+.select-option.is-selected {
+    background: #efe5d8;
+    color: #5a4315;
+    font-weight: 600;
+}
+
+.field-error {
+    margin-top: 6px;
+    font-size: 0.78rem;
+    color: #b33a3a;
 }
 
 .register-btn {
-    margin-top: 8px;
+    margin-top: 6px;
     width: 100%;
     border: none;
     border-radius: 18px;
-    padding: 16px;
+    padding: 14px 16px;
     cursor: pointer;
     font-weight: 600;
     font-size: 1rem;
@@ -230,10 +374,11 @@ function goToLogin() {
 }
 
 .cookie-text {
-    margin-top: 32px;
+    margin-top: clamp(24px, 4vw, 32px);
     font-size: 0.8rem;
     text-align: center;
     color: #8b7c83;
+    line-height: 1.5;
 }
 
 .cookie-text a {
@@ -241,19 +386,73 @@ function goToLogin() {
     font-weight: 500;
 }
 
+@media (max-width: 768px) {
+    .register-main {
+        align-items: flex-start;
+    }
+
+    .register-card {
+        max-width: 640px;
+    }
+}
+
 @media (max-width: 640px) {
     .register-card {
-        padding: 36px 24px 32px;
+        padding: 34px 22px 28px;
         border-radius: 24px;
     }
 
     .register-header {
-        padding: 20px;
-        text-align: center;
+        padding: 16px;
+    }
+
+    .register-form {
+        gap: 14px;
+    }
+
+    .input-wrapper {
+        height: 46px;
+        padding: 0 14px;
+        border-radius: 14px;
+        display: flex;
+        align-items: center;
+    }
+
+    .select-trigger {
+        height: 100%;
+        padding: 0;
+    }
+
+    .select-menu {
+        border-radius: 12px;
     }
 
     .two-column {
-        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+}
+
+@media (max-width: 380px) {
+    .register-header {
+        font-size: 1.28rem;
+    }
+
+    .register-card {
+        padding: 28px 16px 24px;
+    }
+
+    .card-title {
+        font-size: 1.35rem;
+    }
+
+    .form-group label {
+        font-size: 0.74rem;
+        letter-spacing: 0.5px;
+    }
+
+    .register-btn,
+    .ghost-link {
+        font-size: 0.92rem;
     }
 }
 </style>
