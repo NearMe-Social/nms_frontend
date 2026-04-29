@@ -1,12 +1,19 @@
-<script setup>
-//import DiscussionDetail from './views/DiscussionDetail.vue';
-
+<script setup lang="ts">
+import { RouterView } from 'vue-router'
 </script>
 
 <template>
   <RouterView />
 </template>
 
+<style>
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
 
-
-<style scoped></style>
+body {
+  background: #08090f;
+}
+</style>

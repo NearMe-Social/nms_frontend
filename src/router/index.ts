@@ -71,6 +71,11 @@ const routes = [
     component: Settings,
     meta: { requiresAuth: true },
   },
+  {
+    path: '/nearby',
+    name: 'nearby',
+    component: NearbyView,
+  },
 ]
 
 const router = createRouter({
