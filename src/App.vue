@@ -4,11 +4,7 @@
 </script>
 
 <template>
-<<<<<<< HEAD
-    <router-view />
-=======
   <RouterView />
->>>>>>> Development
 </template>
 
 

@@ -5,6 +5,8 @@
     <RouterLink to="/chat">Chat</RouterLink>
     <RouterLink to="/notifications">Notifications</RouterLink>
     <RouterLink to="/settings">Settings</RouterLink>
+    <RouterLink to="/discussion">Discussion</RouterLink>
+
     <button @click="handleLogout">Logout</button>
   </nav>
 </template>
@@ -27,10 +29,8 @@ nav {
   display: flex;
   gap: 16px;
   padding: 12px 24px;
- 
 }
 nav a {
-
   text-decoration: none;
 }
 nav a:hover {
