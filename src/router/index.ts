@@ -7,6 +7,8 @@ import { pinia } from '@/main'
 // import Register from "@/views/RegisterPage.vue"
 
 // User pages
+import Login from '@/views/LoginPage.vue'
+import Register from '@/views/RegisterPage.vue'
 import HomePage from '@/views/user/HomePage.vue'
 import UserProfile from '@/views/user/UserProfile.vue'
 import PrivateChat from '@/views/user/PrivateChat.vue'
