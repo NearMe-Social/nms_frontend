@@ -1,14 +1,4 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { useAuthStore } from '@/stores/auth'
-import { pinia } from '@/main'
-
-// Auth pages
-// import Login from "@/views/LoginPage.vue"
-// import Register from "@/views/RegisterPage.vue"
-
-// User pages
-import Login from '@/views/LoginPage.vue'
-import Register from '@/views/RegisterPage.vue'
 import HomePage from '@/views/user/HomePage.vue'
 import UserProfile from '@/views/user/UserProfile.vue'
 import PrivateChat from '@/views/user/PrivateChat.vue'
@@ -16,6 +6,9 @@ import Notifications from '@/views/user/Notifications.vue'
 import Settings from '@/views/user/Settings.vue'
 import PermissionRequest from '@/views/user/PermissionRequest.vue'
 import DiscussionDetail from '@/views/user/DiscussionDetail.vue'
+import NearbyView from '@/views/NearbyView.vue'
+import CreatePostPage from '@/views/CreatePostPage.vue'
+import DiscussionsPage from '@/views/DiscussionsPage.vue'
 
 const routes = [
   // {
@@ -38,6 +31,18 @@ const routes = [
     path: '/discussion',
     name: 'DiscussionDetail',
     component: DiscussionDetail,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/create-post',
+    name: 'CreatePostPage',
+    component: CreatePostPage,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/discussions',
+    name: 'DiscussionsPage',
+    component: DiscussionsPage,
     meta: { requiresAuth: true },
   },
 
@@ -82,23 +87,5 @@ const router = createRouter({
   history: createWebHistory(),
   routes,
 })
-
-
-// router.beforeEach((to, from, next) => {
-//   const auth = useAuthStore(pinia)
-
-//   if (to.meta.requiresAuth && !auth.isLoggedIn) {
-//     next({ name: 'Login' })
-//   } 
-//   else if (
-//     (to.name === 'Login' || to.name === 'Register') &&
-//     auth.isLoggedIn
-//   ) {
-//     next({ name: 'HomePage' })
-//   } 
-//   else {
-//     next()
-//   }
-// })
 
 export default router

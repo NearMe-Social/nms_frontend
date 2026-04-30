@@ -42,7 +42,7 @@
                                 class="select-trigger"
                                 :class="{ 'is-placeholder': !gender }"
                                 aria-haspopup="listbox"
-                                :aria-expanded="isGenderOpen.toString()"
+                                :aria-expanded="isGenderOpen"
                                 @click="toggleGenderDropdown"
                             >
                                 <span>{{ selectedGenderLabel }}</span>
@@ -50,7 +50,7 @@
                             </button>
 
                             <ul v-if="isGenderOpen" class="select-menu" role="listbox" aria-label="Select your gender">
-                                <li v-for="option in genderOptions" :key="option.value" role="option" :aria-selected="(gender === option.value).toString()">
+                                <li v-for="option in genderOptions" :key="option.value" role="option" :aria-selected="gender === option.value">
                                     <button
                                         type="button"
                                         class="select-option"

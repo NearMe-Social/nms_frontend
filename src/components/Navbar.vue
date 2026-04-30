@@ -66,6 +66,13 @@ button {
         <button class="md:hidden w-9 h-9 flex items-center justify-center rounded-full hover:bg-gray-100 transition">
           <Search class="w-5 h-5 text-gray-500" />
         </button>
+        <RouterLink
+          to="/create-post"
+          class="hidden md:inline-flex items-center gap-2 h-9 px-4 rounded-full bg-teal-600 text-white text-sm font-semibold hover:bg-teal-700 transition"
+        >
+          <Plus class="w-4 h-4" />
+          Create Post
+        </RouterLink>
         <RouterLink to="/notifications"
           class="relative w-9 h-9 flex items-center justify-center rounded-full hover:bg-gray-100 transition">
           <Bell class="w-5 h-5 text-gray-500" />
@@ -88,5 +95,5 @@ button {
 </template>
 
 <script setup>
-import { Search, Bell, Settings } from 'lucide-vue-next'
+import { Search, Bell, Settings, Plus } from 'lucide-vue-next'
 </script>
