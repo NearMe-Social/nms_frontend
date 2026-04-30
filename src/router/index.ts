@@ -8,6 +8,9 @@ import PrivateChat from '@/views/user/PrivateChat.vue'
 import Notifications from '@/views/user/Notifications.vue'
 import Settings from '@/views/user/Settings.vue'
 import PermissionRequest from '@/views/user/PermissionRequest.vue'
+import DiscussionDetail from '@/views/user/DiscussionDetail.vue'
+import CreateDiscussion from '@/views/user/CreateDiscussion.vue'
+import NearbyView from '@/views/NearbyView.vue'
 
 const routes = [
   {
@@ -24,7 +27,21 @@ const routes = [
     path: '/permission-request',
     name: 'PermissionRequest',
     component: PermissionRequest,
+    meta: { requiresAuth: true },
   },
+  {
+    path: '/discussion',
+    name: 'DiscussionDetail',
+    component: DiscussionDetail,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/discussion/new',
+    name: 'CreateDiscussion',
+    component: CreateDiscussion,
+    meta: { requiresAuth: true },
+  },
+
   {
     path: '/',
     name: 'HomePage',
@@ -55,6 +72,11 @@ const routes = [
     component: Settings,
     meta: { requiresAuth: true },
   },
+  {
+    path: '/nearby',
+    name: 'nearby',
+    component: NearbyView,
+  },
 ]
 
 const router = createRouter({
@@ -63,8 +85,15 @@ const router = createRouter({
 })
 
 router.beforeEach((to, from, next) => {
-  const auth = useAuthStore()  //use real Pinia store, not a fake function
+  const auth = useAuthStore()
 
+  // Redirect authenticated users away from login/register pages
+  if ((to.name === 'Login' || to.name === 'Register') && auth.isLoggedIn) {
+    next({ name: 'HomePage' })
+    return
+  }
+
+  // Protect routes that require authentication
   if (to.meta.requiresAuth && !auth.isLoggedIn) {
     next({ name: 'Login' })
   } else {
@@ -73,4 +102,3 @@ router.beforeEach((to, from, next) => {
 })
 
 export default router
-
