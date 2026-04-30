@@ -1,5 +1,8 @@
 <template>
-  <div class="page">
+  <Navbar />
+  <div class="discussion-layout">
+    <AppSidebar class="hidden md:flex" />
+    <div class="page">
     <!-- LEFT COLUMN -->
     <div>
       <button class="back-btn" @click="goBack">
@@ -123,12 +126,15 @@
         </div>
       </div>
     </div>
+    </div>
   </div>
 </template>
 
 <script setup>
 import { ref, computed } from 'vue'
 import CommentSection from './CommentSection.vue'
+import Navbar from '@/components/Navbar.vue'
+import AppSidebar from '@/components/AppSidebar.vue'
 
 
 // Post data
@@ -246,13 +252,41 @@ function goBack() {
 </script>
 
 <style scoped>
+.discussion-layout {
+  display: flex;
+  min-height: calc(100vh - 64px);
+  background: #f6f1ea;
+}
+
 .page {
+  --accent: #2d6a4f;
+  --accent-light: #e7f3ec;
+  --border: #e4ded5;
+  --card: #fffaf4;
+  --radius: 18px;
+  --shadow: 0 18px 45px rgba(63, 47, 28, 0.09);
+  --tag-bg: #eef7f2;
+  --tag-text: #2d6a4f;
+  --text: #28231f;
+  --text-muted: #82786f;
+  min-height: calc(100vh - 64px);
+  position: relative;
+  isolation: isolate;
   max-width: 1100px;
   margin: 0 auto;
   padding: 32px 20px 60px;
   display: grid;
   grid-template-columns: 1fr 300px;
   gap: 28px;
+  color: var(--text);
+}
+
+.page::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background: #f6f1ea;
 }
 
 /* BACK BTN */

@@ -6,7 +6,6 @@ import './style.css'
 import 'bootstrap-icons/font/bootstrap-icons.css'
 
 export const pinia = createPinia()   
-import './assets/main.css'
 
 const app = createApp(App)
 

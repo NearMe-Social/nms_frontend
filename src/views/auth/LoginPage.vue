@@ -12,9 +12,9 @@
 
                 <form class="login-form" @submit.prevent="handleLogin">
                     <div class="form-group">
-                        <label for="username">Username</label>
+                        <label for="email">Email</label>
                         <div class="input-wrapper">
-                            <input type="text" id="username" placeholder="Enter your username" v-model="username" required />
+                            <input type="email" id="email" placeholder="Enter your email" v-model="email" required />
                         </div>
                     </div>
 
@@ -29,7 +29,11 @@
                         <a href="/forgot-password">Forgot Password?</a>
                     </div>
 
-                    <button type="submit" class="login-btn">Log In</button>
+                    <p v-if="errorMsg" class="error-msg">{{ errorMsg }}</p>
+
+                    <button type="submit" class="login-btn" :disabled="isLoading">
+                        {{ isLoading ? 'Logging in...' : 'Log In' }}
+                    </button>
 
                     <p class="signup-text">Don't have account? <a href="/register">Register</a></p>
 
@@ -63,16 +67,34 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
-
-const username = ref('')
-const password = ref('')
+import { useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
+import { authApi } from '@/services/api'
 
 import googleIcon from '@/assets/icons/Google.png'
 import facebookIcon from '@/assets/icons/Facebook.png'
 import xIcon from '@/assets/icons/X.png'
 
-function handleLogin() {
-    console.log('login', username.value)
+const router = useRouter()
+const auth = useAuthStore()
+
+const email = ref('')
+const password = ref('')
+const errorMsg = ref('')
+const isLoading = ref(false)
+
+async function handleLogin() {
+    errorMsg.value = ''
+    isLoading.value = true
+    try {
+        const res = await authApi.login(email.value, password.value)
+        auth.setAuth(res.token, res.user)
+        router.push('/')
+    } catch (err: unknown) {
+        errorMsg.value = err instanceof Error ? err.message : 'Login failed. Please try again.'
+    } finally {
+        isLoading.value = false
+    }
 }
 
 function handleSocialLogin(provider: string) {
@@ -175,6 +197,17 @@ label {
     color: #0c9081;
 }
 
+.error-msg {
+    margin-top: 10px;
+    font-size: 0.88rem;
+    color: #c0392b;
+    background: #fdf0ef;
+    border: 1px solid #f5c6c2;
+    border-radius: 10px;
+    padding: 8px 12px;
+    text-align: center;
+}
+
 .login-btn {
     margin-top: 24px;
     width: 100%;
@@ -187,6 +220,12 @@ label {
     color: #fff;
     background: linear-gradient(140deg, #c7a038, #6c4f15);
     box-shadow: 0 12px 20px rgba(108, 79, 21, 0.25);
+    transition: opacity 0.2s;
+}
+
+.login-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
 }
 
 .signup-text {
