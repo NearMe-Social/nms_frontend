@@ -1,10 +1,5 @@
 <template>
   <aside class="app-sidebar">
-    <RouterLink class="brand" to="/">
-      <span class="brand-main">Nearme</span>
-      <span class="brand-sub">Social</span>
-    </RouterLink>
-
     <div class="community-card">
       <p>Your Commons</p>
       <span>Approximate radius only</span>
@@ -23,9 +18,9 @@
       </RouterLink>
     </nav>
 
-    <RouterLink class="create-link" to="/discussion/new">
+    <RouterLink class="create-link" to="/create-post">
       <Plus class="nav-icon" />
-      <span>Create Discussion</span>
+      <span>Create Post</span>
     </RouterLink>
 
     <div class="safety-note">
@@ -42,6 +37,7 @@
 import { RouterLink, useRoute } from 'vue-router'
 import {
   Bell,
+  ClipboardList,
   Home,
   MapPin,
   MessageCircle,
@@ -57,6 +53,7 @@ const route = useRoute()
 const navItems = [
   { to: '/', label: 'Home Feed', icon: Home },
   { to: '/nearby', label: 'Nearby Users', icon: MapPin },
+  { to: '/discussions', label: 'My Posts', icon: ClipboardList },
   { to: '/discussion', label: 'Discussions', icon: Users },
   { to: '/chat', label: 'Private Chat', icon: MessageCircle },
   { to: '/notifications', label: 'Notifications', icon: Bell },
@@ -66,41 +63,19 @@ const navItems = [
 
 function isActive(path: string) {
   if (path === '/') return route.path === '/'
-  return route.path.startsWith(path)
+  return route.path === path || route.path.startsWith(`${path}/`)
 }
 </script>
 
 <style scoped>
 .app-sidebar {
-  width: 224px;
-  flex: 0 0 224px;
+  width: 208px;
+  flex: 0 0 208px;
   flex-direction: column;
-  gap: 18px;
-  padding: 20px 14px;
+  gap: 16px;
+  padding: 18px 12px;
   border-right: 1px solid #e3ebf2;
   background: #f8fbff;
-}
-
-.brand {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 4px;
-  padding: 0 8px;
-  text-decoration: none;
-}
-
-.brand-main {
-  color: #0f5f71;
-  font-size: 1.1rem;
-  font-weight: 900;
-}
-
-.brand-sub {
-  color: #8a9baa;
-  font-size: 0.75rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
 }
 
 .community-card {
@@ -132,15 +107,15 @@ function isActive(path: string) {
 
 .nav-item,
 .create-link {
-  min-height: 38px;
+  min-height: 36px;
   display: flex;
   align-items: center;
   gap: 10px;
   border-radius: 10px;
-  padding: 9px 10px;
+  padding: 8px 10px;
   color: #4b6477;
   text-decoration: none;
-  font-size: 0.86rem;
+  font-size: 0.82rem;
   font-weight: 750;
 }
 
@@ -173,6 +148,6 @@ function isActive(path: string) {
   border-radius: 14px;
   border: 1px solid #e4edf3;
   background: #fff;
-  padding: 12px;
+  padding: 10px;
 }
 </style>

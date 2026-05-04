@@ -29,7 +29,7 @@
                     <div class="form-group">
                         <label for="birthday">Birthday</label>
                         <div class="input-wrapper">
-                            <input id="birthday" type="text" placeholder="MM/DD/YYYY" v-model="birthday" required />
+                            <input id="birthday" type="date" v-model="birthday" required />
                         </div>
                     </div>
 
@@ -50,7 +50,7 @@
                             </button>
 
                             <ul v-if="isGenderOpen" class="select-menu" role="listbox" aria-label="Select your gender">
-                                <li v-for="option in genderOptions" :key="option.value" role="option" :aria-selected="(gender === option.value).toString()">
+                                <li v-for="option in genderOptions" :key="option.value" role="option" :aria-selected="gender === option.value">
                                     <button
                                         type="button"
                                         class="select-option"
@@ -128,6 +128,10 @@ const selectedGenderLabel = computed(() => {
     return genderOptions.find((option) => option.value === gender.value)?.label || 'Select your gender'
 })
 
+const birthdayDate = computed(() => {
+    return birthday.value || undefined
+})
+
 function toggleGenderDropdown() {
     isGenderOpen.value = !isGenderOpen.value
 }
@@ -163,15 +167,22 @@ async function handleRegister() {
         return
     }
 
-    // Map form fields to backend DTO:
-    // username = firstName + lastName, email = contact
-    const username = `${firstName.value} ${lastName.value}`.trim()
+    // Map form fields to backend DTO.
+    const username = `${firstName.value}.${lastName.value}`.trim().toLowerCase()
     const email = contact.value
 
     errorMsg.value = ''
     isLoading.value = true
     try {
-        const res = await authApi.register(username, email, password.value)
+        const res = await authApi.register({
+            username,
+            first_name: firstName.value,
+            last_name: lastName.value,
+            email,
+            password: password.value,
+            birthday: birthdayDate.value,
+            gender: gender.value,
+        })
         auth.setAuth(res.token, res.user)
         router.push('/')
     } catch (err: unknown) {

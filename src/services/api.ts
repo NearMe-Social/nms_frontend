@@ -35,10 +35,18 @@ export const authApi = {
     })
   },
 
-  register(username: string, email: string, password: string): Promise<AuthResponse> {
+  register(payload: {
+    username: string
+    first_name: string
+    last_name: string
+    email: string
+    password: string
+    birthday?: string
+    gender?: string
+  }): Promise<AuthResponse> {
     return request<AuthResponse>('/auth/register', {
       method: 'POST',
-      body: JSON.stringify({ username, email, password }),
+      body: JSON.stringify(payload),
     })
   },
 }

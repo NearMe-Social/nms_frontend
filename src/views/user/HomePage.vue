@@ -10,14 +10,14 @@
 import Navbar from '@/components/Navbar.vue'
 </script> -->
 <template>
-  <div class="min-h-screen bg-gray-50">
+  <div class="min-h-screen bg-[#f4f7fb]">
     <Navbar />
 
-    <div class="w-full px-4 md:px-6 py-6 flex gap-4 xl:gap-6">
+    <div class="flex w-full gap-4 xl:gap-6">
       <AppSidebar class="hidden md:flex" />
 
       <!-- ── MIDDLE FEED ── -->
-      <main class="flex-1 flex flex-col gap-4 min-w-0">
+      <main class="flex-1 flex flex-col gap-4 min-w-0 px-4 py-5 md:px-6">
 
         <!-- Mobile sort + create row -->
         <div class="flex md:hidden items-center justify-between gap-2">
@@ -25,7 +25,7 @@ import Navbar from '@/components/Navbar.vue'
             <button class="px-4 py-2 rounded-xl text-xs font-semibold bg-gray-800 text-white">Latest</button>
             <button class="px-4 py-2 rounded-xl text-xs font-semibold border bg-white text-gray-500 border-gray-200">Active</button>
           </div>
-          <RouterLink to="/discussion/new" class="bg-teal-600 text-white text-xs font-semibold px-4 py-2 rounded-xl flex items-center gap-1 no-underline">
+        <RouterLink to="/create-post" class="bg-teal-600 text-white text-xs font-semibold px-4 py-2 rounded-xl flex items-center gap-1 no-underline">
             <Plus class="w-3 h-3" /> Post
           </RouterLink>
         </div>
@@ -36,7 +36,7 @@ import Navbar from '@/components/Navbar.vue'
         </div>
 
         <!-- POST CARD 1 -->
-        <RouterLink to="/discussion" class="bg-white rounded-2xl p-4 md:p-5 flex flex-col gap-3 shadow-sm hover:shadow-md transition-shadow no-underline">
+        <RouterLink to="/discussion" class="bg-white rounded-[18px] p-5 md:p-6 flex flex-col gap-4 shadow-sm ring-1 ring-slate-200/70 hover:shadow-md transition-shadow no-underline">
           <div class="flex items-start justify-between">
             <div class="flex items-center gap-3">
               <RouterLink to="/profile" @click.stop>
@@ -80,7 +80,7 @@ import Navbar from '@/components/Navbar.vue'
         </RouterLink>
 
         <!-- POST CARD 2 -->
-        <div class="bg-white rounded-2xl p-4 md:p-5 flex flex-col gap-3 shadow-sm hover:shadow-md transition-shadow">
+        <div class="bg-white rounded-[18px] p-5 md:p-6 flex flex-col gap-4 shadow-sm ring-1 ring-slate-200/70 hover:shadow-md transition-shadow">
           <div class="flex items-start justify-between">
             <div class="flex items-center gap-3">
               <img src="https://i.pravatar.cc/150?img=3" class="w-10 h-10 md:w-11 md:h-11 rounded-full object-cover" />
@@ -125,7 +125,7 @@ import Navbar from '@/components/Navbar.vue'
         </div>
 
         <!-- POST CARD 3 -->
-        <div class="bg-white rounded-2xl p-4 md:p-5 flex flex-col gap-3 shadow-sm hover:shadow-md transition-shadow">
+        <div class="bg-white rounded-[18px] p-5 md:p-6 flex flex-col gap-4 shadow-sm ring-1 ring-slate-200/70 hover:shadow-md transition-shadow">
           <div class="flex items-start justify-between">
             <div class="flex items-center gap-3">
               <img src="https://i.pravatar.cc/150?img=5" class="w-10 h-10 md:w-11 md:h-11 rounded-full object-cover" />
@@ -163,7 +163,7 @@ import Navbar from '@/components/Navbar.vue'
         </div>
 
         <!-- POST CARD 4 -->
-        <div class="bg-white rounded-2xl p-4 md:p-5 flex flex-col gap-3 shadow-sm hover:shadow-md transition-shadow">
+        <div class="bg-white rounded-[18px] p-5 md:p-6 flex flex-col gap-4 shadow-sm ring-1 ring-slate-200/70 hover:shadow-md transition-shadow">
           <div class="flex items-start justify-between">
             <div class="flex items-center gap-3">
               <img src="https://i.pravatar.cc/150?img=8" class="w-10 h-10 md:w-11 md:h-11 rounded-full object-cover" />
@@ -202,14 +202,14 @@ import Navbar from '@/components/Navbar.vue'
       </main>
 
       <!-- ── RIGHT PANEL ── -->
-      <aside class="hidden lg:flex w-56 xl:w-64 shrink-0 flex-col gap-4">
+      <aside class="hidden lg:flex w-56 xl:w-64 shrink-0 flex-col gap-4 py-5 pr-4 md:pr-6">
 
         <div class="flex items-center gap-2">
           <Zap class="w-4 h-4 text-yellow-400 fill-yellow-400" />
           <p class="text-xs font-bold uppercase tracking-widest text-gray-400">Trending Nearby</p>
         </div>
 
-        <div class="bg-white rounded-2xl p-4 shadow-sm flex flex-col gap-2">
+        <div class="bg-white rounded-[18px] p-5 shadow-sm ring-1 ring-slate-200/70 flex flex-col gap-2">
           <p class="text-xs font-semibold text-teal-600 uppercase tracking-wide">Happening Now</p>
           <p class="text-sm font-semibold text-gray-800">Block Party Planning</p>
           <div class="flex items-center mt-1">
@@ -221,13 +221,13 @@ import Navbar from '@/components/Navbar.vue'
           </div>
         </div>
 
-        <div class="bg-white rounded-2xl p-4 shadow-sm flex flex-col gap-1">
+        <div class="bg-white rounded-[18px] p-5 shadow-sm ring-1 ring-slate-200/70 flex flex-col gap-1">
           <p class="text-xs font-semibold text-red-500 uppercase tracking-wide">Road Closure</p>
           <p class="text-sm font-semibold text-gray-800">Main St Utilities Repair</p>
           <p class="text-xs text-gray-400">Expected until 6 PM</p>
         </div>
 
-        <div class="bg-white rounded-2xl p-4 shadow-sm flex flex-col gap-3">
+        <div class="bg-white rounded-[18px] p-5 shadow-sm ring-1 ring-slate-200/70 flex flex-col gap-3">
           <p class="text-sm font-semibold text-gray-800">Neighborhood Poll</p>
           <p class="text-xs text-gray-500 leading-relaxed">
             Should we install more bike racks near the local market?
@@ -255,7 +255,7 @@ import Navbar from '@/components/Navbar.vue'
           <p class="text-xs text-gray-400">84 neighbors have voted</p>
         </div>
 
-        <div class="bg-white rounded-2xl overflow-hidden shadow-sm">
+        <div class="bg-white rounded-[18px] overflow-hidden shadow-sm ring-1 ring-slate-200/70">
           <div class="h-36 bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center relative">
             <div class="absolute inset-0 opacity-20"
               style="background-image: repeating-linear-gradient(0deg,#999 0,#999 1px,transparent 1px,transparent 20px), repeating-linear-gradient(90deg,#999 0,#999 1px,transparent 1px,transparent 20px)">
@@ -285,7 +285,7 @@ import Navbar from '@/components/Navbar.vue'
         <MessageCircle class="w-5 h-5" />
         <span class="text-xs">Chat</span>
       </RouterLink>
-      <RouterLink to="/discussion/new" class="flex flex-col items-center gap-1 text-gray-400 no-underline">
+      <RouterLink to="/create-post" class="flex flex-col items-center gap-1 text-gray-400 no-underline">
         <div class="w-10 h-10 bg-teal-600 rounded-full flex items-center justify-center -mt-5 shadow-lg">
           <Plus class="w-5 h-5 text-white" />
         </div>
