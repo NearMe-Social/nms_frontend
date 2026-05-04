@@ -11,6 +11,8 @@ import PermissionRequest from '@/views/user/PermissionRequest.vue'
 import DiscussionDetail from '@/views/user/DiscussionDetail.vue'
 import CreateDiscussion from '@/views/user/CreateDiscussion.vue'
 import NearbyView from '@/views/NearbyView.vue'
+import CreatePostPage from '@/views/CreatePostPage.vue'
+import DiscussionsPage from '@/views/DiscussionsPage.vue'
 
 const routes = [
   {
@@ -39,6 +41,18 @@ const routes = [
     path: '/discussion/new',
     name: 'CreateDiscussion',
     component: CreateDiscussion,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/create-post',
+    name: 'CreatePostPage',
+    component: CreatePostPage,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/discussions',
+    name: 'DiscussionsPage',
+    component: DiscussionsPage,
     meta: { requiresAuth: true },
   },
 
@@ -76,6 +90,7 @@ const routes = [
     path: '/nearby',
     name: 'nearby',
     component: NearbyView,
+    meta: { requiresAuth: true },
   },
 ]
 
@@ -95,7 +110,7 @@ router.beforeEach((to, from, next) => {
 
   // Protect routes that require authentication
   if (to.meta.requiresAuth && !auth.isLoggedIn) {
-    next({ name: 'Login' })
+    next({ name: 'Login', query: { redirect: to.fullPath } })
   } else {
     next()
   }

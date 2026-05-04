@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
-import { Bell, Flag, Lock, MapPin, MessageCircle, Search, Settings, ShieldCheck, SlidersHorizontal, UserRound } from 'lucide-vue-next'
+import { Flag, Lock, MapPin, MessageCircle, ShieldCheck, SlidersHorizontal, UserRound } from 'lucide-vue-next'
 import { useNearbyStore, type NearbyUser } from '@/stores/nearbyStore'
 import { useGeolocation } from '@/composables/useGeolocation'
 import GeoErrorState from '@/components/GeoErrorState.vue'
 import AppSidebar from '@/components/AppSidebar.vue'
+import Navbar from '@/components/Navbar.vue'
 
 const nearbyStore = useNearbyStore()
 const geo = useGeolocation()
@@ -72,28 +73,13 @@ onUnmounted(() => nearbyStore.stopPolling())
 </script>
 
 <template>
-  <div class="nearby-shell">
-    <AppSidebar class="hidden md:flex" />
+  <div class="nearby-page">
+    <Navbar />
 
-    <main class="workspace">
-      <header class="topbar">
-        <div class="search-box">
-          <Search />
-          <input type="search" placeholder="Search the commons..." />
-        </div>
+    <div class="nearby-shell">
+      <AppSidebar class="hidden md:flex" />
 
-        <div class="top-actions">
-          <button type="button" title="Notifications">
-            <Bell />
-          </button>
-          <RouterLink to="/settings" title="Settings">
-            <Settings />
-          </RouterLink>
-          <RouterLink class="avatar-link" to="/profile" title="Profile">
-            <img src="https://i.pravatar.cc/80?img=12" alt="Your profile" />
-          </RouterLink>
-        </div>
-      </header>
+      <main class="workspace">
 
       <section class="page-heading">
         <div>
@@ -251,18 +237,22 @@ onUnmounted(() => nearbyStore.stopPolling())
           No nearby users inside {{ radius }}m yet. The map keeps your exact location private.
         </p>
       </section>
-    </main>
+      </main>
+    </div>
   </div>
 </template>
 
 <style scoped>
-.nearby-shell {
+.nearby-page {
   min-height: 100vh;
-  display: grid;
-  grid-template-columns: 220px minmax(0, 1fr);
   background: #f4f7fb;
   color: #16374c;
   font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+}
+
+.nearby-shell {
+  display: flex;
+  min-width: 0;
 }
 
 .page-heading p,
@@ -274,8 +264,6 @@ onUnmounted(() => nearbyStore.stopPolling())
   font-size: 0.78rem;
 }
 
-.top-actions svg,
-.search-box svg,
 .privacy-control svg,
 .status-card svg {
   width: 16px;
@@ -284,72 +272,20 @@ onUnmounted(() => nearbyStore.stopPolling())
 
 .workspace {
   min-width: 0;
-  padding: 24px 30px 56px;
+  flex: 1;
+  padding: 24px clamp(16px, 2vw, 30px) 56px;
 }
 
-.topbar,
 .page-heading,
 .identity-card,
 .control-row,
 .list-header,
 .person-row,
 .identity-left,
-.top-actions,
 .privacy-control,
 .status-card {
   display: flex;
   align-items: center;
-}
-
-.topbar {
-  justify-content: space-between;
-  margin-bottom: 18px;
-}
-
-.search-box {
-  width: min(360px, 60vw);
-  height: 42px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  background: #eef4f8;
-  border-radius: 999px;
-  padding: 0 18px;
-  color: #7e98aa;
-}
-
-.search-box input {
-  width: 100%;
-  border: 0;
-  outline: 0;
-  background: transparent;
-  color: #294b60;
-  font-size: 0.85rem;
-}
-
-.top-actions {
-  gap: 12px;
-}
-
-.top-actions button,
-.top-actions a {
-  width: 34px;
-  height: 34px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: 0;
-  border-radius: 999px;
-  background: transparent;
-  color: #164b66;
-  cursor: pointer;
-}
-
-.avatar-link img {
-  width: 28px;
-  height: 28px;
-  border-radius: 999px;
-  object-fit: cover;
 }
 
 .page-heading {
@@ -703,14 +639,6 @@ onUnmounted(() => nearbyStore.stopPolling())
 }
 
 @media (max-width: 980px) {
-  .nearby-shell {
-    grid-template-columns: 1fr;
-  }
-
-  .side-nav {
-    display: none;
-  }
-
   .workspace {
     padding-inline: 18px;
   }

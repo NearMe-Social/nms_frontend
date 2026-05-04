@@ -1,131 +1,121 @@
 <template>
-  <Navbar />
-  <div class="discussion-layout">
-    <AppSidebar class="hidden md:flex" />
-    <div class="page">
-    <!-- LEFT COLUMN -->
-    <div>
-      <button class="back-btn" @click="goBack">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-          <path d="M19 12H5M12 5l-7 7 7 7" />
-        </svg>
-        Back
-      </button>
+  <div class="min-h-screen bg-[#f4f7fb] text-slate-700">
+    <Navbar />
 
-      <!-- MAIN POST -->
-      <div class="post-card">
-        <div class="post-meta">
-          <span class="post-tag">
-            <i class="bi bi-tools"></i> Maintenance
-          </span>
-          <span class="post-time"><i class="bi bi-clock"></i> {{ post.time }}</span>
-        </div>
+    <div class="flex min-w-0">
+      <AppSidebar class="hidden md:flex" />
 
-        <h1 class="post-title">{{ post.title }}</h1>
-
-        <div class="author-row">
-          <div class="author-avatar">{{ post.author.initials }}</div>
-          <div>
-            <div class="author-name">{{ post.author.name }}</div>
-            <div class="author-sub">
-              {{ post.author.distance }} &bull;
-              <span class="verified-badge">✓ Verified Resident</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="post-body">
-          <p v-for="(para, i) in post.body" :key="i">{{ para }}</p>
-        </div>
-
-        <div class="post-actions">
-          <button class="action-btn" :class="{ upvoted: post.upvoted }" @click="toggleUpvote">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M14 9V5a3 3 0 00-3-3l-4 9v11h11.28a2 2 0 002-1.7l1.38-9a2 2 0 00-2-2.3H14z" />
-              <path d="M7 22H4a2 2 0 01-2-2v-7a2 2 0 012-2h3" />
-            </svg>
-            {{ post.upvotes }} Upvotes
+      <div class="detail-page">
+        <div class="mb-5 flex flex-wrap items-center justify-between gap-3">
+          <button class="back-btn" type="button" @click="goBack">
+            <span aria-hidden="true">←</span>
+            The Neighborhood
           </button>
-          <button class="action-btn" @click="focusReply">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
-            </svg>
-            {{ commentCount }} Comments
-          </button>
-          <div class="share-btns">
-            <button class="share-btn">Share</button>
-            <button class="share-btn">Thread</button>
+
+          <div class="detail-context">
+            <span>Courtyard</span>
+            <span>Explore</span>
+            <span>Alerts</span>
           </div>
         </div>
-      </div>
 
-      <!-- CONVERSATIONS SECTION -->
-      <CommentSection
-        ref="commentSectionRef"
-        :comments="comments"
-        :sort-by="sortBy"
-        @update:sort-by="sortBy = $event"
-        @add-comment="addComment"
-        @submit-reply="submitReply"
-      />
-    </div>
+        <div class="detail-grid">
+          <main class="min-w-0">
+            <article class="post-card">
+              <div class="post-meta">
+                <span class="post-tag">Maintenance</span>
+                <span class="post-time">{{ post.time }}</span>
+              </div>
 
-    <!-- SIDEBAR -->
-    <div class="sidebar">
-      <!-- LIVE PULSE -->
-      <div class="sidebar-card">
-        <div class="sidebar-title">Live Community Pulse</div>
-        <div class="pulse-label">
-          Support Strength <span class="pulse-pct">High ({{ pulse.pct }}%)</span>
-        </div>
-        <div class="pulse-bar-track">
-          <div class="pulse-bar-fill" :style="{ width: pulse.pct + '%' }"></div>
-        </div>
-        <div class="pulse-stats">
-          <div class="stat-box">
-            <div class="stat-num">{{ pulse.voters }}</div>
-            <div class="stat-label">Active Voters</div>
-          </div>
-          <div class="stat-box">
-            <div class="stat-num">{{ pulse.trend }}d</div>
-            <div class="stat-label">Trend Age</div>
-          </div>
+              <h1 class="post-title">{{ post.title }}</h1>
+
+              <div class="author-row">
+                <div class="author-avatar">{{ post.author.initials }}</div>
+                <div>
+                  <div class="author-name">{{ post.author.name }}</div>
+                  <div class="author-sub">
+                    {{ post.author.distance }} · <span class="verified-badge">Verified Resident</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="post-body">
+                <p v-for="(para, i) in post.body" :key="i">{{ para }}</p>
+              </div>
+
+              <div class="post-actions">
+                <button class="action-btn" :class="{ upvoted: post.upvoted }" type="button" @click="toggleUpvote">
+                  {{ post.upvotes }} Upvotes
+                </button>
+                <button class="action-btn" type="button" @click="focusReply">
+                  {{ commentCount }} Comments
+                </button>
+                <span class="action-note">5 min read</span>
+              </div>
+            </article>
+
+            <CommentSection
+              ref="commentSectionRef"
+              :comments="comments"
+              :sort-by="sortBy"
+              @update:sort-by="sortBy = $event"
+              @add-comment="addComment"
+              @submit-reply="submitReply"
+            />
+          </main>
+
+          <aside class="detail-sidebar">
+            <section class="side-card">
+              <div class="side-title">Live Community Pulse</div>
+              <div class="pulse-label">
+                Support Strength <span>{{ pulse.pct }}%</span>
+              </div>
+              <div class="pulse-track">
+                <div class="pulse-fill" :style="{ width: pulse.pct + '%' }"></div>
+              </div>
+              <div class="pulse-stats">
+                <div>
+                  <strong>{{ pulse.voters }}</strong>
+                  <span>Active voters</span>
+                </div>
+                <div>
+                  <strong>{{ pulse.trend }}d</strong>
+                  <span>Trend age</span>
+                </div>
+              </div>
+            </section>
+
+            <section class="map-card">
+              <div class="map-grid"></div>
+              <div class="map-pin"></div>
+              <div class="map-caption">
+                <span>Location Impact</span>
+                <strong>West Gate Entrance</strong>
+              </div>
+            </section>
+
+            <section class="side-card">
+              <div class="side-title">Discussion Tips</div>
+              <div class="tips-list">
+                <div v-for="t in tips" :key="t.text" class="tip-item">
+                  <span></span>
+                  <p>{{ t.text }}</p>
+                </div>
+              </div>
+            </section>
+
+            <section class="side-card">
+              <div class="side-title">Related Topics</div>
+              <div class="related-list">
+                <button v-for="r in related" :key="r.title" type="button" class="related-item">
+                  <strong>{{ r.title }}</strong>
+                  <span>{{ r.meta }}</span>
+                </button>
+              </div>
+            </section>
+          </aside>
         </div>
       </div>
-
-      <!-- LOCATION IMPACT -->
-      <div class="location-card">
-        <div class="location-grid"></div>
-        <div class="location-overlay">
-          <div class="location-sub">Location Impact</div>
-          <div class="location-name">West Gate Entrance</div>
-        </div>
-      </div>
-
-      <!-- DISCUSSION TIPS -->
-      <div class="sidebar-card">
-        <div class="sidebar-title"><i class="bi bi-lightbulb"></i> Discussion Tips</div>
-        <div class="tips-list">
-          <div class="tip-item" v-for="t in tips" :key="t.icon">
-            <div class="tip-icon">
-              <i class="bi" :class="t.icon"></i>
-            </div>
-            <span>{{ t.text }}</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- RELATED TOPICS -->
-      <div class="sidebar-card">
-        <div class="sidebar-title"><i class="bi bi-link-45deg"></i> Related Topics</div>
-        <div class="related-list">
-          <div class="related-item" v-for="r in related" :key="r.title">
-            <span class="related-title">{{ r.title }}</span>
-            <span class="related-meta">{{ r.meta }}</span>
-          </div>
-        </div>
-      </div>
-    </div>
     </div>
   </div>
 </template>
@@ -136,8 +126,6 @@ import CommentSection from './CommentSection.vue'
 import Navbar from '@/components/Navbar.vue'
 import AppSidebar from '@/components/AppSidebar.vue'
 
-
-// Post data
 const post = ref({
   title: 'Improving the West Gate lighting',
   time: '2 hours ago',
@@ -146,19 +134,18 @@ const post = ref({
   author: { name: 'Marcus Chen', initials: 'MC', distance: '3 blocks away' },
   body: [
     "I've noticed that the lighting around the West Gate entrance has been flickering significantly over the past week. It feels quite dark near the pedestrian walkway after 8 PM, which might be a safety concern for those walking dogs or returning from late shifts.",
-    "I suggest we look into transitioning those fixtures to high-efficiency LED units with motion sensors. Not only would it improve visibility, but it would also lower our communal energy costs in the long run. Does anyone else feel the same, or have experience with the current vendor?"
-  ]
+    'I suggest we look into transitioning those fixtures to high-efficiency LED units with motion sensors. Not only would it improve visibility, but it would also lower our communal energy costs in the long run. Does anyone else feel the same?',
+  ],
 })
 
-// Comments data
 const comments = ref([
   {
     id: 1,
     name: 'Sarah Miller',
     initials: 'SM',
     time: '1 hour ago',
-    color: 'linear-gradient(135deg,#c77c3e,#e6a254)',
-    body: "Completely agree, Marcus. I walk my retriever there every night and the shadows make the uneven pavement hard to see. LEDs would be a great upgrade!",
+    color: 'linear-gradient(135deg,#0f766e,#22c1b6)',
+    body: 'Completely agree, Marcus. I walk my retriever there every night and the shadows make the uneven pavement hard to see. LEDs would be a great upgrade!',
     likes: 8,
     showReply: false,
     replyText: '',
@@ -167,47 +154,41 @@ const comments = ref([
         name: 'David Vance',
         initials: 'DV',
         time: '45 mins ago',
-        color: 'linear-gradient(135deg,#2d6a4f,#52b788)',
-        body: "I actually work in smart lighting — I could help the board vet a few cost-effective options if we decide to move forward."
-      }
-    ]
+        color: 'linear-gradient(135deg,#164e63,#0e7490)',
+        body: 'I could help the board compare a few cost-effective options if we decide to move forward.',
+      },
+    ],
   },
   {
     id: 2,
     name: 'Jason K.',
     initials: 'JK',
     time: '30 mins ago',
-    color: 'linear-gradient(135deg,#3a5f8a,#5b8fc4)',
-    body: "Has anyone checked if it's just a bulb or a wiring issue? If it's wiring, we might need a full inspection before just swapping the units.",
+    color: 'linear-gradient(135deg,#475569,#64748b)',
+    body: "Has anyone checked if it's just a bulb or a wiring issue? If it's wiring, we might need a full inspection before swapping the units.",
     likes: 2,
     showReply: false,
     replyText: '',
-    replies: []
-  }
+    replies: [],
+  },
 ])
 
 const sortBy = ref('top')
 const commentSectionRef = ref(null)
-
-// Computed comment count
 const commentCount = computed(() => comments.value.length)
-
-// Pulse data
 const pulse = ref({ pct: 88, voters: 14, trend: 2 })
 
-// Static sidebar data
 const tips = [
-  { icon: 'bi-geo', text: "Stay polite and constructive; we're all neighbors here." },
-  { icon: 'bi-geo-alt', text: "Suggest solutions alongside identifying problems." },
-  { icon: 'bi-people', text: "Mention neighbors who might have relevant expertise." }
+  { text: "Stay polite and constructive; we're all neighbors here." },
+  { text: 'Suggest solutions alongside identifying problems.' },
+  { text: 'Mention neighbors who might have relevant expertise.' },
 ]
 
 const related = [
   { title: 'Shared Garden Irrigation', meta: '8 active voices · Utilities' },
-  { title: 'Visitor Parking Rules', meta: '15 active voices · Community' }
+  { title: 'Visitor Parking Rules', meta: '15 active voices · Community' },
 ]
 
-// Methods
 function toggleUpvote() {
   post.value.upvoted = !post.value.upvoted
   post.value.upvotes += post.value.upvoted ? 1 : -1
@@ -224,12 +205,12 @@ function addComment(text) {
     name: 'You',
     initials: 'JD',
     time: 'just now',
-    color: 'linear-gradient(135deg,#6b4f9e,#9b78d4)',
+    color: 'linear-gradient(135deg,#0f766e,#22c1b6)',
     body: text,
     likes: 0,
     showReply: false,
     replyText: '',
-    replies: []
+    replies: [],
   })
 }
 
@@ -239,8 +220,8 @@ function submitReply(comment, text) {
     name: 'You',
     initials: 'JD',
     time: 'just now',
-    color: 'linear-gradient(135deg,#6b4f9e,#9b78d4)',
-    body: text
+    color: 'linear-gradient(135deg,#0f766e,#22c1b6)',
+    body: text,
   })
   comment.replyText = ''
   comment.showReply = false
@@ -252,398 +233,376 @@ function goBack() {
 </script>
 
 <style scoped>
-.discussion-layout {
-  display: flex;
-  min-height: calc(100vh - 64px);
-  background: #f6f1ea;
+.detail-page {
+  --accent: #0f766e;
+  --accent-dark: #164e63;
+  --accent-soft: #e7f7f7;
+  --border: #dbe6ee;
+  --card: #ffffff;
+  --muted: #64748b;
+  --text: #172033;
+  --radius: 18px;
+  --shadow: 0 16px 36px rgba(15, 35, 55, 0.08);
+  width: 100%;
+  min-width: 0;
+  flex: 1;
+  padding: 22px clamp(16px, 2vw, 28px) 40px;
 }
 
-.page {
-  --accent: #2d6a4f;
-  --accent-light: #e7f3ec;
-  --border: #e4ded5;
-  --card: #fffaf4;
-  --radius: 18px;
-  --shadow: 0 18px 45px rgba(63, 47, 28, 0.09);
-  --tag-bg: #eef7f2;
-  --tag-text: #2d6a4f;
-  --text: #28231f;
-  --text-muted: #82786f;
-  min-height: calc(100vh - 64px);
-  position: relative;
-  isolation: isolate;
-  max-width: 1100px;
-  margin: 0 auto;
-  padding: 32px 20px 60px;
+.detail-grid {
   display: grid;
-  grid-template-columns: 1fr 300px;
-  gap: 28px;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 22px;
+  align-items: start;
+}
+
+.back-btn,
+.detail-context {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.back-btn {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
   color: var(--text);
 }
 
-.page::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  background: #f6f1ea;
+.detail-context span {
+  border-radius: 999px;
+  background: #fff;
+  padding: 7px 11px;
+  box-shadow: 0 1px 0 rgba(15, 35, 55, 0.04);
 }
 
-/* BACK BTN */
-.back-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-family: 'DM Sans', sans-serif;
-  font-size: 0.88rem;
-  color: var(--text-muted);
-  margin-bottom: 18px;
-  padding: 0;
-  transition: color .2s;
-}
-.back-btn:hover {
-  color: var(--accent);
-}
-.back-btn svg {
-  width: 16px;
-  height: 16px;
-}
-
-/* MAIN POST CARD */
-.post-card {
-  background: var(--card);
-  border-radius: var(--radius);
+.post-card,
+.side-card {
   border: 1px solid var(--border);
-  padding: 28px 30px 20px;
+  border-radius: var(--radius);
+  background: var(--card);
   box-shadow: var(--shadow);
-  position: relative;
-  overflow: hidden;
 }
-.post-card::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 4px;
-  background: var(--accent);
-  border-radius: 4px 0 0 4px;
+
+.post-card {
+  padding: clamp(20px, 2vw, 28px);
+  border-left: 4px solid var(--accent);
+}
+
+.post-meta,
+.post-actions,
+.pulse-stats {
+  display: flex;
+  align-items: center;
+}
+
+.post-meta {
+  justify-content: space-between;
+  gap: 12px;
 }
 
 .post-tag {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  background: var(--tag-bg);
-  color: var(--tag-text);
-  font-size: 0.72rem;
-  font-weight: 600;
-  letter-spacing: 0.07em;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  padding: 5px 10px;
+  color: var(--accent);
+  font-size: 0.68rem;
+  font-weight: 950;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
-  padding: 4px 10px;
-  border-radius: 20px;
 }
-.post-meta {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 16px;
-}
-.post-time {
-  font-size: 0.8rem;
-  color: var(--text-muted);
-  display: flex;
-  align-items: center;
-  gap: 4px;
+
+.post-time,
+.author-sub,
+.action-note {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 700;
 }
 
 .post-title {
-  font-family: 'Playfair Display', serif;
-  font-size: 1.38rem;
-  font-weight: 700;
-  margin: 14px 0 8px;
-  line-height: 1.3;
+  margin: 18px 0 14px;
+  color: var(--text);
+  font-size: clamp(1.6rem, 2.4vw, 2.15rem);
+  font-weight: 950;
+  letter-spacing: -0.02em;
+  line-height: 1.12;
 }
 
 .author-row {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin-bottom: 18px;
+  gap: 12px;
+  margin-bottom: 20px;
 }
+
 .author-avatar {
   width: 42px;
   height: 42px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #2d6a4f 30%, #c77c3e);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  flex: 0 0 42px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--accent), #22c1b6);
   color: #fff;
-  font-weight: 700;
-  font-size: 0.95rem;
-  flex-shrink: 0;
+  font-size: 0.82rem;
+  font-weight: 900;
 }
+
 .author-name {
-  font-weight: 600;
-  font-size: 0.92rem;
+  color: var(--text);
+  font-size: 0.95rem;
+  font-weight: 900;
 }
-.author-sub {
-  font-size: 0.78rem;
-  color: var(--text-muted);
-  margin-top: 1px;
-}
+
 .verified-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
   color: var(--accent);
-  font-size: 0.72rem;
-  font-weight: 600;
+}
+
+.post-body {
+  max-width: 72ch;
 }
 
 .post-body p {
-  font-size: 0.92rem;
+  margin: 0 0 14px;
+  color: #334155;
+  font-size: 0.94rem;
   line-height: 1.75;
-  color: #3a3630;
-  margin-bottom: 12px;
 }
 
 .post-actions {
-  display: flex;
-  align-items: center;
-  gap: 18px;
+  flex-wrap: wrap;
+  gap: 10px;
   margin-top: 20px;
-  padding-top: 16px;
   border-top: 1px solid var(--border);
+  padding-top: 16px;
 }
+
 .action-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  background: none;
-  border: none;
+  border: 0;
+  border-radius: 999px;
+  background: #f1f5f9;
+  padding: 8px 12px;
+  color: var(--muted);
   cursor: pointer;
-  font-family: 'DM Sans', sans-serif;
-  font-size: 0.84rem;
-  color: var(--text-muted);
-  padding: 6px 10px;
-  border-radius: 8px;
-  transition: background .2s, color .2s;
-  font-weight: 500;
-}
-.action-btn:hover {
-  background: var(--accent-light);
-  color: var(--accent);
-}
-.action-btn.upvoted {
-  color: var(--accent);
-  font-weight: 600;
-}
-.action-btn svg {
-  width: 16px;
-  height: 16px;
-}
-.share-btns {
-  margin-left: auto;
-  display: flex;
-  gap: 8px;
-}
-.share-btn {
-  font-size: 0.78rem;
-  color: var(--text-muted);
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 5px 8px;
-  border-radius: 6px;
-  transition: background .2s;
-}
-.share-btn:hover {
-  background: var(--border);
-}
-
-/* SIDEBAR */
-.sidebar {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-.sidebar-card {
-  background: var(--card);
-  border-radius: var(--radius);
-  border: 1px solid var(--border);
-  padding: 20px;
-  box-shadow: var(--shadow);
-}
-.sidebar-title {
-  font-family: 'Playfair Display', serif;
-  font-size: 0.98rem;
-  font-weight: 700;
-  margin-bottom: 14px;
-  display: flex;
-  align-items: center;
-  gap: 7px;
-}
-
-/* PULSE */
-.pulse-label {
-  font-size: 0.78rem;
-  color: var(--text-muted);
-  font-weight: 500;
-  margin-bottom: 5px;
-}
-.pulse-bar-track {
-  background: var(--border);
-  border-radius: 99px;
-  height: 7px;
-  overflow: hidden;
-}
-.pulse-bar-fill {
-  height: 100%;
-  border-radius: 99px;
-  background: linear-gradient(90deg, #2d6a4f, #52b788);
-  transition: width .6s ease;
-}
-.pulse-pct {
-  float: right;
   font-size: 0.8rem;
-  font-weight: 700;
-  color: var(--accent);
-  margin-top: -1px;
+  font-weight: 900;
 }
-.pulse-stats {
+
+.action-btn:hover,
+.action-btn.upvoted {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.action-note {
+  margin-left: auto;
+}
+
+.detail-sidebar {
   display: grid;
+  gap: 16px;
+}
+
+.side-card {
+  padding: 18px;
+}
+
+.side-title {
+  margin-bottom: 13px;
+  color: var(--text);
+  font-size: 0.9rem;
+  font-weight: 950;
+}
+
+.pulse-label {
+  display: flex;
+  justify-content: space-between;
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.pulse-label span {
+  color: var(--accent);
+}
+
+.pulse-track {
+  height: 8px;
+  margin-top: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e2e8f0;
+}
+
+.pulse-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--accent), #22c1b6);
+}
+
+.pulse-stats {
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
+  display: grid;
+  gap: 10px;
   margin-top: 14px;
 }
-.stat-box {
-  background: #f9f7f4;
-  border-radius: 10px;
+
+.pulse-stats div {
+  border-radius: 14px;
+  background: #f8fafc;
+  padding: 12px;
   text-align: center;
-  padding: 12px 8px;
-}
-.stat-num {
-  font-family: 'Playfair Display', serif;
-  font-size: 1.55rem;
-  font-weight: 700;
-  color: var(--text);
-  line-height: 1;
-}
-.stat-label {
-  font-size: 0.7rem;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  margin-top: 4px;
-  font-weight: 600;
 }
 
-/* LOCATION CARD */
-.location-card {
-  border-radius: var(--radius);
-  overflow: hidden;
-  position: relative;
-  height: 140px;
-  background: linear-gradient(135deg, #1a3a2a 0%, #2d6a4f 60%, #c77c3e 100%);
+.pulse-stats strong {
+  display: block;
+  color: var(--text);
+  font-size: 1.35rem;
+  font-weight: 950;
 }
-.location-grid {
+
+.pulse-stats span {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 0.66rem;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.map-card {
+  position: relative;
+  min-height: 170px;
+  overflow: hidden;
+  border-radius: var(--radius);
+  background: linear-gradient(135deg, #164e63, #0f766e);
+  box-shadow: var(--shadow);
+}
+
+.map-grid {
   position: absolute;
   inset: 0;
-  opacity: 0.18;
-  background-image: repeating-linear-gradient(0deg, transparent, transparent 14px, rgba(255,255,255,.15) 14px, rgba(255,255,255,.15) 15px), repeating-linear-gradient(90deg, transparent, transparent 14px, rgba(255,255,255,.15) 14px, rgba(255,255,255,.15) 15px);
+  opacity: 0.34;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.45) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.45) 1px, transparent 1px);
+  background-size: 26px 26px;
 }
-.location-overlay {
+
+.map-pin {
   position: absolute;
+  left: 50%;
+  top: 48%;
+  width: 11px;
+  height: 11px;
+  border-radius: 999px;
+  background: #083344;
+  box-shadow: 0 0 0 18px rgba(186, 230, 253, 0.35), 0 0 0 44px rgba(186, 230, 253, 0.22);
+}
+
+.map-caption {
+  position: absolute;
+  inset-inline: 0;
   bottom: 0;
-  left: 0;
-  right: 0;
   padding: 14px 16px;
-  background: linear-gradient(transparent, rgba(0,0,0,0.65));
-}
-.location-sub {
-  font-size: 0.65rem;
-  color: rgba(255,255,255,0.7);
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  font-weight: 600;
-}
-.location-name {
-  font-family: 'Playfair Display', serif;
-  font-size: 1.1rem;
+  background: linear-gradient(transparent, rgba(8, 47, 73, 0.9));
   color: #fff;
-  font-weight: 700;
-  margin-top: 2px;
 }
 
-/* TIPS */
-.tips-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-.tip-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 9px;
-  font-size: 0.82rem;
-  color: #4a4540;
-  line-height: 1.5;
-}
-.tip-icon {
-  flex-shrink: 0;
-  width: 20px;
-  height: 20px;
-  border-radius: 6px;
-  background: var(--accent-light);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.7rem;
-  margin-top: 1px;
+.map-caption span {
+  display: block;
+  font-size: 0.65rem;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  opacity: 0.72;
+  text-transform: uppercase;
 }
 
-/* RELATED */
+.map-caption strong {
+  display: block;
+  margin-top: 3px;
+  font-size: 0.94rem;
+}
+
+.tips-list,
 .related-list {
-  display: flex;
-  flex-direction: column;
+  display: grid;
   gap: 10px;
 }
-.related-item {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 10px 12px;
-  border-radius: 10px;
-  background: #f9f7f4;
-  cursor: pointer;
-  transition: background .2s;
-}
-.related-item:hover {
-  background: var(--accent-light);
-}
-.related-title {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--text);
-}
-.related-meta {
-  font-size: 0.73rem;
-  color: var(--text-muted);
+
+.tip-item {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  gap: 9px;
 }
 
-/* RESPONSIVE */
-@media (max-width: 750px) {
-  .page {
+.tip-item span {
+  width: 18px;
+  height: 18px;
+  border-radius: 6px;
+  background: var(--accent-soft);
+}
+
+.tip-item p,
+.related-item span {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.related-item {
+  border: 0;
+  border-radius: 14px;
+  background: #f8fafc;
+  padding: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.related-item strong {
+  display: block;
+  color: var(--text);
+  font-size: 0.82rem;
+}
+
+@media (max-width: 1120px) {
+  .detail-grid {
     grid-template-columns: 1fr;
   }
-  .sidebar {
-    order: -1;
+
+  .detail-sidebar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .detail-page {
+    padding: 16px 14px 32px;
+  }
+
+  .detail-sidebar {
+    grid-template-columns: 1fr;
+  }
+
+  .detail-context {
+    display: none;
+  }
+
+  .post-meta,
+  .post-actions {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .action-note {
+    margin-left: 0;
   }
 }
 </style>

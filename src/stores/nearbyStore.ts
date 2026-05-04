@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { useAuthStore } from './authStore'
+import { useAuthStore } from './auth'
 
 export interface NearbyUser {
   id: string

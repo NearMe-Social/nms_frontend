@@ -34,6 +34,7 @@ export const useAuthStore = defineStore('auth', () => {
     user.value = null
     localStorage.removeItem('token')
     localStorage.removeItem('auth_user')
+    localStorage.removeItem('nms_token')
   }
 
   return { token, user, isLoggedIn, setAuth, setToken, logout }

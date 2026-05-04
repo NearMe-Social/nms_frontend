@@ -15,7 +15,7 @@
       <RouterLink to="/nearby" :class="{ active: route.path.startsWith('/nearby') }">
         Nearby
       </RouterLink>
-      <RouterLink to="/discussion" :class="{ active: route.path.startsWith('/discussion') }">
+      <RouterLink to="/discussions" :class="{ active: route.path.startsWith('/discussion') }">
         Discussions
       </RouterLink>
       <RouterLink to="/chat" :class="{ active: route.path.startsWith('/chat') }">Chat</RouterLink>
@@ -25,7 +25,7 @@
       <button class="mobile-search" type="button" title="Search">
         <Search class="icon" />
       </button>
-      <RouterLink to="/discussion/new" class="create-action">Create</RouterLink>
+      <RouterLink to="/create-post" class="create-action">Create</RouterLink>
       <RouterLink to="/notifications" class="icon-link" title="Notifications">
         <Bell class="icon" />
         <span class="notification-dot"></span>
@@ -36,15 +36,26 @@
       <RouterLink to="/profile" class="profile-link" title="Profile">
         <img src="https://i.pravatar.cc/150?img=12" alt="Profile" />
       </RouterLink>
+      <button class="icon-link logout-button" type="button" title="Log out" @click="handleLogout">
+        <LogOut class="icon" />
+      </button>
     </div>
   </nav>
 </template>
 
 <script setup lang="ts">
-import { RouterLink, useRoute } from 'vue-router'
-import { Bell, Search, Settings } from 'lucide-vue-next'
+import { RouterLink, useRoute, useRouter } from 'vue-router'
+import { Bell, LogOut, Search, Settings } from 'lucide-vue-next'
+import { useAuthStore } from '@/stores/auth'
 
 const route = useRoute()
+const router = useRouter()
+const auth = useAuthStore()
+
+function handleLogout() {
+  auth.logout()
+  router.replace('/login')
+}
 </script>
 
 <style scoped>
@@ -107,7 +118,7 @@ const route = useRoute()
 }
 
 .nav-links {
-  display: flex;
+  display: none;
   align-items: center;
   gap: 4px;
   margin-left: auto;
@@ -132,6 +143,7 @@ const route = useRoute()
   display: flex;
   align-items: center;
   gap: 8px;
+  margin-left: auto;
   flex: 0 0 auto;
 }
 
@@ -154,6 +166,11 @@ const route = useRoute()
   background: transparent;
   color: #516a7d;
   cursor: pointer;
+}
+
+.logout-button:hover {
+  background: #fff1f2;
+  color: #e11d48;
 }
 
 .icon {
@@ -185,13 +202,15 @@ const route = useRoute()
 }
 
 @media (max-width: 980px) {
-  .nav-links {
-    display: none;
-  }
-
   .search-box {
     margin-left: auto;
     width: min(280px, 38vw);
+  }
+}
+
+@media (min-width: 641px) and (max-width: 767px) {
+  .nav-links {
+    display: flex;
   }
 }
 
@@ -201,7 +220,9 @@ const route = useRoute()
   }
 
   .search-box,
-  .create-action {
+  .create-action,
+  .nav-links,
+  .actions .icon-link[title='Settings'] {
     display: none;
   }
 
