@@ -1,33 +1,51 @@
 <template>
   <profileNavbar/>
   <div class="profile-page">
-    <!-- Hero Banner -->
-    <div class="profile-hero">
-      <div class="profile-avatar-wrap">
-        <div class="profile-avatar">
-          <div class="avatar-initials">JT</div>
-        </div>
-        <div class="avatar-badge">
-          <CheckIcon :size="11" color="white" />
+    <!-- Loading State -->
+    <div v-if="isLoading" class="loading-state">
+      <div class="loading-spinner">
+        <LoaderIcon :size="48" class="spinner-icon" />
+      </div>
+      <div class="loading-text">Loading profile...</div>
+    </div>
+
+    <!-- Main Profile Content -->
+    <div v-else-if="userLoaded" class="profile-content">
+      <!-- Hero Banner -->
+      <div class="profile-hero">
+        <div class="profile-avatar-wrap">
+          <div class="profile-avatar">
+            <div class="avatar-initials">JT</div>
+          </div>
+          <div class="avatar-badge">
+            <CheckIcon :size="11" color="white" />
+          </div>
         </div>
       </div>
-    </div>
 
     <!-- Name / Actions Bar -->
     <div class="profile-info-bar">
-      <div>
+      <div class="profile-head">
         <div class="profile-name">{{ user.name }}</div>
+        <div class="profile-handle">{{ user.handle }}</div>
         <div class="profile-meta">
           <MapPinIcon :size="13" />
           {{ user.location }} • {{ user.role }}
         </div>
+        <p class="profile-blurb">{{ user.bio }}</p>
+        <div class="profile-stats">
+          <div class="profile-stat" v-for="stat in user.stats" :key="stat.label">
+            <div class="stat-num">{{ stat.value }}</div>
+            <div class="stat-label">{{ stat.label }}</div>
+          </div>
+        </div>
       </div>
       <div class="profile-actions">
+        <button class="btn-follow">Follow</button>
         <button class="btn-msg">
           <MailIcon :size="14" />
           Message
         </button>
-        <button class="btn-follow">Follow</button>
       </div>
     </div>
 
@@ -113,8 +131,19 @@
           </div>
         </div>
 
+        <!-- Posts Grid or Empty State -->
+        <div v-if="showEmptyState" class="empty-state">
+          <div class="empty-icon">
+            <FileTextIcon :size="64" />
+          </div>
+          <div class="empty-title">No posts yet</div>
+          <div class="empty-description">
+            {{ user.name }} hasn't published any posts or discussions yet.
+          </div>
+        </div>
+
         <!-- Two-column grid -->
-        <div class="posts-grid">
+        <div v-else class="posts-grid">
           <div class="post-card" v-for="post in smallPosts" :key="post.id">
             <div class="post-card-img" :class="post.imgClass"></div>
             <div class="post-card-body">
@@ -132,10 +161,11 @@
       </section>
     </div>
   </div>
+    </div>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import profileNavbar from '@/components/profileNavbar.vue'
 import {
   MapPin  as MapPinIcon,
@@ -145,23 +175,34 @@ import {
   MessageSquare as MessageSquareIcon,
   BookOpen as BookOpenIcon,
   Check   as CheckIcon,
+  Loader2  as LoaderIcon,
+  FileText as FileTextIcon,
 } from 'lucide-vue-next'
 
 const activeTab = ref('Latest')
 const tabs = ['Latest', 'Popular', 'Media']
 
+// Loading and data states
+const isLoading = ref(false)
+const userLoaded = ref(true) // Set to true for demo, would be false initially
+
 const user = {
   name: 'Julian Thorne',
+  handle: '@juliant',
   location: 'Brooklyn, New York',
   role: 'Design Lead',
-  bio: 'Curating the intersection of urban architecture and community dynamics. I build spaces that foster intentional conversation and sustainable growth. Always looking for the next great neighborhood coffee shop.',
+  bio: 'Curating the intersection of urban architecture and community dynamics. I build spaces that foster intentional conversation and sustainable growth.',
   tags: ['Architecture', 'Urbanism', 'Design Strategy'],
-  followers: '12.4k',
-  following: '842',
+  stats: [
+    { label: 'Posts', value: '128' },
+    { label: 'Followers', value: '12.4k' },
+    { label: 'Following', value: '842' },
+  ],
   essays: 42,
   activeIn: 'Brooklyn Commons',
 }
 
+// Mock posts data - set to empty array to test empty state
 const smallPosts = [
   {
     id: 2,
@@ -178,6 +219,11 @@ const smallPosts = [
     comments: 31,
   },
 ]
+
+// Computed properties for state management
+const hasPosts = computed(() => smallPosts.length > 0)
+const showEmptyState = computed(() => !isLoading.value && !hasPosts.value)
+
 </script>
 
 <style scoped>
@@ -186,11 +232,14 @@ const smallPosts = [
   flex-direction: column;
   min-height: 100vh;
   font-family: 'DM Sans', sans-serif;
+  margin-left: 200px;
+  width: calc(100% - 200px);
+  background: #f0f2f8;
 }
 
 /* ── Hero ── */
 .profile-hero {
-  height: 200px;
+  height: 220px;
   background: linear-gradient(135deg, #0d1b3e 0%, #162d6b 40%, #1a4a6e 100%);
   position: relative;
 }
@@ -263,7 +312,57 @@ const smallPosts = [
   gap: 6px;
   font-size: 13px;
   color: #6b7280;
+  margin-top: 8px;
+}
+
+.profile-handle {
+  font-size: 14px;
+  color: #64748b;
   margin-top: 6px;
+}
+
+.profile-blurb {
+  max-width: 720px;
+  margin-top: 16px;
+  font-size: 14px;
+  line-height: 1.75;
+  color: #475569;
+}
+
+.profile-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 18px;
+  background: #eff4ff;
+  border: 1px solid #e2e8f0;
+  border-radius: 28px;
+  padding: 14px;
+  justify-content: space-between;
+}
+
+.profile-stat {
+  min-width: 100px;
+  flex: 1;
+  background: transparent;
+  border: none;
+  border-radius: 14px;
+  padding: 0;
+  text-align: center;
+}
+
+.profile-stat .stat-num {
+  font-family: 'DM Serif Display', serif;
+  font-size: 24px;
+  color: #1a56db;
+}
+
+.profile-stat .stat-label {
+  margin-top: 6px;
+  text-transform: uppercase;
+  font-size: 10px;
+  font-weight: 700;
+  color: #64748b;
 }
 
 .profile-actions {
@@ -276,29 +375,28 @@ const smallPosts = [
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 9px 18px;
-  border: 1.5px solid #e2e8f0;
-  border-radius: 10px;
-  background: transparent;
+  padding: 12px 18px;
+  border: none;
+  border-radius: 999px;
+  background: #2dd4bf;
   font-family: 'DM Sans', sans-serif;
   font-size: 13px;
   font-weight: 600;
-  color: #1a1f36;
+  color: #0f2134;
   cursor: pointer;
   transition: all 0.15s;
 }
 
 .btn-msg:hover {
-  border-color: #1a56db;
-  color: #1a56db;
+  background: #2bb8a9;
 }
 
 .btn-follow {
-  padding: 9px 22px;
+  padding: 12px 22px;
   background: #1a56db;
   color: #fff;
   border: none;
-  border-radius: 10px;
+  border-radius: 999px;
   font-family: 'DM Sans', sans-serif;
   font-size: 13px;
   font-weight: 600;
@@ -639,5 +737,270 @@ const smallPosts = [
 .explore-link:hover {
   border-color: #1a56db;
   background: #eff4ff;
+}
+
+@media (max-width: 1024px) {
+  .profile-page {
+    margin-left: 0;
+    width: 100%;
+  }
+
+  .profile-hero {
+    height: 180px;
+  }
+
+  .profile-avatar-wrap {
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: -52px;
+  }
+
+  .profile-info-bar {
+    padding: 70px 20px 20px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 20px;
+  }
+
+  .profile-actions {
+    width: 100%;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .btn-msg,
+  .btn-follow {
+    width: 48%;
+    min-width: 0;
+    justify-content: center;
+  }
+
+  .btn-msg {
+    order: 2;
+  }
+
+  .btn-follow {
+    order: 1;
+  }
+
+  .profile-body {
+    grid-template-columns: 1fr;
+    padding: 20px;
+    gap: 22px;
+  }
+
+  .sidebar {
+    display: none;
+  }
+
+  .posts-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .tab-bar {
+    width: 100%;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+
+  .posts-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .post-featured {
+    display: block;
+  }
+
+  .post-img {
+    height: 180px;
+  }
+}
+
+@media (max-width: 900px) {
+  .profile-page {
+    margin-left: 0;
+    width: 100%;
+    padding-top: 68px;
+    padding-bottom: 100px;
+  }
+
+  .navbar + .profile-page {
+    margin-top: 0;
+  }
+
+  .profile-hero {
+    height: 180px;
+  }
+
+  .profile-avatar-wrap {
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: -52px;
+  }
+
+  .profile-info-bar {
+    padding: 70px 18px 20px;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 18px;
+  }
+
+  .profile-actions {
+    width: 100%;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .btn-msg,
+  .btn-follow {
+    width: 48%;
+    min-width: 0;
+    justify-content: center;
+  }
+
+  .profile-body {
+    grid-template-columns: 1fr;
+    padding: 20px;
+    gap: 22px;
+  }
+
+  .posts-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .tab-bar {
+    width: 100%;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+
+  .posts-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .post-card-img {
+    height: 140px;
+  }
+}
+
+@media (max-width: 640px) {
+  .profile-info-bar {
+    padding: 62px 18px 18px;
+    align-items: center;
+    text-align: center;
+  }
+
+  .profile-name {
+    font-size: 28px;
+  }
+
+  .profile-handle {
+    font-size: 14px;
+  }
+
+  .profile-meta {
+    justify-content: center;
+    font-size: 12px;
+  }
+
+  .profile-blurb {
+    font-size: 13px;
+    max-width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .profile-stats {
+    gap: 12px;
+  }
+
+  .btn-msg,
+  .btn-follow {
+    width: 48%;
+    padding: 14px 0;
+  }
+
+  .profile-body {
+    padding: 16px;
+  }
+
+  .post-card-img {
+    height: 120px;
+  }
+}
+
+/* ── Loading State ── */
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  padding: 40px 20px;
+  background: #f0f2f8;
+}
+
+.loading-spinner {
+  margin-bottom: 20px;
+}
+
+.spinner-icon {
+  color: #1a56db;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.loading-text {
+  font-size: 16px;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+/* ── Empty State ── */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  text-align: center;
+  background: #fff;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+  margin-bottom: 24px;
+}
+
+.empty-icon {
+  color: #cbd5e1;
+  margin-bottom: 20px;
+}
+
+.empty-title {
+  font-family: 'DM Serif Display', serif;
+  font-size: 24px;
+  color: #1a1f36;
+  margin-bottom: 8px;
+}
+
+.empty-description {
+  font-size: 14px;
+  color: #6b7280;
+  max-width: 300px;
+  line-height: 1.5;
 }
 </style>
