@@ -6,6 +6,9 @@ export interface NearbyUser {
   id: string
   username: string
   distance_m: number
+  distance_label?: string
+  profile_image?: string | null
+  location_updated_at?: string | null
 }
 
 export const useNearbyStore = defineStore('nearby', () => {
@@ -16,15 +19,38 @@ export const useNearbyStore = defineStore('nearby', () => {
 
   let refreshTimer: ReturnType<typeof setInterval> | null = null
 
-  async function fetchNearby(lat: number, lng: number) {
+  async function updateMyLocation(lat: number, lng: number) {
+    const authStore = useAuthStore()
+
+    if (!authStore.token) return
+
+    await fetch('http://localhost:3000/users/me/location', {
+      method: 'PATCH',
+      headers: {
+        Authorization: `Bearer ${authStore.token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ lat, lng }),
+    })
+  }
+
+  async function fetchNearby(lat: number, lng: number, radius = 200) {
     const authStore = useAuthStore()
     loading.value = true
     error.value = null
 
     try {
-      const res = await fetch(`http://localhost:3000/users/nearby?lat=${lat}&lng=${lng}`, {
+      await updateMyLocation(lat, lng).catch(() => undefined)
+
+      const params = new URLSearchParams({
+        lat: String(lat),
+        lng: String(lng),
+        radius: String(radius),
+      })
+
+      const res = await fetch(`http://localhost:3000/users/nearby?${params.toString()}`, {
         headers: {
-          Authorization: `Bearer ${authStore.token}`,
+          ...(authStore.token ? { Authorization: `Bearer ${authStore.token}` } : {}),
           'Content-Type': 'application/json',
         },
       })
@@ -43,9 +69,9 @@ export const useNearbyStore = defineStore('nearby', () => {
     }
   }
 
-  function startPolling(lat: number, lng: number) {
+  function startPolling(lat: number, lng: number, radius = 200) {
     stopPolling()
-    refreshTimer = setInterval(() => fetchNearby(lat, lng), 30_000)
+    refreshTimer = setInterval(() => fetchNearby(lat, lng, radius), 30_000)
   }
 
   function stopPolling() {
@@ -55,5 +81,13 @@ export const useNearbyStore = defineStore('nearby', () => {
     }
   }
 
-  return { users, loading, error, lastFetchedAt, fetchNearby, startPolling, stopPolling }
+  return {
+    users,
+    loading,
+    error,
+    lastFetchedAt,
+    fetchNearby,
+    startPolling,
+    stopPolling,
+  }
 })

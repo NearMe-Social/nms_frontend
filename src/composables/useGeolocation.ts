@@ -7,6 +7,28 @@ export interface GeoCoords {
   lng: number
 }
 
+const LAST_KNOWN_LOCATION_KEY = 'nms_last_known_location'
+
+function saveLastKnownLocation(coords: GeoCoords) {
+  localStorage.setItem(LAST_KNOWN_LOCATION_KEY, JSON.stringify(coords))
+}
+
+function getLastKnownLocation(): GeoCoords | null {
+  const raw = localStorage.getItem(LAST_KNOWN_LOCATION_KEY)
+  if (!raw) return null
+
+  try {
+    const parsed = JSON.parse(raw) as GeoCoords
+    if (Number.isFinite(parsed.lat) && Number.isFinite(parsed.lng)) {
+      return parsed
+    }
+  } catch {
+    return null
+  }
+
+  return null
+}
+
 export function useGeolocation() {
   const status = ref<GeoStatus>('idle')
   const coords = ref<GeoCoords | null>(null)
@@ -26,14 +48,14 @@ export function useGeolocation() {
       navigator.geolocation.getCurrentPosition(
         (pos) => {
           coords.value = { lat: pos.coords.latitude, lng: pos.coords.longitude }
+          saveLastKnownLocation(coords.value)
           status.value = 'granted'
           resolve(coords.value)
         },
         (err) => {
           if (err.code === GeolocationPositionError.PERMISSION_DENIED) {
             status.value = 'denied'
-            errorMessage.value =
-              'Location access was denied. Enable it in browser settings to see nearby users.'
+            errorMessage.value = 'Location access was denied. Enable it in browser settings.'
           } else if (err.code === GeolocationPositionError.POSITION_UNAVAILABLE) {
             status.value = 'unavailable'
             errorMessage.value = 'Your location could not be determined right now.'
@@ -53,5 +75,6 @@ export function useGeolocation() {
     coords: readonly(coords),
     errorMessage: readonly(errorMessage),
     request,
+    getLastKnownLocation,
   }
 }
