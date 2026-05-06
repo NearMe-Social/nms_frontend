@@ -29,7 +29,7 @@
                     <div class="form-group">
                         <label for="birthday">Birthday</label>
                         <div class="input-wrapper">
-                            <input id="birthday" type="text" placeholder="MM/DD/YYYY" v-model="birthday" required />
+                            <input id="birthday" type="date" v-model="birthday" required />
                         </div>
                     </div>
 
@@ -79,7 +79,11 @@
                         </div>
                     </div>
 
-                    <button type="submit" class="register-btn">Register Now</button>
+                    <p v-if="errorMsg" class="error-msg">{{ errorMsg }}</p>
+
+                    <button type="submit" class="register-btn" :disabled="isLoading">
+                        {{ isLoading ? 'Registering...' : 'Register Now' }}
+                    </button>
                     <button type="button" class="ghost-link" @click="goToLogin">I already have an account</button>
                 </form>
 
@@ -95,8 +99,11 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
+import { authApi } from '@/services/api'
 
 const router = useRouter()
+const auth = useAuthStore()
 
 const firstName = ref('')
 const lastName = ref('')
@@ -107,6 +114,8 @@ const password = ref('')
 const isGenderOpen = ref(false)
 const genderError = ref('')
 const genderDropdownRef = ref<HTMLElement | null>(null)
+const errorMsg = ref('')
+const isLoading = ref(false)
 
 const genderOptions = [
     { value: 'female', label: 'Female' },
@@ -117,6 +126,10 @@ const genderOptions = [
 
 const selectedGenderLabel = computed(() => {
     return genderOptions.find((option) => option.value === gender.value)?.label || 'Select your gender'
+})
+
+const birthdayDate = computed(() => {
+    return birthday.value || undefined
 })
 
 function toggleGenderDropdown() {
@@ -133,7 +146,6 @@ function closeGenderDropdownOnOutsideClick(event: MouseEvent) {
     if (!genderDropdownRef.value) {
         return
     }
-
     const target = event.target as Node
     if (!genderDropdownRef.value.contains(target)) {
         isGenderOpen.value = false
@@ -148,20 +160,36 @@ onBeforeUnmount(() => {
     document.removeEventListener('pointerdown', closeGenderDropdownOnOutsideClick)
 })
 
-function handleRegister() {
+async function handleRegister() {
     if (!gender.value) {
         genderError.value = 'Please select your gender.'
         isGenderOpen.value = true
         return
     }
 
-    console.log('register', {
-        firstName: firstName.value,
-        lastName: lastName.value,
-        birthday: birthday.value,
-        gender: gender.value,
-        contact: contact.value,
-    })
+    // Map form fields to backend DTO.
+    const username = `${firstName.value}.${lastName.value}`.trim().toLowerCase()
+    const email = contact.value
+
+    errorMsg.value = ''
+    isLoading.value = true
+    try {
+        const res = await authApi.register({
+            username,
+            first_name: firstName.value,
+            last_name: lastName.value,
+            email,
+            password: password.value,
+            birthday: birthdayDate.value,
+            gender: gender.value,
+        })
+        auth.setAuth(res.token, res.user)
+        router.push('/')
+    } catch (err: unknown) {
+        errorMsg.value = err instanceof Error ? err.message : 'Registration failed. Please try again.'
+    } finally {
+        isLoading.value = false
+    }
 }
 
 function goToLogin() {

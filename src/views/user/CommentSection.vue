@@ -155,21 +155,20 @@ defineExpose({
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin: 28px 0 14px;
+  margin: 24px 0 14px;
 }
 .section-title {
-  font-family: 'Playfair Display', serif;
-  font-size: 1.05rem;
-  font-weight: 700;
+  color: var(--text, #172033);
+  font-size: 1rem;
+  font-weight: 950;
 }
 .sort-select {
-  font-family: 'DM Sans', sans-serif;
-  font-size: 0.82rem;
+  font-size: 0.78rem;
   border: 1px solid var(--border);
   background: var(--card);
   color: var(--text);
-  border-radius: 8px;
-  padding: 5px 10px;
+  border-radius: 999px;
+  padding: 7px 11px;
   cursor: pointer;
   outline: none;
 }
@@ -178,7 +177,7 @@ defineExpose({
   background: var(--card);
   border-radius: var(--radius);
   border: 1px solid var(--border);
-  padding: 18px 20px;
+  padding: 16px 18px;
   box-shadow: var(--shadow);
   margin-bottom: 12px;
   animation: fadeUp .35s ease both;
@@ -214,7 +213,8 @@ defineExpose({
   flex-shrink: 0;
 }
 .comment-name {
-  font-weight: 600;
+  color: var(--text, #172033);
+  font-weight: 900;
   font-size: 0.88rem;
 }
 .comment-time {
@@ -225,7 +225,7 @@ defineExpose({
 .comment-body {
   font-size: 0.88rem;
   line-height: 1.68;
-  color: #3a3630;
+  color: #334155;
   margin-bottom: 10px;
 }
 .comment-footer {
@@ -269,7 +269,7 @@ defineExpose({
 .nested-reply {
   margin-top: 12px;
   margin-left: 24px;
-  background: #f9f7f4;
+  background: #f8fafc;
   border-left: 3px solid var(--accent-light);
   border-radius: 0 10px 10px 0;
   padding: 14px 16px;
@@ -290,7 +290,7 @@ defineExpose({
   display: flex;
   align-items: center;
   gap: 10px;
-  background: #e8e4dd;
+  background: #fff;
   border: 1px solid var(--border);
   border-radius: 50px;
   padding: 8px 8px 8px 16px;
@@ -324,7 +324,7 @@ defineExpose({
   flex-shrink: 0;
 }
 .send-btn:hover {
-  background: #1f4f3a;
+  background: var(--accent-dark, #164e63);
   transform: scale(1.07);
 }
 .send-btn svg {
@@ -336,7 +336,7 @@ defineExpose({
   width: 42px;
   height: 42px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #2d6a4f 30%, #c77c3e);
+  background: linear-gradient(135deg, var(--accent, #0f766e), #22c1b6);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -344,5 +344,27 @@ defineExpose({
   font-weight: 700;
   font-size: 0.95rem;
   flex-shrink: 0;
+}
+
+@media (max-width: 640px) {
+  .section-header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .comment-card {
+    padding: 14px;
+  }
+
+  .nested-reply {
+    margin-left: 10px;
+    padding: 12px;
+  }
+
+  .reply-input-row {
+    border-radius: 18px;
+    padding-left: 12px;
+  }
 }
 </style>
