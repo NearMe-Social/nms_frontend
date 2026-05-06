@@ -22,9 +22,11 @@ export const useNearbyStore = defineStore('nearby', () => {
   async function updateMyLocation(lat: number, lng: number) {
     const authStore = useAuthStore()
 
-    if (!authStore.token) return
+    if (!authStore.token) {
+      throw new Error('You need to be logged in before sharing nearby location.')
+    }
 
-    await fetch('http://localhost:3000/users/me/location', {
+    const res = await fetch('http://localhost:3000/users/me/location', {
       method: 'PATCH',
       headers: {
         Authorization: `Bearer ${authStore.token}`,
@@ -32,6 +34,11 @@ export const useNearbyStore = defineStore('nearby', () => {
       },
       body: JSON.stringify({ lat, lng }),
     })
+
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}))
+      throw new Error(`Location update failed: ${body?.message ?? `HTTP ${res.status}`}`)
+    }
   }
 
   async function fetchNearby(lat: number, lng: number, radius = 200) {
@@ -40,7 +47,7 @@ export const useNearbyStore = defineStore('nearby', () => {
     error.value = null
 
     try {
-      await updateMyLocation(lat, lng).catch(() => undefined)
+      await updateMyLocation(lat, lng)
 
       const params = new URLSearchParams({
         lat: String(lat),
@@ -57,7 +64,7 @@ export const useNearbyStore = defineStore('nearby', () => {
 
       if (!res.ok) {
         const body = await res.json().catch(() => ({}))
-        throw new Error(body?.message ?? `HTTP ${res.status}`)
+        throw new Error(`Nearby users failed: ${body?.message ?? `HTTP ${res.status}`}`)
       }
 
       users.value = await res.json()

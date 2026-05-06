@@ -32,8 +32,8 @@
 
         <div class="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h1 class="text-xl md:text-2xl font-bold text-gray-800">Nearby Feed</h1>
-            <p class="text-gray-400 text-sm mt-1">See what's happening right now in your immediate circle.</p>
+            <h1 class="text-3xl font-extrabold tracking-tight text-slate-900 lg:text-4xl">Nearby Feed</h1>
+            <p class="mt-2 text-sm font-medium text-slate-400">See what's happening right now in your immediate circle.</p>
           </div>
 
           <div class="hidden md:flex gap-2">
