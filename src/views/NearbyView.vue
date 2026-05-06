@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import { Flag, Lock, MapPin, MessageCircle, ShieldCheck, SlidersHorizontal, UserRound } from 'lucide-vue-next'
 import { useNearbyStore, type NearbyUser } from '@/stores/nearbyStore'
@@ -52,6 +52,10 @@ function approximateDistance(meters: number) {
   return 'outside radius'
 }
 
+function userDistance(user: NearbyUser) {
+  return user.distance_label ?? approximateDistance(user.distance_m)
+}
+
 function pinForUser(user: NearbyUser, index: number) {
   const pin = mapPins[index % mapPins.length]
   return {
@@ -64,12 +68,19 @@ function pinForUser(user: NearbyUser, index: number) {
 async function init() {
   const position = await geo.request()
   if (!position) return
-  await nearbyStore.fetchNearby(position.lat, position.lng)
-  nearbyStore.startPolling(position.lat, position.lng)
+  await nearbyStore.fetchNearby(position.lat, position.lng, radius.value)
+  nearbyStore.startPolling(position.lat, position.lng, radius.value)
 }
 
 onMounted(init)
 onUnmounted(() => nearbyStore.stopPolling())
+
+watch(radius, async () => {
+  const position = geo.coords.value
+  if (!position) return
+  await nearbyStore.fetchNearby(position.lat, position.lng, radius.value)
+  nearbyStore.startPolling(position.lat, position.lng, radius.value)
+})
 </script>
 
 <template>
@@ -174,7 +185,7 @@ onUnmounted(() => nearbyStore.stopPolling())
               class="user-pin"
               :class="pinForUser(user, index).color"
               :style="{ left: pinForUser(user, index).left, top: pinForUser(user, index).top }"
-              :title="`${user.username}, ${approximateDistance(user.distance_m)}`"
+              :title="`${user.username}, ${userDistance(user)}`"
             >
               <UserRound />
             </button>
@@ -224,7 +235,7 @@ onUnmounted(() => nearbyStore.stopPolling())
             <div class="person-avatar">{{ user.username.slice(0, 2).toUpperCase() }}</div>
             <div>
               <strong>{{ user.username }}</strong>
-              <span>{{ approximateDistance(user.distance_m) }}</span>
+              <span>{{ userDistance(user) }}</span>
             </div>
             <div class="person-actions">
               <RouterLink to="/chat">Message</RouterLink>
