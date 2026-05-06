@@ -2,7 +2,8 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 
 interface AuthUser {
-  userId: number
+  userId?: number
+  user_id?: number
   username: string
   email: string
   role: string
@@ -17,10 +18,15 @@ export const useAuthStore = defineStore('auth', () => {
   const isLoggedIn = computed(() => !!token.value)
 
   function setAuth(newToken: string, userData: AuthUser) {
+    const normalizedUser = {
+      ...userData,
+      userId: userData.userId ?? userData.user_id,
+    }
+
     token.value = newToken
-    user.value = userData
+    user.value = normalizedUser
     localStorage.setItem('token', newToken)
-    localStorage.setItem('auth_user', JSON.stringify(userData))
+    localStorage.setItem('auth_user', JSON.stringify(normalizedUser))
   }
 
   // Keep setToken for backward compatibility

@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { postApi } from '@/services/api'
+import { useAuthStore } from '@/stores/auth'
+import { useGeolocation } from '@/composables/useGeolocation'
 import Navbar from '@/components/Navbar.vue'
 import AppSidebar from '@/components/AppSidebar.vue'
 import {
@@ -29,6 +32,9 @@ const selectedImageUrl = ref('')
 const selectedImageName = ref('')
 let activeObjectUrl: string | null = null
 const router = useRouter()
+const auth = useAuthStore()
+const geo = useGeolocation()
+const submitError = ref('')
 
 const isReadyToSubmit = computed(
   () =>
@@ -71,10 +77,46 @@ function handleImageChange(event: Event) {
   selectedImageName.value = file.name
 }
 
-function submitPost() {
+function durationToMs(duration: (typeof durationOptions)[number]) {
+  const amount = Number(duration.replace('h', ''))
+  return amount * 60 * 60 * 1000
+}
+
+async function getPostLocation() {
+  const position = await geo.request()
+  return position ?? geo.getLastKnownLocation()
+}
+
+async function submitPost() {
   if (!isReadyToSubmit.value) return
+  const userId = auth.user?.userId ?? auth.user?.user_id
+
+  if (!userId) {
+    submitError.value = 'Please log in again before posting.'
+    return
+  }
+
   submitting.value = true
-  window.setTimeout(() => {
+  submitError.value = ''
+
+  try {
+    const position = await getPostLocation()
+    if (!position) {
+      submitError.value =
+        'Location is required to create a nearby post. Try opening Nearby Users once, then create the post again.'
+      return
+    }
+
+    await postApi.create({
+      user_id: userId,
+      title: title.value.trim(),
+      content: content.value.trim(),
+      latitude: position.lat,
+      longitude: position.lng,
+      visibility_radius: visibilityRadius.value,
+      expires_at: new Date(Date.now() + durationToMs(selectedDuration.value)).toISOString(),
+    })
+
     submitting.value = false
     title.value = ''
     content.value = ''
@@ -84,7 +126,11 @@ function submitPost() {
     selectedDuration.value = '12h'
     clearSelectedImage()
     router.push('/discussions')
-  }, 900)
+  } catch (err: unknown) {
+    submitError.value = err instanceof Error ? err.message : 'Failed to create post.'
+  } finally {
+    submitting.value = false
+  }
 }
 
 onBeforeUnmount(() => {
@@ -278,6 +324,10 @@ onBeforeUnmount(() => {
                 </div>
 
                 <div class="flex flex-wrap items-center justify-between gap-3 pt-1">
+                  <p v-if="submitError" class="basis-full text-sm font-semibold text-rose-600">
+                    {{ submitError }}
+                  </p>
+                  <button class="text-xs font-bold text-slate-500 transition hover:text-slate-800">Discard Draft</button>
                   <button
                     type="button"
                     class="text-xs font-bold text-slate-500 transition hover:text-slate-800"

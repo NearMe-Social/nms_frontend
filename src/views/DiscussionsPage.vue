@@ -1,8 +1,10 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import Navbar from '@/components/Navbar.vue'
 import AppSidebar from '@/components/AppSidebar.vue'
+import { postApi, type ApiPost } from '@/services/api'
+import { useAuthStore } from '@/stores/auth'
 import {
   Clock3,
   Heart,
@@ -15,9 +17,9 @@ import {
   Sparkles,
 } from 'lucide-vue-next'
 
-type PostStatus = 'published' | 'draft' | 'scheduled'
+type PostStatus = 'published'
 
-type MockPost = {
+type MyPost = {
   id: number
   title: string
   body: string
@@ -35,59 +37,39 @@ type MockPost = {
 const tabs = [
   { key: 'all', label: 'All' },
   { key: 'published', label: 'Published' },
-  { key: 'draft', label: 'Drafts' },
-  { key: 'scheduled', label: 'Scheduled' },
 ] as const
 
+const auth = useAuthStore()
 const activeTab = ref<(typeof tabs)[number]['key']>('all')
 const searchTerm = ref('')
+const posts = ref<ApiPost[]>([])
+const loading = ref(true)
+const error = ref('')
 
-const posts: MockPost[] = [
-  {
-    id: 1,
-    title: 'Water Main Repair - Elm Street',
-    body: 'Public works is starting repairs on the main line tonight between 8 PM and 11 PM. Please avoid that route.',
-    status: 'published',
-    visibility: 200,
-    timeLabel: '15 minutes ago',
-    likes: 28,
-    comments: 7,
-    shares: 3,
-    category: 'Update',
-    featured: true,
-    image: 'https://images.unsplash.com/photo-1503387762-592deb58ef4e?auto=format&fit=crop&w=900&q=80',
-  },
-  {
-    id: 2,
-    title: 'Found Golden Retriever',
-    body: 'Found wandering near the reservoir. Very friendly, wearing a blue collar but no tag.',
-    status: 'published',
-    visibility: 100,
-    timeLabel: '2 hours ago',
-    likes: 16,
-    comments: 5,
-    shares: 1,
-    category: 'Lost and found',
-    image: 'https://images.unsplash.com/photo-1552053831-71594a27632d?auto=format&fit=crop&w=700&q=80',
-  },
-  {
-    id: 3,
-    title: 'Weekend Community Yoga',
-    body: 'Join us this Saturday at 8 AM in the north lawn. All levels welcome.',
-    status: 'scheduled',
-    visibility: 200,
-    timeLabel: 'Friday, 7:00 PM',
-    likes: 0,
-    comments: 2,
-    shares: 0,
-    category: 'Events',
-  },
-]
+const myPosts = computed<MyPost[]>(() => {
+  const userId = auth.user?.userId ?? auth.user?.user_id
+
+  return posts.value
+    .filter((post) => !userId || post.user?.user_id === userId)
+    .map((post, index) => ({
+      id: post.post_id,
+      title: post.title,
+      body: post.content,
+      status: 'published',
+      visibility: post.visibility_radius,
+      timeLabel: timeAgo(post.created_at),
+      likes: post.reactions?.length ?? post.reactions_count ?? 0,
+      comments: post.comments?.length ?? post.comments_count ?? 0,
+      shares: 0,
+      category: post.status,
+      featured: index === 0,
+    }))
+})
 
 const filteredPosts = computed(() => {
   const needle = searchTerm.value.trim().toLowerCase()
 
-  return posts.filter((post) => {
+  return myPosts.value.filter((post) => {
     const matchesTab = activeTab.value === 'all' || post.status === activeTab.value
     const matchesSearch =
       needle.length === 0 ||
@@ -100,13 +82,37 @@ const filteredPosts = computed(() => {
 })
 
 const stats = computed(() => {
-  const totalEngagement = posts.reduce((sum, post) => sum + post.likes + post.comments + post.shares, 0)
+  const totalEngagement = myPosts.value.reduce((sum, post) => sum + post.likes + post.comments + post.shares, 0)
   return {
-    views: '8.2k',
-    activeNeighbors: 245,
+    views: String(myPosts.value.length),
+    activeNeighbors: myPosts.value.length,
     engagement: totalEngagement,
   }
 })
+
+async function loadPosts() {
+  loading.value = true
+  error.value = ''
+  try {
+    posts.value = await postApi.list('latest')
+  } catch (err: unknown) {
+    error.value = err instanceof Error ? err.message : 'Failed to load your posts.'
+  } finally {
+    loading.value = false
+  }
+}
+
+function timeAgo(value: string) {
+  const diffMs = Date.now() - new Date(value).getTime()
+  const minutes = Math.max(0, Math.floor(diffMs / 60000))
+  if (minutes < 1) return 'just now'
+  if (minutes < 60) return `${minutes} minutes ago`
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `${hours} hours ago`
+  return `${Math.floor(hours / 24)} days ago`
+}
+
+onMounted(loadPosts)
 </script>
 
 <template>
@@ -165,7 +171,14 @@ const stats = computed(() => {
               </div>
             </section>
 
-            <section class="grid auto-rows-fr gap-5 lg:grid-cols-2">
+            <p v-if="loading" class="rounded-[18px] bg-white p-5 text-sm font-semibold text-slate-500 ring-1 ring-slate-200/70">
+              Loading your posts...
+            </p>
+            <p v-else-if="error" class="rounded-[18px] bg-white p-5 text-sm font-semibold text-rose-600 ring-1 ring-rose-100">
+              {{ error }}
+            </p>
+
+            <section v-else class="grid auto-rows-fr gap-5 lg:grid-cols-2">
               <article
                 v-for="post in filteredPosts"
                 :key="post.id"
