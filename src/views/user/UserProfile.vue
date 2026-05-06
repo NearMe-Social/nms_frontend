@@ -41,7 +41,11 @@
         </div>
       </div>
       <div class="profile-actions">
-        <button class="btn-follow">Follow</button>
+        <button v-if="isOwnProfile" class="btn-edit" @click="handleEditProfile">
+          <EditIcon :size="14" />
+          Edit Profile
+        </button>
+        <button v-else class="btn-follow">Follow</button>
         <button class="btn-msg">
           <MailIcon :size="14" />
           Message
@@ -166,6 +170,8 @@
 
 <script setup>
 import { ref, computed } from 'vue'
+import { useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
 import profileNavbar from '@/components/profileNavbar.vue'
 import {
   MapPin  as MapPinIcon,
@@ -177,7 +183,11 @@ import {
   Check   as CheckIcon,
   Loader2  as LoaderIcon,
   FileText as FileTextIcon,
+  Edit2   as EditIcon,
 } from 'lucide-vue-next'
+
+const router = useRouter()
+const authStore = useAuthStore()
 
 const activeTab = ref('Latest')
 const tabs = ['Latest', 'Popular', 'Media']
@@ -185,6 +195,16 @@ const tabs = ['Latest', 'Popular', 'Media']
 // Loading and data states
 const isLoading = ref(false)
 const userLoaded = ref(true) // Set to true for demo, would be false initially
+
+// Check if this is the current user's profile
+const isOwnProfile = computed(() => {
+  // In a real app, you'd compare the profile being viewed with the current user
+  return true // For now, assume it's your own profile
+})
+
+const handleEditProfile = () => {
+  router.push('/profile/edit')
+}
 
 const user = {
   name: 'Julian Thorne',
@@ -406,6 +426,28 @@ const showEmptyState = computed(() => !isLoading.value && !hasPosts.value)
 
 .btn-follow:hover {
   background: #1348c0;
+}
+
+.btn-edit {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 22px;
+  background: #667eea;
+  color: #fff;
+  border: none;
+  border-radius: 999px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.btn-edit:hover {
+  background: #5568d3;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
 }
 
 /* ── Body grid ── */
