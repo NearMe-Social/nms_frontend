@@ -25,7 +25,6 @@
       <button class="mobile-search" type="button" title="Search">
         <Search class="icon" />
       </button>
-      <RouterLink to="/create-post" class="create-action">Create</RouterLink>
       <RouterLink to="/notifications" class="icon-link" title="Notifications">
         <Bell class="icon" />
         <span class="notification-dot"></span>
@@ -124,8 +123,7 @@ function handleLogout() {
   margin-left: auto;
 }
 
-.nav-links a,
-.create-action {
+.nav-links a {
   border-radius: 999px;
   padding: 8px 12px;
   color: #607486;
@@ -145,11 +143,6 @@ function handleLogout() {
   gap: 8px;
   margin-left: auto;
   flex: 0 0 auto;
-}
-
-.create-action {
-  background: #0f8a7c;
-  color: #fff;
 }
 
 .icon-link,
@@ -178,36 +171,6 @@ function handleLogout() {
   height: 18px;
 }
 
-<<<<<<< HEAD
-      <!-- Right actions -->
-      <div class="flex items-center gap-1 shrink-0">
-        <button class="md:hidden w-9 h-9 flex items-center justify-center rounded-full hover:bg-gray-100 transition">
-          <Search class="w-5 h-5 text-gray-500" />
-        </button>
-        <RouterLink
-          to="/create-post"
-          class="hidden md:inline-flex items-center gap-2 h-9 px-4 rounded-full bg-teal-600 text-white text-sm font-semibold hover:bg-teal-700 transition"
-        >
-          <Plus class="w-4 h-4" />
-          Create Post
-        </RouterLink>
-        <RouterLink to="/notifications"
-          class="relative w-9 h-9 flex items-center justify-center rounded-full hover:bg-gray-100 transition">
-          <Bell class="w-5 h-5 text-gray-500" />
-          <span class="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full"></span>
-        </RouterLink>
-        <RouterLink to="/settings"
-          class="w-9 h-9 flex items-center justify-center rounded-full hover:bg-gray-100 transition">
-          <Settings class="w-5 h-5 text-gray-500" />
-        </RouterLink>
-        <RouterLink to="/profile" class="ml-1">
-          <img
-            src="https://i.pravatar.cc/150?img=12"
-            class="w-9 h-9 rounded-full object-cover ring-2 ring-teal-400"
-          />
-        </RouterLink>
-      </div>
-=======
 .notification-dot {
   position: absolute;
   top: 8px;
@@ -218,7 +181,6 @@ function handleLogout() {
   border-radius: 999px;
   background: #ef4444;
 }
->>>>>>> Development
 
 .profile-link img {
   width: 32px;
@@ -228,11 +190,6 @@ function handleLogout() {
   box-shadow: 0 0 0 2px #2dd4bf;
 }
 
-<<<<<<< HEAD
-<script setup>
-import { Search, Bell, Settings, Plus } from 'lucide-vue-next'
-</script>
-=======
 .mobile-search {
   display: none;
 }
@@ -256,7 +213,6 @@ import { Search, Bell, Settings, Plus } from 'lucide-vue-next'
   }
 
   .search-box,
-  .create-action,
   .nav-links,
   .actions .icon-link[title='Settings'] {
     display: none;
@@ -267,4 +223,3 @@ import { Search, Bell, Settings, Plus } from 'lucide-vue-next'
   }
 }
 </style>
->>>>>>> Development

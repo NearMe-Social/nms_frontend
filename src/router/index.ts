@@ -1,10 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
-<<<<<<< HEAD
-=======
 import { useAuthStore } from '@/stores/auth'
-// import Login from '@/views/auth/LoginPage.vue'
-// import Register from '@/views/auth/RegisterPage.vue'
->>>>>>> Development
+import Login from '@/views/auth/LoginPage.vue'
+import Register from '@/views/auth/RegisterPage.vue'
 import HomePage from '@/views/user/HomePage.vue'
 import UserProfile from '@/views/user/UserProfile.vue'
 import PrivateChat from '@/views/user/PrivateChat.vue'
@@ -12,23 +9,21 @@ import Notifications from '@/views/user/Notifications.vue'
 import Settings from '@/views/user/Settings.vue'
 import PermissionRequest from '@/views/user/PermissionRequest.vue'
 import DiscussionDetail from '@/views/user/DiscussionDetail.vue'
-<<<<<<< HEAD
-=======
 import CreateDiscussion from '@/views/user/CreateDiscussion.vue'
->>>>>>> Development
 import NearbyView from '@/views/NearbyView.vue'
 import CreatePostPage from '@/views/CreatePostPage.vue'
 import DiscussionsPage from '@/views/DiscussionsPage.vue'
 
 const routes = [
-  // {
-  //   path: '/login',
-  //   name: 'Login',
-  //   component: Login,
-  // },
+  {
+    path: '/login',
+    name: 'Login',
+    component: Login,
+  },
   {
     path: '/register',
-    redirect: '/',
+    name: 'Register',
+    component: Register,
   },
   {
     path: '/permission-request',
@@ -43,12 +38,6 @@ const routes = [
     meta: { requiresAuth: true },
   },
   {
-<<<<<<< HEAD
-    path: '/create-post',
-    name: 'CreatePostPage',
-    component: CreatePostPage,
-    meta: { requiresAuth: true },
-=======
     path: '/discussion/new',
     name: 'CreateDiscussion',
     component: CreateDiscussion,
@@ -58,48 +47,50 @@ const routes = [
     path: '/create-post',
     name: 'CreatePostPage',
     component: CreatePostPage,
->>>>>>> Development
+    meta: { requiresAuth: true },
   },
   {
     path: '/discussions',
     name: 'DiscussionsPage',
     component: DiscussionsPage,
-<<<<<<< HEAD
     meta: { requiresAuth: true },
-=======
->>>>>>> Development
   },
 
   {
     path: '/',
     name: 'HomePage',
     component: HomePage,
-   // meta: { requiresAuth: true },
+    meta: { requiresAuth: true },
   },
   {
     path: '/profile',
     name: 'UserProfile',
     component: UserProfile,
+    meta: { requiresAuth: true },
   },
   {
     path: '/chat',
     name: 'PrivateChat',
     component: PrivateChat,
+    meta: { requiresAuth: true },
   },
   {
     path: '/notifications',
     name: 'Notifications',
     component: Notifications,
+    meta: { requiresAuth: true },
   },
   {
     path: '/settings',
     name: 'Settings',
     component: Settings,
+    meta: { requiresAuth: true },
   },
   {
     path: '/nearby',
     name: 'nearby',
     component: NearbyView,
+    meta: { requiresAuth: true },
   },
 ]
 
@@ -108,8 +99,6 @@ const router = createRouter({
   routes,
 })
 
-<<<<<<< HEAD
-=======
 router.beforeEach((to, from, next) => {
   const auth = useAuthStore()
 
@@ -127,5 +116,4 @@ router.beforeEach((to, from, next) => {
   }
 })
 
->>>>>>> Development
 export default router

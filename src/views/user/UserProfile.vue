@@ -1,1006 +1,506 @@
 <template>
-  <profileNavbar/>
   <div class="profile-page">
-    <!-- Loading State -->
-    <div v-if="isLoading" class="loading-state">
-      <div class="loading-spinner">
-        <LoaderIcon :size="48" class="spinner-icon" />
-      </div>
-      <div class="loading-text">Loading profile...</div>
-    </div>
+    <Navbar />
 
-    <!-- Main Profile Content -->
-    <div v-else-if="userLoaded" class="profile-content">
-      <!-- Hero Banner -->
-      <div class="profile-hero">
-        <div class="profile-avatar-wrap">
-          <div class="profile-avatar">
-            <div class="avatar-initials">JT</div>
+    <div class="profile-shell">
+      <AppSidebar class="hidden md:flex" />
+
+      <main class="workspace">
+        <section class="profile-header">
+          <div class="cover-map">
+            <div class="map-grid"></div>
+            <div class="signal-ring"></div>
           </div>
-          <div class="avatar-badge">
-            <CheckIcon :size="11" color="white" />
-          </div>
-        </div>
-      </div>
 
-    <!-- Name / Actions Bar -->
-    <div class="profile-info-bar">
-      <div class="profile-head">
-        <div class="profile-name">{{ user.name }}</div>
-        <div class="profile-handle">{{ user.handle }}</div>
-        <div class="profile-meta">
-          <MapPinIcon :size="13" />
-          {{ user.location }} • {{ user.role }}
-        </div>
-        <p class="profile-blurb">{{ user.bio }}</p>
-        <div class="profile-stats">
-          <div class="profile-stat" v-for="stat in user.stats" :key="stat.label">
-            <div class="stat-num">{{ stat.value }}</div>
-            <div class="stat-label">{{ stat.label }}</div>
-          </div>
-        </div>
-      </div>
-      <div class="profile-actions">
-        <button class="btn-follow">Follow</button>
-        <button class="btn-msg">
-          <MailIcon :size="14" />
-          Message
-        </button>
-      </div>
-    </div>
-
-    <!-- Body Grid -->
-    <div class="profile-body">
-
-      <!-- SIDEBAR -->
-      <aside class="sidebar">
-
-        <!-- Biography -->
-        <div class="card">
-          <div class="card-label">Biography</div>
-          <p class="bio-text">{{ user.bio }}</p>
-          <div class="tag-row">
-            <span class="tag" v-for="tag in user.tags" :key="tag">{{ tag }}</span>
-          </div>
-        </div>
-
-        <!-- Stats -->
-        <div class="stats-grid">
-          <div class="stat-cell">
-            <div class="stat-num">{{ user.followers }}</div>
-            <div class="stat-lbl">Followers</div>
-          </div>
-          <div class="stat-cell">
-            <div class="stat-num">{{ user.following }}</div>
-            <div class="stat-lbl">Following</div>
-          </div>
-        </div>
-
-        <!-- Published Essays -->
-        <div class="essays-card">
-          <div>
-            <div class="essays-num">{{ user.essays }}</div>
-            <div class="essays-lbl">Published Essays</div>
-          </div>
-          <BookOpenIcon :size="32" color="rgba(255,255,255,0.65)" />
-        </div>
-
-        <!-- Active badge -->
-        <div class="active-badge">
-          <span class="dot"></span>
-          Currently active in {{ user.activeIn }}
-        </div>
-
-      </aside>
-
-      <!-- POSTS -->
-      <section class="posts-section">
-
-        <div class="posts-header">
-          <div class="posts-title">Recent Editorial Posts</div>
-          <div class="tab-bar">
-            <button
-              v-for="tab in tabs"
-              :key="tab"
-              class="tab"
-              :class="{ active: activeTab === tab }"
-              @click="activeTab = tab"
-            >{{ tab }}</button>
-          </div>
-        </div>
-
-        <!-- Featured post -->
-        <div class="post-featured">
-          <div class="post-img post-img-arch"></div>
-          <div class="post-body">
-            <div class="post-badge">
-              <StarIcon :size="12" />
-              Featured Insight
+          <div class="profile-summary">
+            <div class="avatar-wrap">
+              <img
+                :src="profileImage"
+                :alt="`${displayName} profile photo`"
+                class="avatar"
+              />
+              <span class="status-dot" />
             </div>
-            <div class="post-h">The Future of Third Spaces: Why Libraries are the New Social Clubs</div>
-            <div class="post-excerpt">
-              In an era of digital isolation, physical repositories of knowledge are transforming into the most vital community hubs of the decade…
-            </div>
-            <div class="post-footer">
-              <div class="post-meta">
-                <span class="meta-item"><HeartIcon :size="14" /> 1.2k</span>
-                <span class="meta-item"><MessageSquareIcon :size="14" /> 84</span>
-              </div>
-              <span class="post-date">Oct 12, 2023</span>
-            </div>
-          </div>
-        </div>
 
-        <!-- Posts Grid or Empty State -->
-        <div v-if="showEmptyState" class="empty-state">
-          <div class="empty-icon">
-            <FileTextIcon :size="64" />
-          </div>
-          <div class="empty-title">No posts yet</div>
-          <div class="empty-description">
-            {{ user.name }} hasn't published any posts or discussions yet.
-          </div>
-        </div>
+            <div class="summary-copy">
+              <p class="eyebrow">Verified neighbor</p>
+              <h1>{{ displayName }}</h1>
+              <p class="handle">@{{ username }}</p>
+              <p class="bio">{{ bio }}</p>
 
-        <!-- Two-column grid -->
-        <div v-else class="posts-grid">
-          <div class="post-card" v-for="post in smallPosts" :key="post.id">
-            <div class="post-card-img" :class="post.imgClass"></div>
-            <div class="post-card-body">
-              <div class="post-card-h">{{ post.title }}</div>
-              <div class="post-card-meta">
-                <span class="meta-item"><HeartIcon :size="13" /> {{ post.likes }}</span>
-                <span class="meta-item"><MessageSquareIcon :size="13" /> {{ post.comments }}</span>
+              <div class="meta-row">
+                <span>
+                  <MapPin class="icon" />
+                  Oak Ridge Commons
+                </span>
+                <span>
+                  <ShieldCheck class="icon" />
+                  Approximate radius only
+                </span>
               </div>
             </div>
+
+            <div class="actions">
+              <RouterLink to="/settings" class="secondary-action">Edit profile</RouterLink>
+              <RouterLink to="/create-post" class="primary-action">
+                <Plus class="icon" />
+                Create post
+              </RouterLink>
+            </div>
           </div>
+        </section>
+
+        <section class="stats-grid" aria-label="Profile stats">
+          <article v-for="stat in stats" :key="stat.label" class="stat-card">
+            <component :is="stat.icon" class="stat-icon" />
+            <div>
+              <strong>{{ stat.value }}</strong>
+              <span>{{ stat.label }}</span>
+            </div>
+          </article>
+        </section>
+
+        <div class="content-grid">
+          <section class="panel">
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow">About</p>
+                <h2>Community profile</h2>
+              </div>
+            </div>
+
+            <p class="panel-text">{{ bio }}</p>
+
+            <div class="tag-row">
+              <span v-for="tag in tags" :key="tag">{{ tag }}</span>
+            </div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow">Activity</p>
+                <h2>Recent posts</h2>
+              </div>
+              <RouterLink to="/discussions">View all</RouterLink>
+            </div>
+
+            <div class="activity-list">
+              <article v-for="post in recentPosts" :key="post.title" class="activity-item">
+                <div class="activity-icon">
+                  <MessageSquare class="icon" />
+                </div>
+                <div>
+                  <strong>{{ post.title }}</strong>
+                  <span>{{ post.meta }}</span>
+                </div>
+              </article>
+            </div>
+          </section>
         </div>
-
-        <div class="explore-link">Explore Full Archive →</div>
-
-      </section>
+      </main>
     </div>
   </div>
-    </div>
 </template>
 
-<script setup>
-import { ref, computed } from 'vue'
-import profileNavbar from '@/components/profileNavbar.vue'
+<script setup lang="ts">
+import { computed } from 'vue'
+import { RouterLink } from 'vue-router'
 import {
-  MapPin  as MapPinIcon,
-  Mail    as MailIcon,
-  Star    as StarIcon,
-  Heart   as HeartIcon,
-  MessageSquare as MessageSquareIcon,
-  BookOpen as BookOpenIcon,
-  Check   as CheckIcon,
-  Loader2  as LoaderIcon,
-  FileText as FileTextIcon,
+  ClipboardList,
+  Heart,
+  MapPin,
+  MessageSquare,
+  Plus,
+  ShieldCheck,
+  Users,
 } from 'lucide-vue-next'
+import Navbar from '@/components/Navbar.vue'
+import AppSidebar from '@/components/AppSidebar.vue'
+import { useAuthStore } from '@/stores/auth'
 
-const activeTab = ref('Latest')
-const tabs = ['Latest', 'Popular', 'Media']
+const auth = useAuthStore()
 
-// Loading and data states
-const isLoading = ref(false)
-const userLoaded = ref(true) // Set to true for demo, would be false initially
+const username = computed(() => auth.user?.username ?? 'neighbor')
+const displayName = computed(() =>
+  username.value
+    .split(/[._-]/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ') || 'Nearme Neighbor',
+)
+const profileImage = computed(
+  () => `https://i.pravatar.cc/150?u=${encodeURIComponent(username.value)}`,
+)
 
-const user = {
-  name: 'Julian Thorne',
-  handle: '@juliant',
-  location: 'Brooklyn, New York',
-  role: 'Design Lead',
-  bio: 'Curating the intersection of urban architecture and community dynamics. I build spaces that foster intentional conversation and sustainable growth.',
-  tags: ['Architecture', 'Urbanism', 'Design Strategy'],
-  stats: [
-    { label: 'Posts', value: '128' },
-    { label: 'Followers', value: '12.4k' },
-    { label: 'Following', value: '842' },
-  ],
-  essays: 42,
-  activeIn: 'Brooklyn Commons',
-}
+const bio =
+  'Sharing useful local updates, nearby questions, and quick notices for neighbors in the commons.'
 
-// Mock posts data - set to empty array to test empty state
-const smallPosts = [
-  {
-    id: 2,
-    imgClass: 'post-img-calm',
-    title: 'Designing for Calm: Workplace Ethics',
-    likes: 450,
-    comments: 12,
-  },
-  {
-    id: 3,
-    imgClass: 'post-img-city',
-    title: 'Hyper-local: The 15 Minute City',
-    likes: 890,
-    comments: 31,
-  },
+const tags = ['Local updates', 'Safety aware', 'Community helper']
+
+const stats = [
+  { label: 'Posts', value: 'Live', icon: ClipboardList },
+  { label: 'Neighbors', value: 'Nearby', icon: Users },
+  { label: 'Helpful actions', value: 'Active', icon: Heart },
 ]
 
-// Computed properties for state management
-const hasPosts = computed(() => smallPosts.length > 0)
-const showEmptyState = computed(() => !isLoading.value && !hasPosts.value)
-
+const recentPosts = [
+  {
+    title: 'Neighborhood updates',
+    meta: 'Your posts now load from the backend in My Posts.',
+  },
+  {
+    title: 'Nearby visibility',
+    meta: 'Location is protected with approximate distance only.',
+  },
+  {
+    title: 'Private chat ready',
+    meta: 'Message neighbors from the shared navigation.',
+  },
+]
 </script>
 
 <style scoped>
 .profile-page {
-  display: flex;
-  flex-direction: column;
   min-height: 100vh;
-  font-family: 'DM Sans', sans-serif;
-  margin-left: 200px;
-  width: calc(100% - 200px);
-  background: #f0f2f8;
+  background: #f4f7fb;
+  color: #1f4054;
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
 }
 
-/* ── Hero ── */
-.profile-hero {
-  height: 220px;
-  background: linear-gradient(135deg, #0d1b3e 0%, #162d6b 40%, #1a4a6e 100%);
-  position: relative;
-}
-
-.profile-avatar-wrap {
-  position: absolute;
-  bottom: -48px;
-  left: 40px;
-}
-
-.profile-avatar {
-  width: 110px;
-  height: 110px;
-  border-radius: 18px;
-  border: 4px solid #fff;
-  overflow: hidden;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+.profile-shell {
   display: flex;
-  align-items: center;
-  justify-content: center;
+  min-width: 0;
 }
 
-.avatar-initials {
-  font-family: 'DM Serif Display', serif;
-  font-size: 36px;
-  color: #1a56db;
-  background: #eff4ff;
+.workspace {
   width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  min-width: 0;
+  flex: 1;
+  padding: 24px clamp(16px, 3vw, 32px) 40px;
 }
 
-.avatar-badge {
+.profile-header,
+.panel,
+.stat-card {
+  border: 1px solid #e3ebf2;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(15, 45, 70, 0.04);
+}
+
+.profile-header {
+  overflow: hidden;
+  border-radius: 18px;
+}
+
+.cover-map {
+  position: relative;
+  height: 170px;
+  overflow: hidden;
+  background: #dfeaf0;
+}
+
+.map-grid {
   position: absolute;
-  bottom: 6px;
-  right: 6px;
-  width: 22px;
-  height: 22px;
-  background: #00c9b1;
-  border-radius: 50%;
-  border: 2px solid #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  inset: 0;
+  opacity: 0.72;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.78) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.78) 1px, transparent 1px);
+  background-size: 34px 34px;
 }
 
-/* ── Info bar ── */
-.profile-info-bar {
-  background: #fff;
-  padding: 60px 40px 24px;
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  border-bottom: 1px solid #e2e8f0;
-}
-
-.profile-name {
-  font-family: 'DM Serif Display', serif;
-  font-size: 32px;
-  letter-spacing: -0.5px;
-  color: #1a1f36;
-  line-height: 1.1;
-}
-
-.profile-meta {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 13px;
-  color: #6b7280;
-  margin-top: 8px;
-}
-
-.profile-handle {
-  font-size: 14px;
-  color: #64748b;
-  margin-top: 6px;
-}
-
-.profile-blurb {
-  max-width: 720px;
-  margin-top: 16px;
-  font-size: 14px;
-  line-height: 1.75;
-  color: #475569;
-}
-
-.profile-stats {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-top: 18px;
-  background: #eff4ff;
-  border: 1px solid #e2e8f0;
-  border-radius: 28px;
-  padding: 14px;
-  justify-content: space-between;
-}
-
-.profile-stat {
-  min-width: 100px;
-  flex: 1;
-  background: transparent;
-  border: none;
-  border-radius: 14px;
-  padding: 0;
-  text-align: center;
-}
-
-.profile-stat .stat-num {
-  font-family: 'DM Serif Display', serif;
-  font-size: 24px;
-  color: #1a56db;
-}
-
-.profile-stat .stat-label {
-  margin-top: 6px;
-  text-transform: uppercase;
-  font-size: 10px;
-  font-weight: 700;
-  color: #64748b;
-}
-
-.profile-actions {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-}
-
-.btn-msg {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 12px 18px;
-  border: none;
+.signal-ring {
+  position: absolute;
+  left: 50%;
+  top: 54%;
+  width: 118px;
+  height: 118px;
+  transform: translate(-50%, -50%);
+  border: 1px solid #50b6cc;
   border-radius: 999px;
-  background: #2dd4bf;
-  font-family: 'DM Sans', sans-serif;
-  font-size: 13px;
-  font-weight: 600;
-  color: #0f2134;
-  cursor: pointer;
-  transition: all 0.15s;
+  background: rgba(80, 182, 204, 0.14);
+  box-shadow: 0 0 0 20px rgba(80, 182, 204, 0.08);
 }
 
-.btn-msg:hover {
-  background: #2bb8a9;
-}
-
-.btn-follow {
-  padding: 12px 22px;
-  background: #1a56db;
-  color: #fff;
-  border: none;
-  border-radius: 999px;
-  font-family: 'DM Sans', sans-serif;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.15s;
-}
-
-.btn-follow:hover {
-  background: #1348c0;
-}
-
-/* ── Body grid ── */
-.profile-body {
+.profile-summary {
   display: grid;
-  grid-template-columns: 280px 1fr;
-  gap: 28px;
-  padding: 28px 40px 48px;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 18px;
   align-items: start;
-  background: #f0f2f8;
-  flex: 1;
+  padding: 24px 24px 24px;
 }
 
-/* ── Sidebar ── */
-.sidebar {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
+.avatar-wrap {
+  position: relative;
+  margin-top: 0;
+  align-self: start;
 }
 
-.card {
-  background: #fff;
-  border-radius: 16px;
-  border: 1px solid #e2e8f0;
-  padding: 20px;
+.avatar {
+  width: 104px;
+  height: 104px;
+  border: 4px solid #fff;
+  border-radius: 18px;
+  object-fit: cover;
+  box-shadow: 0 14px 28px rgba(15, 45, 70, 0.16);
 }
 
-.card-label {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 1.2px;
+.status-dot {
+  position: absolute;
+  right: 9px;
+  bottom: 9px;
+  width: 16px;
+  height: 16px;
+  border: 3px solid #fff;
+  border-radius: 999px;
+  background: #0f8a7c;
+}
+
+.summary-copy {
+  min-width: 0;
+  padding-top: 0;
+}
+
+.eyebrow {
+  margin: 0;
+  color: #0e6378;
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: #1a56db;
-  margin-bottom: 10px;
 }
 
-.bio-text {
-  font-size: 13.5px;
+h1,
+h2 {
+  margin: 0;
+  color: #17364a;
+  letter-spacing: 0;
+}
+
+h1 {
+  margin-top: 4px;
+  font-size: clamp(1.7rem, 3vw, 2.35rem);
+  font-weight: 850;
+}
+
+h2 {
+  margin-top: 4px;
+  font-size: 1.05rem;
+  font-weight: 850;
+}
+
+.handle {
+  margin: 4px 0 0;
+  color: #7990a2;
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.bio,
+.panel-text {
+  color: #5d7285;
   line-height: 1.65;
-  color: #374151;
 }
 
-.tag-row {
+.bio {
+  max-width: 760px;
+  margin: 12px 0 0;
+  font-size: 0.92rem;
+}
+
+.meta-row,
+.actions,
+.tag-row,
+.panel-header,
+.activity-item,
+.stat-card {
   display: flex;
+  align-items: center;
+}
+
+.meta-row {
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 10px;
   margin-top: 14px;
 }
 
-.tag {
-  font-size: 11.5px;
-  font-weight: 600;
-  padding: 4px 10px;
-  border-radius: 20px;
-  border: 1.5px solid #00c9b1;
-  color: #00c9b1;
-  background: #f0fdfb;
+.meta-row span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 999px;
+  background: #f0f5f8;
+  padding: 7px 10px;
+  color: #4f687d;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.actions {
+  gap: 10px;
+  align-self: center;
+}
+
+.primary-action,
+.secondary-action,
+.panel-header a {
+  border-radius: 999px;
+  text-decoration: none;
+  font-size: 0.82rem;
+  font-weight: 850;
+}
+
+.primary-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #0f8a7c;
+  color: #fff;
+  padding: 10px 14px;
+  box-shadow: 0 12px 22px rgba(15, 138, 124, 0.18);
+}
+
+.secondary-action,
+.panel-header a {
+  border: 1px solid #dce7ee;
+  background: #f8fbff;
+  color: #4f687d;
+  padding: 10px 14px;
+}
+
+.icon {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
 }
 
 .stats-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.stat-card {
+  gap: 12px;
   border-radius: 14px;
-  overflow: hidden;
-  border: 1px solid #e2e8f0;
-  background: #fff;
+  padding: 16px;
 }
 
-.stat-cell {
-  padding: 16px 18px;
-  border-right: 1px solid #e2e8f0;
+.stat-icon {
+  width: 20px;
+  height: 20px;
+  color: #0f8a7c;
 }
 
-.stat-cell:last-child {
-  border-right: none;
+.stat-card strong {
+  display: block;
+  color: #17364a;
+  font-size: 1.3rem;
+  font-weight: 900;
 }
 
-.stat-num {
-  font-family: 'DM Serif Display', serif;
-  font-size: 24px;
-  color: #1a1f36;
-  line-height: 1;
-}
-
-.stat-lbl {
-  font-size: 10px;
+.stat-card span,
+.activity-item span {
+  color: #7890a2;
+  font-size: 0.78rem;
   font-weight: 700;
-  letter-spacing: 0.8px;
-  text-transform: uppercase;
-  color: #6b7280;
-  margin-top: 3px;
 }
 
-.essays-card {
-  background: #1a56db;
-  color: #fff;
-  border-radius: 16px;
-  padding: 18px 20px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.essays-num {
-  font-family: 'DM Serif Display', serif;
-  font-size: 30px;
-  line-height: 1;
-}
-
-.essays-lbl {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  opacity: 0.75;
-  margin-top: 3px;
-}
-
-.active-badge {
-  background: #f0fdfb;
-  border: 1.5px solid #b2f5ea;
-  border-radius: 12px;
-  padding: 12px 16px;
-  font-size: 13px;
-  font-weight: 600;
-  color: #0d9488;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #00c9b1;
-  flex-shrink: 0;
-}
-
-/* ── Posts ── */
-.posts-section {
-  min-width: 0;
-}
-
-.posts-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 18px;
-}
-
-.posts-title {
-  font-family: 'DM Serif Display', serif;
-  font-size: 20px;
-  color: #1a1f36;
-}
-
-.tab-bar {
-  display: flex;
-  gap: 4px;
-}
-
-.tab {
-  padding: 6px 14px;
-  border-radius: 8px;
-  font-size: 13px;
-  font-weight: 600;
-  color: #6b7280;
-  cursor: pointer;
-  border: none;
-  background: transparent;
-  font-family: 'DM Sans', sans-serif;
-  transition: all 0.15s;
-}
-
-.tab.active {
-  color: #1a56db;
-  border-bottom: 2px solid #1a56db;
-  border-radius: 0;
-}
-
-.tab:hover:not(.active) {
-  color: #1a1f36;
-}
-
-/* Featured post */
-.post-featured {
-  background: #fff;
-  border-radius: 16px;
-  border: 1px solid #e2e8f0;
-  overflow: hidden;
-  margin-bottom: 16px;
-  transition: box-shadow 0.2s;
-}
-
-.post-featured:hover {
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.07);
-}
-
-.post-img {
-  width: 100%;
-  height: 200px;
-}
-
-.post-img-arch {
-  background: linear-gradient(160deg, #c4a96a 0%, #6e5c3b 60%, #3d3328 100%);
-}
-
-.post-img-calm {
-  background: linear-gradient(160deg, #d4c5a9 0%, #8a9a7e 50%, #5a7a6e 100%);
-}
-
-.post-img-city {
-  background: linear-gradient(160deg, #2d3561 0%, #c24b4b 40%, #e8a24e 100%);
-}
-
-.post-body {
-  padding: 20px 24px 24px;
-}
-
-.post-badge {
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 1.2px;
-  text-transform: uppercase;
-  color: #00c9b1;
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  margin-bottom: 8px;
-}
-
-.post-h {
-  font-family: 'DM Serif Display', serif;
-  font-size: 22px;
-  line-height: 1.25;
-  color: #1a1f36;
-  margin-bottom: 10px;
-}
-
-.post-excerpt {
-  font-size: 13.5px;
-  color: #6b7280;
-  line-height: 1.6;
-  margin-bottom: 16px;
-}
-
-.post-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.post-meta {
-  display: flex;
-  gap: 14px;
-}
-
-.meta-item {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 12.5px;
-  color: #6b7280;
-  font-weight: 500;
-}
-
-.post-date {
-  font-size: 12px;
-  color: #6b7280;
-}
-
-/* Small post grid */
-.posts-grid {
+.content-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(260px, 0.72fr) minmax(0, 1.28fr);
   gap: 16px;
-  margin-bottom: 24px;
+  margin-top: 16px;
 }
 
-.post-card {
-  background: #fff;
-  border-radius: 16px;
-  border: 1px solid #e2e8f0;
-  overflow: hidden;
-  transition: box-shadow 0.2s;
-  cursor: pointer;
+.panel {
+  border-radius: 18px;
+  padding: 20px;
 }
 
-.post-card:hover {
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.07);
-}
-
-.post-card-img {
-  height: 140px;
-  width: 100%;
-}
-
-.post-card-body {
-  padding: 14px 16px 18px;
-}
-
-.post-card-h {
-  font-family: 'DM Serif Display', serif;
-  font-size: 16px;
-  line-height: 1.3;
-  color: #1a1f36;
-  margin-bottom: 10px;
-}
-
-.post-card-meta {
-  display: flex;
+.panel-header {
+  justify-content: space-between;
   gap: 12px;
 }
 
-.explore-link {
-  text-align: center;
-  font-size: 13.5px;
-  font-weight: 600;
-  color: #1a56db;
-  cursor: pointer;
+.panel-text {
+  margin: 16px 0 0;
+  font-size: 0.9rem;
+}
+
+.tag-row {
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.tag-row span {
+  border-radius: 999px;
+  background: #e8f7f4;
+  padding: 7px 10px;
+  color: #0f766e;
+  font-size: 0.76rem;
+  font-weight: 850;
+}
+
+.activity-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.activity-item {
+  gap: 12px;
+  border-radius: 14px;
+  background: #f8fbff;
   padding: 12px;
-  border-radius: 12px;
-  border: 1.5px solid #e2e8f0;
-  background: #fff;
-  transition: all 0.15s;
 }
 
-.explore-link:hover {
-  border-color: #1a56db;
-  background: #eff4ff;
+.activity-icon {
+  display: inline-flex;
+  width: 36px;
+  height: 36px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: #e0f4f8;
+  color: #0e6378;
 }
 
-@media (max-width: 1024px) {
-  .profile-page {
-    margin-left: 0;
-    width: 100%;
-  }
-
-  .profile-hero {
-    height: 180px;
-  }
-
-  .profile-avatar-wrap {
-    left: 50%;
-    transform: translateX(-50%);
-    bottom: -52px;
-  }
-
-  .profile-info-bar {
-    padding: 70px 20px 20px;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 20px;
-  }
-
-  .profile-actions {
-    width: 100%;
-    justify-content: center;
-    flex-wrap: wrap;
-    gap: 12px;
-  }
-
-  .btn-msg,
-  .btn-follow {
-    width: 48%;
-    min-width: 0;
-    justify-content: center;
-  }
-
-  .btn-msg {
-    order: 2;
-  }
-
-  .btn-follow {
-    order: 1;
-  }
-
-  .profile-body {
-    grid-template-columns: 1fr;
-    padding: 20px;
-    gap: 22px;
-  }
-
-  .sidebar {
-    display: none;
-  }
-
-  .posts-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 12px;
-  }
-
-  .tab-bar {
-    width: 100%;
-    flex-wrap: wrap;
-    justify-content: flex-start;
-  }
-
-  .posts-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .post-featured {
-    display: block;
-  }
-
-  .post-img {
-    height: 180px;
-  }
+.activity-item strong {
+  display: block;
+  color: #263f52;
+  font-size: 0.9rem;
 }
 
 @media (max-width: 900px) {
-  .profile-page {
-    margin-left: 0;
-    width: 100%;
-    padding-top: 68px;
-    padding-bottom: 100px;
-  }
-
-  .navbar + .profile-page {
-    margin-top: 0;
-  }
-
-  .profile-hero {
-    height: 180px;
-  }
-
-  .profile-avatar-wrap {
-    left: 50%;
-    transform: translateX(-50%);
-    bottom: -52px;
-  }
-
-  .profile-info-bar {
-    padding: 70px 18px 20px;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-    gap: 18px;
-  }
-
-  .profile-actions {
-    width: 100%;
-    justify-content: center;
-    flex-wrap: wrap;
-    gap: 12px;
-  }
-
-  .btn-msg,
-  .btn-follow {
-    width: 48%;
-    min-width: 0;
-    justify-content: center;
-  }
-
-  .profile-body {
-    grid-template-columns: 1fr;
-    padding: 20px;
-    gap: 22px;
-  }
-
-  .posts-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 12px;
-  }
-
-  .tab-bar {
-    width: 100%;
-    flex-wrap: wrap;
-    justify-content: flex-start;
-  }
-
-  .posts-grid {
+  .profile-summary,
+  .content-grid {
     grid-template-columns: 1fr;
   }
 
-  .post-card-img {
-    height: 140px;
+  .profile-summary {
+    align-items: start;
+  }
+
+  .actions {
+    flex-wrap: wrap;
   }
 }
 
 @media (max-width: 640px) {
-  .profile-info-bar {
-    padding: 62px 18px 18px;
-    align-items: center;
-    text-align: center;
+  .workspace {
+    padding: 16px 12px 32px;
   }
 
-  .profile-name {
-    font-size: 28px;
+  .profile-summary {
+    padding: 0 16px 18px;
   }
 
-  .profile-handle {
-    font-size: 14px;
+  .stats-grid {
+    grid-template-columns: 1fr;
   }
-
-  .profile-meta {
-    justify-content: center;
-    font-size: 12px;
-  }
-
-  .profile-blurb {
-    font-size: 13px;
-    max-width: 100%;
-    margin-left: auto;
-    margin-right: auto;
-  }
-
-  .profile-stats {
-    gap: 12px;
-  }
-
-  .btn-msg,
-  .btn-follow {
-    width: 48%;
-    padding: 14px 0;
-  }
-
-  .profile-body {
-    padding: 16px;
-  }
-
-  .post-card-img {
-    height: 120px;
-  }
-}
-
-/* ── Loading State ── */
-.loading-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 60vh;
-  padding: 40px 20px;
-  background: #f0f2f8;
-}
-
-.loading-spinner {
-  margin-bottom: 20px;
-}
-
-.spinner-icon {
-  color: #1a56db;
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-.loading-text {
-  font-size: 16px;
-  color: #6b7280;
-  font-weight: 500;
-}
-
-/* ── Empty State ── */
-.empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 60px 20px;
-  text-align: center;
-  background: #fff;
-  border-radius: 16px;
-  border: 1px solid #e2e8f0;
-  margin-bottom: 24px;
-}
-
-.empty-icon {
-  color: #cbd5e1;
-  margin-bottom: 20px;
-}
-
-.empty-title {
-  font-family: 'DM Serif Display', serif;
-  font-size: 24px;
-  color: #1a1f36;
-  margin-bottom: 8px;
-}
-
-.empty-description {
-  font-size: 14px;
-  color: #6b7280;
-  max-width: 300px;
-  line-height: 1.5;
 }
 </style>
