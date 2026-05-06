@@ -1,7 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import Login from '@/views/auth/LoginPage.vue'
-import Register from '@/views/auth/RegisterPage.vue'
+// import Login from '@/views/auth/LoginPage.vue'
+// import Register from '@/views/auth/RegisterPage.vue'
 import HomePage from '@/views/user/HomePage.vue'
 import UserProfile from '@/views/user/UserProfile.vue'
 import PrivateChat from '@/views/user/PrivateChat.vue'
@@ -15,15 +15,14 @@ import CreatePostPage from '@/views/CreatePostPage.vue'
 import DiscussionsPage from '@/views/DiscussionsPage.vue'
 
 const routes = [
-  {
-    path: '/login',
-    name: 'Login',
-    component: Login,
-  },
+  // {
+  //   path: '/login',
+  //   name: 'Login',
+  //   component: Login,
+  // },
   {
     path: '/register',
-    name: 'Register',
-    component: Register,
+    redirect: '/',
   },
   {
     path: '/permission-request',
@@ -47,50 +46,43 @@ const routes = [
     path: '/create-post',
     name: 'CreatePostPage',
     component: CreatePostPage,
-    meta: { requiresAuth: true },
   },
   {
     path: '/discussions',
     name: 'DiscussionsPage',
     component: DiscussionsPage,
-    meta: { requiresAuth: true },
   },
 
   {
     path: '/',
     name: 'HomePage',
     component: HomePage,
-    meta: { requiresAuth: true },
+   // meta: { requiresAuth: true },
   },
   {
     path: '/profile',
     name: 'UserProfile',
     component: UserProfile,
-    meta: { requiresAuth: true },
   },
   {
     path: '/chat',
     name: 'PrivateChat',
     component: PrivateChat,
-    meta: { requiresAuth: true },
   },
   {
     path: '/notifications',
     name: 'Notifications',
     component: Notifications,
-    meta: { requiresAuth: true },
   },
   {
     path: '/settings',
     name: 'Settings',
     component: Settings,
-    meta: { requiresAuth: true },
   },
   {
     path: '/nearby',
     name: 'nearby',
     component: NearbyView,
-    meta: { requiresAuth: true },
   },
 ]
 
