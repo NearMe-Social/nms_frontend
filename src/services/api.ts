@@ -103,3 +103,60 @@ export const postApi = {
     })
   },
 }
+
+export interface UserProfile {
+  userId?: number
+  user_id?: number
+  username: string
+  email: string
+  first_name: string
+  last_name: string
+  bio?: string
+  location?: string
+  website?: string
+  twitter_handle?: string
+  instagram_handle?: string
+  linkedin_url?: string
+  tags?: string[]
+  profile_image?: string
+}
+
+export interface UpdateProfilePayload {
+  first_name?: string
+  last_name?: string
+  bio?: string
+  location?: string
+  website?: string
+  twitter_handle?: string
+  instagram_handle?: string
+  linkedin_url?: string
+  tags?: string[]
+  profile_image?: string
+}
+
+export const userApi = {
+  getProfile(): Promise<UserProfile> {
+    return request<UserProfile>('/user/profile')
+  },
+
+  updateProfile(payload: UpdateProfilePayload): Promise<UserProfile> {
+    return request<UserProfile>('/user/profile', {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    })
+  },
+
+  uploadProfileImage(file: File): Promise<{ url: string }> {
+    const formData = new FormData()
+    formData.append('file', file)
+    return fetch(`${BASE_URL}/user/profile-image`, {
+      method: 'POST',
+      headers: {
+        ...(localStorage.getItem('token')
+          ? { Authorization: `Bearer ${localStorage.getItem('token')}` }
+          : {}),
+      },
+      body: formData,
+    }).then((res) => res.json())
+  },
+}
