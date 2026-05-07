@@ -73,7 +73,7 @@ const routes = [
     path: '/profile/edit',
     name: 'EditProfile',
     component: EditProfile,
-    // meta: { requiresAuth: true },
+    meta: { requiresAuth: true },
   },
   {
     path: '/chat',
