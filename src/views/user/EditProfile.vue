@@ -418,15 +418,8 @@ const handleSaveChanges = async () => {
     successMessage.value = ''
 
     const updatePayload: UpdateProfilePayload = {
-      first_name: formData.value.first_name,
-      last_name: formData.value.last_name,
+      username: formData.value.username,
       bio: formData.value.bio,
-      location: formData.value.location,
-      website: formData.value.website,
-      twitter_handle: formData.value.twitter_handle,
-      instagram_handle: formData.value.instagram_handle,
-      linkedin_url: formData.value.linkedin_url,
-      tags: formData.value.tags,
     }
 
     if (formData.value.profile_image) {
@@ -469,35 +462,41 @@ const handleCancel = () => {
   min-width: 0;
   flex: 1;
   min-height: 100vh;
-  background: #f8fbff;
-  padding: 22px clamp(16px, 2vw, 28px) 40px;
+  background: #f4f7fb;
+  color: #1f4054;
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  padding: 24px clamp(16px, 3vw, 32px) 40px;
 }
 
 .page-header {
-  padding: 48px 40px 32px;
-  background: white;
-  border-bottom: 1px solid #e5e7eb;
+  border: 1px solid #e3ebf2;
+  border-radius: 18px;
+  background: #fff;
+  padding: 24px;
+  box-shadow: 0 1px 3px rgba(15, 45, 70, 0.04);
 }
 
 .page-title {
-  font-size: 36px;
-  font-weight: 700;
-  color: #0f1419;
-  margin: 0 0 8px 0;
-  font-family: 'DM Serif Display', serif;
+  margin: 0;
+  color: #0f172a;
+  font-size: clamp(1.875rem, 2.6vw, 2.25rem);
+  font-weight: 850;
+  letter-spacing: 0;
+  line-height: 1.1;
 }
 
-    .page-subtitle {
-    font-size: 15px;
-  color: #65676e;
-  margin: 0;
-  font-family: 'DM Sans', sans-serif;
+.page-subtitle {
+  margin: 8px 0 0;
+  color: #7890a2;
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1.6;
 }
 
 .edit-profile-container {
   max-width: 1100px;
   margin: 0 auto;
-  padding: 40px;
+  padding: 24px 0 0;
   width: 100%;
 }
 
@@ -525,11 +524,11 @@ const handleCancel = () => {
 }
 
 .profile-photo-card {
-  background: white;
-  border-radius: 16px;
+  border: 1px solid #e3ebf2;
+  border-radius: 18px;
+  background: #fff;
   padding: 24px;
-  border: 1px solid #e5e7eb;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 1px 3px rgba(15, 45, 70, 0.04);
   position: sticky;
   top: 20px;
   display: flex;
@@ -541,13 +540,13 @@ const handleCancel = () => {
 .photo-section {
   width: 100%;
   aspect-ratio: 1;
-  border-radius: 12px;
+  border-radius: 14px;
   overflow: hidden;
-  background: linear-gradient(135deg, #f0f2f8 0%, #e8ecf7 100%);
+  background: #f0f5f8;
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 2px solid #e5e7eb;
+  border: 1px solid #dce7ee;
 }
 
 .preview-img {
@@ -560,7 +559,7 @@ const handleCancel = () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #a0a9b5;
+  color: #7890a2;
 }
 
 .photo-change-btn {
@@ -578,7 +577,7 @@ const handleCancel = () => {
   justify-content: center;
   gap: 6px;
   transition: all 0.2s ease;
-  font-family: 'DM Sans', sans-serif;
+  font-family: inherit;
 }
 
 .photo-change-btn:hover {
@@ -588,7 +587,7 @@ const handleCancel = () => {
 
 .photo-hint {
   font-size: 12px;
-  color: #939aa4;
+  color: #7890a2;
   margin: 0;
   text-align: center;
 }
@@ -601,11 +600,11 @@ const handleCancel = () => {
 }
 
 .form-section {
-  background: white;
-  border-radius: 12px;
+  border: 1px solid #e3ebf2;
+  border-radius: 18px;
+  background: #fff;
   padding: 24px;
-  border: 1px solid #e5e7eb;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 1px 3px rgba(15, 45, 70, 0.04);
 }
 
 .section-header {
@@ -614,15 +613,15 @@ const handleCancel = () => {
   gap: 12px;
   margin-bottom: 20px;
   padding-bottom: 14px;
-  border-bottom: 2px solid #f3f4f6;
-  color: #0f8a7c;
+  border-bottom: 1px solid #eef3f7;
+  color: #0e6378;
 }
 
 .section-title {
-  font-size: 16px;
-  font-weight: 700;
-  color: #0f1419;
   margin: 0;
+  color: #17364a;
+  font-size: 1rem;
+  font-weight: 850;
 }
 
 /* Form Groups */
@@ -637,35 +636,35 @@ const handleCancel = () => {
 .form-label {
   display: block;
   font-size: 12px;
-  font-weight: 700;
-  color: #3a3f47;
+  font-weight: 850;
+  color: #4f687d;
   margin-bottom: 8px;
   text-transform: uppercase;
-  letter-spacing: 0.6px;
+  letter-spacing: 0.08em;
 }
 
 .form-input,
 .form-textarea {
   width: 100%;
   padding: 11px 13px;
-  border: 1px solid #d1d7de;
-  border-radius: 8px;
-  font-family: 'DM Sans', sans-serif;
+  border: 1px solid #dce7ee;
+  border-radius: 10px;
+  font-family: inherit;
   font-size: 14px;
-  color: #0f1419;
+  color: #17364a;
   background: #fff;
   transition: all 0.2s ease;
 }
 
 .form-input::placeholder,
 .form-textarea::placeholder {
-  color: #8495a3;
+  color: #94a3b8;
 }
 
 .form-input:hover,
 .form-textarea:hover {
   border-color: #b1c0d6;
-  background: #fafbfc;
+  background: #f8fbff;
 }
 
 .form-input:focus,
@@ -676,8 +675,8 @@ const handleCancel = () => {
 }
 
 .form-input:disabled {
-  background: #f6f8fb;
-  color: #8495a3;
+  background: #f0f5f8;
+  color: #7890a2;
   cursor: not-allowed;
 }
 
@@ -688,7 +687,7 @@ const handleCancel = () => {
 
 .char-count {
   font-size: 11px;
-  color: #939aa4;
+  color: #7890a2;
   margin-top: 6px;
 }
 
@@ -728,10 +727,10 @@ const handleCancel = () => {
   align-items: center;
   gap: 6px;
   font-size: 12px;
-  font-weight: 700;
-  color: #3a3f47;
+  font-weight: 850;
+  color: #4f687d;
   text-transform: uppercase;
-  letter-spacing: 0.4px;
+  letter-spacing: 0.08em;
 }
 
 .form-input-sm {
@@ -752,13 +751,13 @@ const handleCancel = () => {
 }
 
 .social-status.connected {
-  color: #00c9b1;
-  background: rgba(0, 201, 177, 0.12);
+  color: #0f766e;
+  background: #e8f7f4;
 }
 
 .social-status.disconnected {
-  color: #939aa4;
-  background: #f3f4f6;
+  color: #7890a2;
+  background: #f0f5f8;
 }
 
 /* Tags Input */
@@ -767,8 +766,8 @@ const handleCancel = () => {
   flex-wrap: wrap;
   gap: 8px;
   padding: 11px;
-  border: 1px solid #d1d7de;
-  border-radius: 8px;
+  border: 1px solid #dce7ee;
+  border-radius: 10px;
   background: #fff;
   align-content: flex-start;
   transition: all 0.2s ease;
@@ -792,7 +791,7 @@ const handleCancel = () => {
   padding: 5px 9px;
   background: #0f8a7c;
   color: white;
-  border-radius: 6px;
+  border-radius: 999px;
   font-size: 11px;
   font-weight: 600;
 }
@@ -829,7 +828,7 @@ const handleCancel = () => {
 
 .tags-hint {
   font-size: 11px;
-  color: #939aa4;
+  color: #7890a2;
   margin-top: 6px;
 }
 
@@ -839,10 +838,10 @@ const handleCancel = () => {
   gap: 12px;
   justify-content: flex-end;
   padding: 20px 24px;
-  background: white;
-  border-radius: 12px;
-  border: 1px solid #e5e7eb;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  border: 1px solid #e3ebf2;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(15, 45, 70, 0.04);
   margin-top: 12px;
 }
 
@@ -850,12 +849,12 @@ const handleCancel = () => {
 .btn-save {
   padding: 11px 24px;
   border: none;
-  border-radius: 8px;
+  border-radius: 999px;
   font-size: 13px;
   font-weight: 700;
   cursor: pointer;
   transition: all 0.2s ease;
-  font-family: 'DM Sans', sans-serif;
+  font-family: inherit;
   display: flex;
   align-items: center;
   gap: 7px;
@@ -864,9 +863,9 @@ const handleCancel = () => {
 }
 
 .btn-cancel {
-  background: #f3f4f6;
-  color: #3a3f47;
-  border: 1px solid #e5e7eb;
+  background: #f8fbff;
+  color: #4f687d;
+  border: 1px solid #dce7ee;
 }
 
 .btn-cancel:hover {
@@ -936,15 +935,15 @@ const handleCancel = () => {
 .form-footer {
   text-align: center;
   padding: 20px 24px;
-  background: rgba(15, 138, 124, 0.08);
-  border-radius: 10px;
-  border: 1px solid rgba(15, 138, 124, 0.15);
+  background: #e8f7f4;
+  border-radius: 14px;
+  border: 1px solid #ccebe5;
   margin-top: 24px;
 }
 
 .footer-note {
   font-size: 12px;
-  color: #65676e;
+  color: #4f687d;
   margin: 0;
   line-height: 1.6;
 }

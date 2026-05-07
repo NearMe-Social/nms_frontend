@@ -41,7 +41,7 @@
             </div>
 
             <div class="actions">
-              <RouterLink to="/settings" class="secondary-action">Edit profile</RouterLink>
+              <RouterLink to="/profile/edit" class="secondary-action">Edit profile</RouterLink>
               <RouterLink to="/create-post" class="primary-action">
                 <Plus class="icon" />
                 Create post

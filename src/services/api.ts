@@ -122,26 +122,19 @@ export interface UserProfile {
 }
 
 export interface UpdateProfilePayload {
-  first_name?: string
-  last_name?: string
+  username?: string
   bio?: string
-  location?: string
-  website?: string
-  twitter_handle?: string
-  instagram_handle?: string
-  linkedin_url?: string
-  tags?: string[]
   profile_image?: string
 }
 
 export const userApi = {
   getProfile(): Promise<UserProfile> {
-    return request<UserProfile>('/user/profile')
+    return request<UserProfile>('/users/me')
   },
 
   updateProfile(payload: UpdateProfilePayload): Promise<UserProfile> {
-    return request<UserProfile>('/user/profile', {
-      method: 'PUT',
+    return request<UserProfile>('/users/me', {
+      method: 'PATCH',
       body: JSON.stringify(payload),
     })
   },
