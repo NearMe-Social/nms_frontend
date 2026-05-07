@@ -35,7 +35,10 @@
                         {{ isLoading ? 'Logging in...' : 'Log In' }}
                     </button>
 
-                    <p class="signup-text">Don't have account? <a href="/register">Register</a></p>
+                    <p class="signup-text">
+                        Don't have account?
+                        <RouterLink to="/register">Register</RouterLink>
+                    </p>
 
                     <div class="divider">
                         <span>OR CONTINUE WITH</span>
@@ -67,7 +70,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { RouterLink, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { authApi } from '@/services/api'
 
