@@ -7,6 +7,7 @@ interface AuthUser {
   username: string
   email: string
   role: string
+  profile?: unknown
 }
 
 export const useAuthStore = defineStore('auth', () => {
@@ -43,5 +44,12 @@ export const useAuthStore = defineStore('auth', () => {
     localStorage.removeItem('nms_token')
   }
 
-  return { token, user, isLoggedIn, setAuth, setToken, logout }
+  function updateProfile(profileData: unknown) {
+    if (user.value) {
+      user.value.profile = profileData
+      localStorage.setItem('auth_user', JSON.stringify(user.value))
+    }
+  }
+
+  return { token, user, isLoggedIn, setAuth, setToken, logout, updateProfile }
 })
