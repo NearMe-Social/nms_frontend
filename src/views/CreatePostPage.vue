@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { postApi } from '@/services/api'
+import { useAuthStore } from '@/stores/auth'
+import { useGeolocation } from '@/composables/useGeolocation'
 import Navbar from '@/components/Navbar.vue'
 import AppSidebar from '@/components/AppSidebar.vue'
 import {
@@ -29,6 +32,9 @@ const selectedImageUrl = ref('')
 const selectedImageName = ref('')
 let activeObjectUrl: string | null = null
 const router = useRouter()
+const auth = useAuthStore()
+const geo = useGeolocation()
+const submitError = ref('')
 
 const isReadyToSubmit = computed(
   () =>
@@ -71,10 +77,46 @@ function handleImageChange(event: Event) {
   selectedImageName.value = file.name
 }
 
-function submitPost() {
+function durationToMs(duration: (typeof durationOptions)[number]) {
+  const amount = Number(duration.replace('h', ''))
+  return amount * 60 * 60 * 1000
+}
+
+async function getPostLocation() {
+  const position = await geo.request()
+  return position ?? geo.getLastKnownLocation()
+}
+
+async function submitPost() {
   if (!isReadyToSubmit.value) return
+  const userId = auth.user?.userId ?? auth.user?.user_id
+
+  if (!userId) {
+    submitError.value = 'Please log in again before posting.'
+    return
+  }
+
   submitting.value = true
-  window.setTimeout(() => {
+  submitError.value = ''
+
+  try {
+    const position = await getPostLocation()
+    if (!position) {
+      submitError.value =
+        'Location is required to create a nearby post. Try opening Nearby Users once, then create the post again.'
+      return
+    }
+
+    await postApi.create({
+      user_id: userId,
+      title: title.value.trim(),
+      content: content.value.trim(),
+      latitude: position.lat,
+      longitude: position.lng,
+      visibility_radius: visibilityRadius.value,
+      expires_at: new Date(Date.now() + durationToMs(selectedDuration.value)).toISOString(),
+    })
+
     submitting.value = false
     title.value = ''
     content.value = ''
@@ -84,7 +126,11 @@ function submitPost() {
     selectedDuration.value = '12h'
     clearSelectedImage()
     router.push('/discussions')
-  }, 900)
+  } catch (err: unknown) {
+    submitError.value = err instanceof Error ? err.message : 'Failed to create post.'
+  } finally {
+    submitting.value = false
+  }
 }
 
 onBeforeUnmount(() => {
@@ -191,6 +237,43 @@ onBeforeUnmount(() => {
                   <div class="rounded-[18px] bg-white p-4 ring-1 ring-slate-200">
                     <div class="flex items-start justify-between gap-3">
                       <div>
+                        <p class="text-xs font-black uppercase tracking-[0.24em] text-slate-500">Visibility Radius</p>
+                        <p class="mt-1 text-xs text-slate-500">Choose how far your post reaches.</p>
+                      </div>
+                      <CircleHelp class="h-4 w-4 shrink-0 text-amber-600" />
+                    </div>
+
+                    <div class="mt-4 space-y-3">
+                      <input
+                        v-model.number="visibilityRadius"
+                        type="range"
+                        min="50"
+                        max="500"
+                        step="50"
+                        class="w-full"
+                      />
+                      <div class="grid grid-cols-4 gap-2">
+                        <button
+                          v-for="option in visibilityOptions"
+                          :key="option"
+                          type="button"
+                          class="rounded-full px-3 py-2 text-xs font-bold transition"
+                          :class="visibilityRadius === option ? 'bg-cyan-100 text-cyan-900 ring-2 ring-cyan-700' : 'bg-slate-100 text-slate-500'"
+                          @click="visibilityRadius = option"
+                        >
+                          {{ option }}m
+                        </button>
+                      </div>
+                    </div>
+
+                    <p class="mt-4 text-xs leading-5 text-cyan-700">
+                      Current radius: <span class="font-bold">{{ visibilityRadius }}m</span>
+                    </p>
+                  </div>
+
+                  <div class="rounded-[18px] bg-white p-4 ring-1 ring-slate-200">
+                    <div class="flex items-start justify-between gap-3">
+                      <div>
                         <p class="text-xs font-black uppercase tracking-[0.24em] text-slate-500">Ephemeral Duration</p>
                         <p class="mt-1 text-xs text-slate-500">Choose how long this spark stays visible.</p>
                       </div>
@@ -241,8 +324,27 @@ onBeforeUnmount(() => {
                 </div>
 
                 <div class="flex flex-wrap items-center justify-between gap-3 pt-1">
+                  <p v-if="submitError" class="basis-full text-sm font-semibold text-rose-600">
+                    {{ submitError }}
+                  </p>
                   <button class="text-xs font-bold text-slate-500 transition hover:text-slate-800">Discard Draft</button>
                   <button
+                    type="button"
+                    class="text-xs font-bold text-slate-500 transition hover:text-slate-800"
+                    @click="() => {
+                      title = ''
+                      content = ''
+                      visibilityRadius = 100
+                      allowResponses = true
+                      pinToMap = false
+                      selectedDuration = '12h'
+                      clearSelectedImage()
+                    }"
+                  >
+                    Discard Draft
+                  </button>
+                  <button
+                    type="button"
                     class="inline-flex items-center gap-2 rounded-full px-5 py-3 text-xs font-bold shadow-lg transition"
                     :class="isReadyToSubmit ? 'bg-cyan-800 text-white shadow-cyan-800/20 hover:bg-cyan-900' : 'cursor-not-allowed bg-slate-200 text-slate-400 shadow-none'"
                     :disabled="!isReadyToSubmit"

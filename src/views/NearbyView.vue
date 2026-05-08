@@ -1,14 +1,16 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import { Flag, Lock, MapPin, MessageCircle, ShieldCheck, SlidersHorizontal, UserRound } from 'lucide-vue-next'
 import { useNearbyStore, type NearbyUser } from '@/stores/nearbyStore'
 import { useGeolocation } from '@/composables/useGeolocation'
+import { useAuthStore } from '@/stores/auth'
 import GeoErrorState from '@/components/GeoErrorState.vue'
 import AppSidebar from '@/components/AppSidebar.vue'
 import Navbar from '@/components/Navbar.vue'
 
 const nearbyStore = useNearbyStore()
+const auth = useAuthStore()
 const geo = useGeolocation()
 
 const radius = ref(100)
@@ -45,11 +47,28 @@ const formattedTime = computed(() => {
   })}`
 })
 
+const username = computed(() => auth.user?.username ?? 'neighbor')
+const displayName = computed(
+  () =>
+    username.value
+      .split(/[._-]/)
+      .filter(Boolean)
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(' ') || 'Nearme Neighbor',
+)
+const profileImage = computed(
+  () => `https://i.pravatar.cc/150?u=${encodeURIComponent(username.value)}`,
+)
+
 function approximateDistance(meters: number) {
   if (meters <= 50) return 'within 50m'
   if (meters <= 100) return 'within 100m'
   if (meters <= 200) return 'within 200m'
   return 'outside radius'
+}
+
+function userDistance(user: NearbyUser) {
+  return user.distance_label ?? approximateDistance(user.distance_m)
 }
 
 function pinForUser(user: NearbyUser, index: number) {
@@ -62,14 +81,21 @@ function pinForUser(user: NearbyUser, index: number) {
 }
 
 async function init() {
-  const position = await geo.request()
+  await geo.request()
+}
+
+async function refreshNearby() {
+  const position = geo.coords.value
   if (!position) return
-  await nearbyStore.fetchNearby(position.lat, position.lng)
-  nearbyStore.startPolling(position.lat, position.lng)
+  await nearbyStore.fetchNearby(position.lat, position.lng, radius.value)
+  nearbyStore.startPolling(position.lat, position.lng, radius.value)
 }
 
 onMounted(init)
 onUnmounted(() => nearbyStore.stopPolling())
+
+watch(radius, refreshNearby)
+watch(() => geo.coords.value, refreshNearby)
 </script>
 
 <template>
@@ -91,12 +117,14 @@ onUnmounted(() => nearbyStore.stopPolling())
 
       <section class="identity-card">
         <div class="identity-left">
-          <div class="mini-avatar">
-            <UserRound />
-          </div>
+          <img
+            :src="profileImage"
+            :alt="`${displayName} profile photo`"
+            class="mini-avatar image-avatar"
+          />
           <div>
-            <strong>Alex Rivera</strong>
-            <span>Posting to Oak Ridge Commons</span>
+            <strong>{{ displayName }}</strong>
+            <span>Posting as @{{ username }}</span>
           </div>
         </div>
 
@@ -174,7 +202,7 @@ onUnmounted(() => nearbyStore.stopPolling())
               class="user-pin"
               :class="pinForUser(user, index).color"
               :style="{ left: pinForUser(user, index).left, top: pinForUser(user, index).top }"
-              :title="`${user.username}, ${approximateDistance(user.distance_m)}`"
+              :title="`${user.username}, ${userDistance(user)}`"
             >
               <UserRound />
             </button>
@@ -219,12 +247,16 @@ onUnmounted(() => nearbyStore.stopPolling())
           <span v-if="nearbyStore.loading">Refreshing...</span>
         </div>
 
-        <div v-if="filteredUsers.length > 0" class="people-list">
+        <p v-if="nearbyStore.error" class="empty-state error-state">
+          {{ nearbyStore.error }}
+        </p>
+
+        <div v-else-if="filteredUsers.length > 0" class="people-list">
           <article v-for="user in filteredUsers" :key="user.id" class="person-row">
             <div class="person-avatar">{{ user.username.slice(0, 2).toUpperCase() }}</div>
             <div>
               <strong>{{ user.username }}</strong>
-              <span>{{ approximateDistance(user.distance_m) }}</span>
+              <span>{{ userDistance(user) }}</span>
             </div>
             <div class="person-actions">
               <RouterLink to="/chat">Message</RouterLink>
@@ -296,12 +328,18 @@ onUnmounted(() => nearbyStore.stopPolling())
 
 .page-heading h1 {
   margin: 0;
-  font-size: clamp(1.6rem, 3vw, 2rem);
+  color: #0f172a;
+  font-size: clamp(1.875rem, 2.6vw, 2.25rem);
+  font-weight: 800;
+  line-height: 1.1;
   letter-spacing: 0;
 }
 
 .page-heading p {
-  margin: 4px 0 0;
+  margin: 8px 0 0;
+  color: #94a3b8;
+  font-size: 0.875rem;
+  font-weight: 600;
 }
 
 .detected-pill {
@@ -350,6 +388,12 @@ onUnmounted(() => nearbyStore.stopPolling())
   width: 34px;
   height: 34px;
   border-radius: 10px;
+}
+
+.image-avatar {
+  object-fit: cover;
+  border: 2px solid #fff;
+  box-shadow: 0 6px 16px rgba(15, 45, 70, 0.12);
 }
 
 .privacy-control {
@@ -636,6 +680,11 @@ onUnmounted(() => nearbyStore.stopPolling())
   padding: 26px 12px;
   text-align: center;
   color: #7891a5;
+}
+
+.error-state {
+  color: #dc2626;
+  font-weight: 700;
 }
 
 @media (max-width: 980px) {

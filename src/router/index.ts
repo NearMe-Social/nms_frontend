@@ -4,6 +4,7 @@ import Login from '@/views/auth/LoginPage.vue'
 import Register from '@/views/auth/RegisterPage.vue'
 import HomePage from '@/views/user/HomePage.vue'
 import UserProfile from '@/views/user/UserProfile.vue'
+import EditProfile from '@/views/user/EditProfile.vue'
 import PrivateChat from '@/views/user/PrivateChat.vue'
 import Notifications from '@/views/user/Notifications.vue'
 import Settings from '@/views/user/Settings.vue'
@@ -69,6 +70,12 @@ const routes = [
     meta: { requiresAuth: true },
   },
   {
+    path: '/profile/edit',
+    name: 'EditProfile',
+    component: EditProfile,
+    meta: { requiresAuth: true },
+  },
+  {
     path: '/chat',
     name: 'PrivateChat',
     component: PrivateChat,
@@ -110,7 +117,12 @@ router.beforeEach((to, from, next) => {
 
   // Protect routes that require authentication
   if (to.meta.requiresAuth && !auth.isLoggedIn) {
-    next({ name: 'Login', query: { redirect: to.fullPath } })
+    // If Login route exists, redirect to it; otherwise stay on current route
+    try {
+      next({ name: 'Login', query: { redirect: to.fullPath } })
+    } catch {
+      next(false)
+    }
   } else {
     next()
   }
