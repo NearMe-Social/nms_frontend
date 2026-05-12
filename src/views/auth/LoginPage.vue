@@ -35,7 +35,10 @@
                         {{ isLoading ? 'Logging in...' : 'Log In' }}
                     </button>
 
-                    <p class="signup-text">Don't have account? <a href="/register">Register</a></p>
+                    <p class="signup-text">
+                        Don't have account?
+                        <RouterLink to="/register">Register</RouterLink>
+                    </p>
 
                     <div class="divider">
                         <span>OR CONTINUE WITH</span>
@@ -67,7 +70,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { RouterLink, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { authApi } from '@/services/api'
 
@@ -259,42 +262,42 @@ label {
     background: #e7e1da;
 }
 
-.btn-social { 
-    display:flex; 
-    gap:12px; 
+.btn-social {
+    display:flex;
+    gap:12px;
     margin-top:12px;
     justify-content: center;
 }
-.btn-social__item { 
-    display:inline-flex; 
-    align-items:center; 
-    justify-content:center; 
-    gap:8px; 
-    width:40px; 
-    height:40px; 
-    padding:0; 
-    border-radius:50%; 
-    font-weight:600; 
-    border: none; 
-    cursor: pointer; 
+.btn-social__item {
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    width:40px;
+    height:40px;
+    padding:0;
+    border-radius:50%;
+    font-weight:600;
+    border: none;
+    cursor: pointer;
 }
-.btn-icon { 
-    width:50px; 
-    height:50px; 
-    object-fit:contain 
+.btn-icon {
+    width:50px;
+    height:50px;
+    object-fit:contain
 }
-.btn-social--google { 
-    background:#fff; 
-    color:#000; 
-    border:1px solid #ddd; 
+.btn-social--google {
+    background:#fff;
+    color:#000;
+    border:1px solid #ddd;
 }
-.btn-social--facebook { 
-    background:#1877F2; 
-    color:#fff; 
+.btn-social--facebook {
+    background:#1877F2;
+    color:#fff;
 }
-.btn-social--x { 
-    background:#000; 
-    color:#fff; 
+.btn-social--x {
+    background:#000;
+    color:#fff;
 }
 
 .cookie-text {

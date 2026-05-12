@@ -25,7 +25,6 @@
       <button class="mobile-search" type="button" title="Search">
         <Search class="icon" />
       </button>
-      <RouterLink to="/create-post" class="create-action">Create</RouterLink>
       <RouterLink to="/notifications" class="icon-link" title="Notifications">
         <Bell class="icon" />
         <span class="notification-dot"></span>
@@ -124,8 +123,7 @@ function handleLogout() {
   margin-left: auto;
 }
 
-.nav-links a,
-.create-action {
+.nav-links a {
   border-radius: 999px;
   padding: 8px 12px;
   color: #607486;
@@ -145,11 +143,6 @@ function handleLogout() {
   gap: 8px;
   margin-left: auto;
   flex: 0 0 auto;
-}
-
-.create-action {
-  background: #0f8a7c;
-  color: #fff;
 }
 
 .icon-link,
@@ -220,7 +213,6 @@ function handleLogout() {
   }
 
   .search-box,
-  .create-action,
   .nav-links,
   .actions .icon-link[title='Settings'] {
     display: none;
