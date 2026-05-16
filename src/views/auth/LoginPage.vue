@@ -93,7 +93,16 @@ async function handleLogin() {
         const res = await authApi.login(email.value, password.value)
         auth.setAuth(res.token, res.user)
         const redirect = router.currentRoute.value.query.redirect
-        router.replace(typeof redirect === 'string' ? redirect : '/')
+        const userRole = res.user?.role
+        if(userRole == 'ADMIN') {
+            router.replace(typeof redirect === 'string' ? redirect : '/admin/reports')
+        } else {
+            if (typeof redirect === 'string' && redirect.startsWith('/admin')) {
+                router.replace('/')
+            } else {
+                router.replace(typeof redirect === 'string' ? redirect : '/')
+            }
+        }
     } catch (err: unknown) {
         errorMsg.value = err instanceof Error ? err.message : 'Login failed. Please try again.'
     } finally {

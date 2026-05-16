@@ -1,8 +1,8 @@
-const BASE_URL = 'http://localhost:3000'
+const API_URL = import.meta.env.VITE_API_URL;
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = localStorage.getItem('token')
-  const res = await fetch(`${BASE_URL}${path}`, {
+  const res = await fetch(`${API_URL}${path}`, {
     headers: {
       'Content-Type': 'application/json',
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -142,13 +142,11 @@ export const userApi = {
   uploadProfileImage(file: File): Promise<{ url: string }> {
     const formData = new FormData()
     formData.append('file', file)
-    return fetch(`${BASE_URL}/user/profile-image`, {
+    return fetch(`${API_URL}/user/profile-image`, {
       method: 'POST',
-      headers: {
-        ...(localStorage.getItem('token')
+      headers: (localStorage.getItem('token')
           ? { Authorization: `Bearer ${localStorage.getItem('token')}` }
           : {}),
-      },
       body: formData,
     }).then((res) => res.json())
   },
