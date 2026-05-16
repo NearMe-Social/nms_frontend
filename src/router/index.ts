@@ -14,6 +14,8 @@ import CreateDiscussion from '@/views/user/CreateDiscussion.vue'
 import NearbyView from '@/views/NearbyView.vue'
 import CreatePostPage from '@/views/CreatePostPage.vue'
 import DiscussionsPage from '@/views/DiscussionsPage.vue'
+import AdminReportsPage from '@/views/admin/AdminReportsPage.vue'
+
 
 const routes = [
   {
@@ -98,6 +100,12 @@ const routes = [
     name: 'nearby',
     component: NearbyView,
     meta: { requiresAuth: true },
+  },
+  {
+  path: '/admin/reports',
+  name: 'AdminReports',
+  component: AdminReportsPage,
+  meta: { requiresAuth: true },
   },
 ]
 
