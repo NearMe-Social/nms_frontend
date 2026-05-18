@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+
 import Login from '@/views/auth/LoginPage.vue'
 import Register from '@/views/auth/RegisterPage.vue'
 import HomePage from '@/views/user/HomePage.vue'
@@ -14,6 +15,7 @@ import CreateDiscussion from '@/views/user/CreateDiscussion.vue'
 import NearbyView from '@/views/NearbyView.vue'
 import CreatePostPage from '@/views/CreatePostPage.vue'
 import DiscussionsPage from '@/views/DiscussionsPage.vue'
+import AdminReportsPage from '@/views/admin/AdminReportsPage.vue'
 
 const routes = [
   {
@@ -56,7 +58,6 @@ const routes = [
     component: DiscussionsPage,
     meta: { requiresAuth: true },
   },
-
   {
     path: '/',
     name: 'HomePage',
@@ -95,9 +96,18 @@ const routes = [
   },
   {
     path: '/nearby',
-    name: 'nearby',
+    name: 'Nearby',
     component: NearbyView,
     meta: { requiresAuth: true },
+  },
+  {
+    path: '/admin/reports',
+    name: 'AdminReports',
+    component: AdminReportsPage,
+    meta: {
+      requiresAuth: true,
+      requiresAdmin: true,
+    },
   },
 ]
 
@@ -109,23 +119,34 @@ const router = createRouter({
 router.beforeEach((to, from, next) => {
   const auth = useAuthStore()
 
-  // Redirect authenticated users away from login/register pages
+  // If already logged in, don't allow user to go back to login/register
   if ((to.name === 'Login' || to.name === 'Register') && auth.isLoggedIn) {
     next({ name: 'HomePage' })
     return
   }
 
-  // Protect routes that require authentication
+  // Check login first
   if (to.meta.requiresAuth && !auth.isLoggedIn) {
-    // If Login route exists, redirect to it; otherwise stay on current route
-    try {
-      next({ name: 'Login', query: { redirect: to.fullPath } })
-    } catch {
-      next(false)
-    }
-  } else {
-    next()
+    next({
+      name: 'Login',
+      query: { redirect: to.fullPath },
+    })
+    return
   }
+
+  // Check admin access
+  const isAdminRoute = to.meta.requiresAdmin || to.path.startsWith('/admin')
+
+  if (isAdminRoute) {
+    const userRole = auth.user?.role
+
+    if (userRole !== 'ADMIN') {
+      next({ name: 'HomePage' })
+      return
+    }
+  }
+
+  next()
 })
 
 export default router
