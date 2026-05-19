@@ -7,17 +7,25 @@
 </template>
 
 <script setup>
+import {
+  Check,
+  Ban,
+  Clock3,
+  Pause,
+  Minus
+} from 'lucide-vue-next'
+
 const props = defineProps({
   status: { type: String, required: true }, 
   showDot: { type: Boolean, default: true },
   showIcon: { type: Boolean, default: false },
 })
 
-const CheckIcon = { template: `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>` }
-const BanIcon = { template: `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>` }
-const ClockIcon = { template: `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>` }
-const PauseIcon = { template: `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>` }
-const MinusIcon = { template: `<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/></svg>` }
+const CheckIcon = Check
+const BanIcon = Ban
+const ClockIcon = Clock3
+const PauseIcon = Pause
+const MinusIcon = Minus
 
 const iconMap = { active: CheckIcon, banned: BanIcon, pending: ClockIcon, suspended: PauseIcon, inactive: MinusIcon }
 const labelMap = { active: 'Active', suspended: 'Suspended', pending: 'Pending', banned: 'Banned', inactive: 'Inactive' }

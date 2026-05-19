@@ -15,6 +15,10 @@ import NearbyView from '@/views/NearbyView.vue'
 import CreatePostPage from '@/views/CreatePostPage.vue'
 import DiscussionsPage from '@/views/DiscussionsPage.vue'
 
+import AdminUsersPage from '@/views/admins/AdminUsersPage.vue';
+import AdminModerationPage from '@/views/admins/AdminModerationPage.vue';
+
+
 const routes = [
   {
     path: '/login',
@@ -99,6 +103,14 @@ const routes = [
     component: NearbyView,
     meta: { requiresAuth: true },
   },
+  {
+    path: '/admins/users',
+    component: AdminUsersPage
+  },
+  {
+    path: '/admins/moderation',
+    component: AdminModerationPage
+  }
 ]
 
 const router = createRouter({

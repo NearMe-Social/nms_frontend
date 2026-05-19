@@ -67,7 +67,16 @@
 
 <script setup>
 import { ref, computed } from 'vue'
-import AdminUsersTable from './AdminUsersTable.vue'
+import {
+  Users,
+  UserCheck,
+  Ban,
+  Flag,
+  Filter,
+  Plus,
+  ChevronRight
+} from 'lucide-vue-next'
+import AdminUsersTable from './UserTable.vue'
 import UserStatusBadge from './UserStatusBadge.vue'
 import SuspendActivateControls from './SuspendActivateControls.vue'
 
@@ -81,10 +90,42 @@ const SuspendIcon  = { template: `<svg width="18" height="18" viewBox="0 0 24 24
 const FlagIcon2    = { template: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>` }
 
 const stats = [
-  { label: 'Total Users',     value: '12,481', delta: '+124 this week', trend: 'up',   icon: UsersIcon,   iconBg: '#eff6ff', iconColor: '#3b82f6' },
-  { label: 'Active Users',    value: '10,902', delta: '+98 this week',  trend: 'up',   icon: ActiveIcon,  iconBg: '#f0fdf4', iconColor: '#16a34a' },
-  { label: 'Suspended',       value: '318',    delta: '-12 this week',  trend: 'down', icon: SuspendIcon, iconBg: '#fff7ed', iconColor: '#c2410c' },
-  { label: 'Flagged Accounts',value: '47',     delta: '+5 this week',   trend: 'up',   icon: FlagIcon2,   iconBg: '#fef2f2', iconColor: '#b91c1c' },
+  {
+    label: 'Total Users',
+    value: '12,481',
+    delta: '+124 this week',
+    trend: 'up',
+    icon: Users,
+    iconBg: '#eff6ff',
+    iconColor: '#3b82f6'
+  },
+  {
+    label: 'Active Users',
+    value: '10,902',
+    delta: '+98 this week',
+    trend: 'up',
+    icon: UserCheck,
+    iconBg: '#f0fdf4',
+    iconColor: '#16a34a'
+  },
+  {
+    label: 'Suspended',
+    value: '318',
+    delta: '-12 this week',
+    trend: 'down',
+    icon: Ban,
+    iconBg: '#fff7ed',
+    iconColor: '#c2410c'
+  },
+  {
+    label: 'Flagged Accounts',
+    value: '47',
+    delta: '+5 this week',
+    trend: 'up',
+    icon: Flag,
+    iconBg: '#fef2f2',
+    iconColor: '#b91c1c'
+  },
 ]
 
 const drawerUser = ref(null)
