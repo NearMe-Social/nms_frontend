@@ -140,10 +140,10 @@ router.beforeEach((to, from, next) => {
   if (isAdminRoute) {
     const userRole = auth.user?.role
 
-    if (userRole !== 'ADMIN') {
-      next({ name: 'HomePage' })
-      return
-    }
+    //if (userRole !== 'ADMIN') {
+     // next({ name: 'HomePage' })
+      //return
+    //}
   }
 
   next()

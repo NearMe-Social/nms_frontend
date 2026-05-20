@@ -1,18 +1,6 @@
 <template>
   <div class="flex flex-wrap items-center gap-2">
 
-    <!-- Search input -->
-    <div class="flex items-center bg-white border border-gray-200 rounded-xl px-3 py-2 gap-2 w-64 shadow-sm transition-all duration-300 ease-out focus-within:ring-2 focus-within:ring-teal-400 focus-within:border-teal-400 focus-within:shadow-md">
-      <Search class="w-4 h-4 text-gray-400 shrink-0 transition-colors duration-300" />
-      <input
-        type="text"
-        :value="search"
-        @input="$emit('update:search', $event.target.value)"
-        placeholder="Search reports..."
-        class="text-sm text-gray-600 outline-none w-full placeholder-gray-400 bg-transparent"
-      />
-    </div>
-
     <!-- Status filter -->
     <div class="flex items-center gap-1 bg-white border border-gray-200 rounded-xl p-1 shadow-sm">
       <button
@@ -50,7 +38,7 @@
     <!-- Clear filters -->
     <Transition name="pop">
       <button
-        v-if="search || status !== 'all' || type !== 'all'"
+        v-if="status !== 'all' || type !== 'all'"
         @click="$emit('clear')"
         class="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-red-500 bg-red-50 border border-red-100 hover:bg-red-100 transition-all duration-300 ease-out"
       >
@@ -62,15 +50,14 @@
 </template>
 
 <script setup>
-import { Search, X } from 'lucide-vue-next'
+import { X } from 'lucide-vue-next'
 
 defineProps({
-  search: { type: String, default: '' },
   status: { type: String, default: 'all' },
   type: { type: String, default: 'all' },
 })
 
-defineEmits(['update:search', 'update:status', 'update:type', 'clear'])
+defineEmits(['update:status', 'update:type', 'clear'])
 
 const statusOptions = [
   { value: 'all', label: 'All' },
@@ -95,10 +82,7 @@ const typeOptions = [
 .pop-leave-active {
   transition: all 0.2s cubic-bezier(0.36, 0, 0.66, -0.56);
 }
-.pop-enter-from {
-  opacity: 0;
-  transform: scale(0.8);
-}
+.pop-enter-from,
 .pop-leave-to {
   opacity: 0;
   transform: scale(0.8);
