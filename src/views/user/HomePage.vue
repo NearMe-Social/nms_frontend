@@ -67,8 +67,8 @@
           <div
             v-for="post in posts"
             :key="post.post_id"
-            class="bg-white rounded-[18px] p-5 md:p-6 flex flex-col gap-4 shadow-sm ring-1 ring-slate-200/70 hover:shadow-md transition-shadow cursor-pointer"
-            @click="navigateToPost"
+            :to="`/posts/${post.post_id}`"
+            class="bg-white rounded-[18px] p-5 md:p-6 flex flex-col gap-4 shadow-sm ring-1 ring-slate-200/70 hover:shadow-md transition-shadow no-underline"
           >
             <div class="flex items-start justify-between">
               <div class="flex items-center gap-3">

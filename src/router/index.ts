@@ -44,6 +44,12 @@ const routes = [
     meta: { requiresAuth: true },
   },
   {
+    path: '/posts/:postId',
+    name: 'PostDetail',
+    component: DiscussionDetail,
+    meta: { requiresAuth: true },
+  },
+  {
     path: '/discussion/new',
     name: 'CreateDiscussion',
     component: CreateDiscussion,

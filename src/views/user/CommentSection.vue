@@ -2,12 +2,14 @@
   <div>
     <div class="section-header">
       <span class="section-title">Neighbor Conversations</span>
-      <select class="sort-select" :value="sortBy" @change="updateSortBy($event.target.value)">
+      <select class="sort-select" :value="sortBy" @change="updateSortBy">
         <option value="top">Top</option>
         <option value="newest">Newest</option>
         <option value="oldest">Oldest</option>
       </select>
     </div>
+
+    <p v-if="errorMessage" class="comment-error">{{ errorMessage }}</p>
 
     <div
       v-for="(c, ci) in sortedComments"
@@ -67,7 +69,7 @@
 
     <!-- MAIN REPLY INPUT -->
     <div class="reply-input-row" style="margin-top:20px;">
-      <div class="author-avatar" style="width:34px;height:34px;font-size:0.78rem;flex-shrink:0;">JD</div>
+      <div class="author-avatar" style="width:34px;height:34px;font-size:0.78rem;flex-shrink:0;">{{ currentUserInitials }}</div>
       <input
         ref="mainReplyInput"
         class="reply-input"
@@ -85,8 +87,9 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, computed } from 'vue'
+import { useAuthStore } from '@/stores/auth'
 
 const props = defineProps({
   comments: {
@@ -96,17 +99,27 @@ const props = defineProps({
   sortBy: {
     type: String,
     default: 'top'
+  },
+  submitting: {
+    type: Boolean,
+    default: false
+  },
+  errorMessage: {
+    type: String,
+    default: ''
   }
 })
 
 const emit = defineEmits(['update:sort-by', 'add-comment', 'submit-reply'])
 
+const auth = useAuthStore()
 const mainReplyText = ref('')
-const mainReplyInput = ref(null)
+const mainReplyInput = ref<HTMLInputElement | null>(null)
+const currentUserInitials = computed(() => initials(auth.user?.username || 'Neighbor'))
 
 // Computed sorted comments
 const sortedComments = computed(() => {
-  const list = [...props.comments]
+  const list = [...props.comments] as Array<any>
   if (props.sortBy === 'top') {
     return list.sort((a, b) => b.likes - a.likes)
   }
@@ -116,24 +129,25 @@ const sortedComments = computed(() => {
   return list.sort((a, b) => a.id - b.id)
 })
 
-function updateSortBy(value) {
-  emit('update:sort-by', value)
+function updateSortBy(event: Event) {
+  emit('update:sort-by', (event.target as HTMLSelectElement).value)
 }
 
-function likeComment(comment) {
+function likeComment(comment: any) {
   comment.likes++
 }
 
-function toggleReply(comment) {
+function toggleReply(comment: any) {
   comment.showReply = !comment.showReply
 }
 
-function submitReply(comment) {
+function submitReply(comment: any) {
   if (!comment.replyText.trim()) return
   emit('submit-reply', comment, comment.replyText)
 }
 
 function addComment() {
+  if (props.submitting) return
   if (!mainReplyText.value.trim()) return
   emit('add-comment', mainReplyText.value)
   mainReplyText.value = ''
@@ -141,6 +155,15 @@ function addComment() {
 
 function focusMainReply() {
   mainReplyInput.value?.focus()
+}
+
+function initials(value: string) {
+  return value
+    .split(/[\s._-]+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part.charAt(0).toUpperCase())
+    .join('') || 'N'
 }
 
 // Expose focus method to parent
@@ -181,6 +204,17 @@ defineExpose({
   box-shadow: var(--shadow);
   margin-bottom: 12px;
   animation: fadeUp .35s ease both;
+}
+
+.comment-error {
+  margin: 0 0 12px;
+  border: 1px solid #fecdd3;
+  border-radius: 12px;
+  background: #fff1f2;
+  color: #be123c;
+  padding: 10px 12px;
+  font-size: 0.82rem;
+  font-weight: 800;
 }
 
 @keyframes fadeUp {

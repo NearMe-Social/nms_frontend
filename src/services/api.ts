@@ -57,6 +57,21 @@ export interface ApiPost {
   distance_label?: string
 }
 
+export interface ApiCommentUser {
+  user_id: number
+  username: string
+  profile_image?: string | null
+}
+
+export interface ApiComment {
+  comment_id: number
+  content: string
+  status: string
+  created_at: string
+  updated_at: string
+  user?: ApiCommentUser | null
+}
+
 export interface CreatePostPayload {
   user_id: number
   title: string
@@ -96,8 +111,25 @@ export const postApi = {
     return request<ApiPost[]>(`/posts?sort=${sort}`)
   },
 
+  get(postId: number): Promise<ApiPost> {
+    return request<ApiPost>(`/posts/${postId}`)
+  },
+
   create(payload: CreatePostPayload): Promise<ApiPost> {
     return request<ApiPost>('/posts', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    })
+  },
+}
+
+export const commentApi = {
+  listByPost(postId: number): Promise<ApiComment[]> {
+    return request<ApiComment[]>(`/comments/post/${postId}`)
+  },
+
+  create(payload: { post_id: number; user_id: number; content: string }): Promise<ApiComment> {
+    return request<ApiComment>('/comments', {
       method: 'POST',
       body: JSON.stringify(payload),
     })
