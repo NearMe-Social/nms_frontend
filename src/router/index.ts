@@ -15,6 +15,9 @@ import CreateDiscussion from '@/views/user/CreateDiscussion.vue'
 import NearbyView from '@/views/NearbyView.vue'
 import CreatePostPage from '@/views/CreatePostPage.vue'
 import DiscussionsPage from '@/views/DiscussionsPage.vue'
+import ReportPostPage from '@/views/ReportPostPage.vue'
+import ReportUserPage from '@/views/ReportUserPage.vue'
+import ReportCommentPage from '@/views/ReportCommentPage.vue'
 import AdminReportsPage from '@/views/admin/AdminReportsPage.vue'
 
 const routes = [
@@ -50,6 +53,24 @@ const routes = [
     path: '/create-post',
     name: 'CreatePostPage',
     component: CreatePostPage,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/report/post',
+    name: 'ReportPost',
+    component: ReportPostPage,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/report/user',
+    name: 'ReportUser',
+    component: ReportUserPage,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/report/comment',
+    name: 'ReportComment',
+    component: ReportCommentPage,
     meta: { requiresAuth: true },
   },
   {
