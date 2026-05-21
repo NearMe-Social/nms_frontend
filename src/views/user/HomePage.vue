@@ -64,11 +64,11 @@
         </p>
 
         <section v-else-if="posts.length > 0" class="flex flex-col gap-4">
-          <RouterLink
+          <div
             v-for="post in posts"
             :key="post.post_id"
-            to="/discussion"
-            class="bg-white rounded-[18px] p-5 md:p-6 flex flex-col gap-4 shadow-sm ring-1 ring-slate-200/70 hover:shadow-md transition-shadow no-underline"
+            class="bg-white rounded-[18px] p-5 md:p-6 flex flex-col gap-4 shadow-sm ring-1 ring-slate-200/70 hover:shadow-md transition-shadow cursor-pointer"
+            @click="navigateToPost"
           >
             <div class="flex items-start justify-between">
               <div class="flex items-center gap-3">
@@ -88,9 +88,12 @@
                   </div>
                 </div>
               </div>
-              <span class="text-xs bg-orange-50 text-orange-500 border border-orange-200 px-2 py-1 rounded-full shrink-0 flex items-center gap-1">
-                <Clock class="w-3 h-3" /> {{ timeLeft(post.expires_at) }}
-              </span>
+              <div class="flex items-center gap-2 shrink-0">
+                <span class="text-xs bg-orange-50 text-orange-500 border border-orange-200 px-2 py-1 rounded-full flex items-center gap-1">
+                  <Clock class="w-3 h-3" /> {{ timeLeft(post.expires_at) }}
+                </span>
+                <PostOptionsMenu :post-id="post.post_id" @click.stop />
+              </div>
             </div>
 
             <div>
@@ -111,7 +114,7 @@
                 <Share2 class="w-4 h-4" />
               </button>
             </div>
-          </RouterLink>
+          </div>
         </section>
 
         <section v-else class="rounded-[18px] bg-white p-8 text-center text-sm font-semibold text-gray-500 ring-1 ring-slate-200/70">
@@ -169,16 +172,22 @@
 
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { RouterLink } from 'vue-router'
+import { RouterLink, useRouter } from 'vue-router'
 import Navbar from '@/components/Navbar.vue'
 import AppSidebar from '@/components/AppSidebar.vue'
+import PostOptionsMenu from '@/components/PostOptionsMenu.vue'
 import { postApi, type ApiPost } from '@/services/api'
 import { MapPin, Bell, MessageCircle, Plus, User, Heart, Share2, Clock, Zap } from 'lucide-vue-next'
 
+const router = useRouter()
 const posts = ref<ApiPost[]>([])
 const loading = ref(true)
 const error = ref('')
 const sortMode = ref<'latest' | 'active'>('latest')
+
+function navigateToPost() {
+  router.push('/discussion')
+}
 
 async function loadPosts() {
   loading.value = true
