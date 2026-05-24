@@ -98,6 +98,12 @@ const routes = [
     meta: { requiresAuth: true },
   },
   {
+    path: '/users/:userId',
+    name: 'PublicUserProfile',
+    component: UserProfile,
+    meta: { requiresAuth: true },
+  },
+  {
     path: '/profile/edit',
     name: 'EditProfile',
     component: EditProfile,

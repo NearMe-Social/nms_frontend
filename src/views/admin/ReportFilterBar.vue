@@ -76,8 +76,6 @@ const statusOptions = [
   { value: 'all', label: 'All' },
   { value: 'pending', label: 'Pending' },
   { value: 'reviewed', label: 'Reviewed' },
-  { value: 'resolved', label: 'Resolved' },
-  { value: 'rejected', label: 'Rejected' },
 ]
 
 const typeOptions = [
@@ -85,6 +83,7 @@ const typeOptions = [
   { value: 'post', label: 'Post' },
   { value: 'user', label: 'User' },
   { value: 'comment', label: 'Comment' },
+  { value: 'message', label: 'Message' },
 ]
 </script>
 

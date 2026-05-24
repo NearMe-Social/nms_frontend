@@ -49,9 +49,12 @@ import { ChevronLeft } from 'lucide-vue-next'
 import Navbar from '@/components/Navbar.vue'
 import ReportReasonSelector from '@/components/ReportReasonSelector.vue'
 import Toast from '@/components/Toast.vue'
+import { reportApi } from '@/services/api'
+import { useAuthStore } from '@/stores/auth'
 
 const route = useRoute()
 const router = useRouter()
+const auth = useAuthStore()
 const reasonSelector = ref()
 const successToast = ref()
 const toastTitle = ref('Report Submitted')
@@ -73,24 +76,43 @@ function onSuccessReport(message: string) {
 
 async function handleReportSubmit(data: any) {
   try {
-    // Set loading state
     reasonSelector.value?.setLoading(true)
 
-    // Simulate API call (replace with actual API call)
-    await new Promise(resolve => setTimeout(resolve, 2000))
+    const reporterId = auth.user?.userId ?? auth.user?.user_id
+    const targetId = Number(route.query.commentId)
 
-    console.log('Report submitted:', data)
+    if (!reporterId) {
+      throw new Error('Please log in again before submitting a report.')
+    }
 
-    // Set success state and show toast
+    if (!Number.isInteger(targetId)) {
+      throw new Error('Missing comment to report.')
+    }
+
+    await reportApi.create({
+      reporter_id: reporterId,
+      target_type: 'COMMENT',
+      target_id: targetId,
+      reason: buildReason(data),
+    })
+
     reasonSelector.value?.setSuccess('Report submitted successfully! Thank you for helping keep our community safe.')
 
-    // Reset after 2 seconds
     setTimeout(() => {
       reasonSelector.value?.reset()
     }, 2000)
   } catch (error) {
     console.error('Error submitting report:', error)
-    reasonSelector.value?.setError('Failed to submit report. Please try again.')
+    reasonSelector.value?.setError(error instanceof Error ? error.message : 'Failed to submit report. Please try again.')
   }
+}
+
+function buildReason(data: any) {
+  const selectedReasons = Array.isArray(data.reasons)
+    ? data.reasons.map((reason: any) => reason.label).filter(Boolean)
+    : []
+  const customDetails = data.customDetails?.trim()
+
+  return [...selectedReasons, customDetails].filter(Boolean).join('; ')
 }
 </script>

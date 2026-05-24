@@ -33,13 +33,18 @@
               <h1 class="post-title">{{ post.title }}</h1>
 
               <div class="author-row">
-                <div class="author-avatar">{{ initials(post.user?.username || 'Neighbor') }}</div>
-                <div>
-                  <div class="author-name">{{ post.user?.username || 'Neighbor' }}</div>
+                <button class="author-avatar author-link" type="button" @click="goToProfile(post.user?.user_id)">
+                  {{ initials(post.user?.username || 'Neighbor') }}
+                </button>
+                <div class="author-copy">
+                  <button class="author-name author-name-button" type="button" @click="goToProfile(post.user?.user_id)">
+                    {{ post.user?.username || 'Neighbor' }}
+                  </button>
                   <div class="author-sub">
                     {{ post.visibility_radius }}m visibility · <span class="verified-badge">Verified Resident</span>
                   </div>
                 </div>
+                <UserOptionsMenu :user-id="post.user?.user_id" />
               </div>
 
               <div class="post-body">
@@ -132,12 +137,14 @@ import { useRoute, useRouter } from 'vue-router'
 import CommentSection from './CommentSection.vue'
 import Navbar from '@/components/Navbar.vue'
 import AppSidebar from '@/components/AppSidebar.vue'
+import UserOptionsMenu from '@/components/UserOptionsMenu.vue'
 import { commentApi, postApi, type ApiComment, type ApiPost } from '@/services/api'
 import { useAuthStore } from '@/stores/auth'
 
 type ViewComment = {
   id: number
   name: string
+  userId: number | null
   initials: string
   time: string
   color: string
@@ -241,6 +248,11 @@ function goBack() {
   window.history.back()
 }
 
+function goToProfile(userId?: number | null) {
+  if (!userId) return
+  router.push(`/users/${userId}`)
+}
+
 async function loadPostDetail() {
   const postId = Number(route.params.postId)
 
@@ -281,6 +293,7 @@ function toViewComment(comment: ApiComment): ViewComment {
   return {
     id: comment.comment_id,
     name: username,
+    userId: comment.user?.user_id ?? null,
     initials: initials(username),
     time: timeAgo(comment.created_at),
     color: avatarGradient(username),
@@ -444,6 +457,7 @@ watch(() => route.params.postId, loadPostDetail)
 }
 
 .author-avatar {
+  border: 0;
   width: 42px;
   height: 42px;
   flex: 0 0 42px;
@@ -456,10 +470,34 @@ watch(() => route.params.postId, loadPostDetail)
   font-weight: 900;
 }
 
+.author-link {
+  cursor: pointer;
+}
+
+.author-link:hover {
+  filter: brightness(0.95);
+}
+
+.author-copy {
+  min-width: 0;
+  flex: 1;
+}
+
 .author-name {
   color: var(--text);
   font-size: 0.95rem;
   font-weight: 900;
+}
+
+.author-name-button {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+}
+
+.author-name-button:hover {
+  color: var(--accent);
 }
 
 .verified-badge {

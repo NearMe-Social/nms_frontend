@@ -18,11 +18,21 @@
       :style="{ animationDelay: ci * 0.06 + 's' }"
     >
       <div class="comment-header">
-        <div class="comment-avatar" :style="{ background: c.color }">{{ c.initials }}</div>
-        <div>
-          <span class="comment-name">{{ c.name }}</span>
+        <button
+          class="comment-avatar comment-author-link"
+          :style="{ background: c.color }"
+          type="button"
+          @click="goToProfile(c.userId)"
+        >
+          {{ c.initials }}
+        </button>
+        <div class="comment-copy">
+          <button class="comment-name comment-name-button" type="button" @click="goToProfile(c.userId)">
+            {{ c.name }}
+          </button>
           <span class="comment-time">· {{ c.time }}</span>
         </div>
+        <CommentOptionsMenu class="comment-menu" :comment-id="c.id" />
       </div>
       <div class="comment-body">{{ c.body }}</div>
       <div class="comment-footer">
@@ -89,7 +99,9 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import CommentOptionsMenu from '@/components/CommentOptionsMenu.vue'
 
 const props = defineProps({
   comments: {
@@ -113,6 +125,7 @@ const props = defineProps({
 const emit = defineEmits(['update:sort-by', 'add-comment', 'submit-reply'])
 
 const auth = useAuthStore()
+const router = useRouter()
 const mainReplyText = ref('')
 const mainReplyInput = ref<HTMLInputElement | null>(null)
 const currentUserInitials = computed(() => initials(auth.user?.username || 'Neighbor'))
@@ -131,6 +144,11 @@ const sortedComments = computed(() => {
 
 function updateSortBy(event: Event) {
   emit('update:sort-by', (event.target as HTMLSelectElement).value)
+}
+
+function goToProfile(userId?: number | null) {
+  if (!userId) return
+  router.push(`/users/${userId}`)
 }
 
 function likeComment(comment: any) {
@@ -235,6 +253,7 @@ defineExpose({
   margin-bottom: 10px;
 }
 .comment-avatar {
+  border: 0;
   width: 36px;
   height: 36px;
   border-radius: 50%;
@@ -246,10 +265,32 @@ defineExpose({
   font-size: 0.82rem;
   flex-shrink: 0;
 }
+.comment-author-link {
+  cursor: pointer;
+}
+.comment-author-link:hover {
+  filter: brightness(0.95);
+}
+.comment-copy {
+  min-width: 0;
+  flex: 1;
+}
 .comment-name {
   color: var(--text, #172033);
   font-weight: 900;
   font-size: 0.88rem;
+}
+.comment-name-button {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+}
+.comment-name-button:hover {
+  color: #0f766e;
+}
+.comment-menu {
+  margin-left: auto;
 }
 .comment-time {
   font-size: 0.75rem;

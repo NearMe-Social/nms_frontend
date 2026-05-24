@@ -72,6 +72,32 @@ export interface ApiComment {
   user?: ApiCommentUser | null
 }
 
+export interface ApiAdminReportUser {
+  userId: number
+  username: string
+  email?: string
+}
+
+export interface ApiAdminReport {
+  reportId: number
+  reporter: ApiAdminReportUser | null
+  targetType: 'POST' | 'COMMENT' | 'USER' | 'MESSAGE'
+  targetId: number
+  reason: string
+  status: 'PENDING' | 'REVIEWED'
+  reviewedBy: Omit<ApiAdminReportUser, 'email'> | null
+  reviewedAt: string | null
+  moderatorNote: string | null
+  createdAt: string
+}
+
+export interface CreateReportPayload {
+  reporter_id: number
+  target_type: 'POST' | 'COMMENT' | 'USER' | 'MESSAGE'
+  target_id: number
+  reason: string
+}
+
 export interface CreatePostPayload {
   user_id: number
   title: string
@@ -136,6 +162,21 @@ export const commentApi = {
   },
 }
 
+export const adminReportsApi = {
+  list(): Promise<ApiAdminReport[]> {
+    return request<ApiAdminReport[]>('/admin/reports')
+  },
+}
+
+export const reportApi = {
+  create(payload: CreateReportPayload): Promise<unknown> {
+    return request<unknown>('/reports', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    })
+  },
+}
+
 export interface UserProfile {
   userId?: number
   user_id?: number
@@ -162,6 +203,10 @@ export interface UpdateProfilePayload {
 export const userApi = {
   getProfile(): Promise<UserProfile> {
     return request<UserProfile>('/users/me')
+  },
+
+  getById(userId: number): Promise<UserProfile> {
+    return request<UserProfile>(`/users/${userId}`)
   },
 
   updateProfile(payload: UpdateProfilePayload): Promise<UserProfile> {

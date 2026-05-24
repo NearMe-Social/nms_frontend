@@ -14,7 +14,39 @@
           </tr>
         </thead>
 
-        <TransitionGroup name="row" tag="tbody" class="divide-y divide-gray-50">
+        <tbody v-if="isLoading">
+          <tr>
+            <td colspan="7" class="px-5 py-12 text-center text-sm text-gray-400">
+              Loading reports...
+            </td>
+          </tr>
+        </tbody>
+
+        <tbody v-else-if="error">
+          <tr>
+            <td colspan="7" class="px-5 py-12 text-center">
+              <div class="flex flex-col items-center gap-3">
+                <p class="text-sm font-medium text-red-500">{{ error }}</p>
+                <button
+                  @click="$emit('retry')"
+                  class="px-3 py-2 rounded-lg bg-red-50 text-xs font-semibold text-red-600 hover:bg-red-100 transition-all duration-200"
+                >
+                  Try again
+                </button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+
+        <tbody v-else-if="reports.length === 0">
+          <tr>
+            <td colspan="7" class="px-5 py-12 text-center text-sm text-gray-400">
+              No reports found
+            </td>
+          </tr>
+        </tbody>
+
+        <TransitionGroup v-else name="row" tag="tbody" class="divide-y divide-gray-50">
           <tr
             v-for="report in reports"
             :key="report.id"
@@ -25,9 +57,16 @@
             <td class="px-5 py-4">
               <div class="flex items-center gap-2.5">
                 <img
+                  v-if="report.reportedBy.avatar"
                   :src="report.reportedBy.avatar"
                   class="w-7 h-7 rounded-full object-cover ring-2 ring-transparent group-hover:ring-teal-200 transition-all duration-300 ease-out"
                 />
+                <span
+                  v-else
+                  class="w-7 h-7 rounded-full bg-teal-50 text-teal-700 text-xs font-bold flex items-center justify-center ring-2 ring-transparent group-hover:ring-teal-200 transition-all duration-300 ease-out"
+                >
+                  {{ initials(report.reportedBy.name) }}
+                </span>
                 <span class="font-medium text-gray-700">{{ report.reportedBy.name }}</span>
               </div>
             </td>
@@ -85,9 +124,11 @@ import ReportStatusBadge from './ReportStatusBadge.vue'
 
 defineProps({
   reports: { type: Array, default: () => [] },
+  isLoading: { type: Boolean, default: false },
+  error: { type: String, default: '' },
 })
 
-defineEmits(['selectReport'])
+defineEmits(['selectReport', 'retry'])
 
 function formatDate(date) {
   return new Date(date).toLocaleDateString('en-US', {
@@ -100,8 +141,18 @@ function typeClass(type) {
     post: 'bg-purple-50 text-purple-700',
     user: 'bg-blue-50 text-blue-700',
     comment: 'bg-orange-50 text-orange-700',
+    message: 'bg-teal-50 text-teal-700',
   }
   return map[type] || 'bg-gray-100 text-gray-600'
+}
+
+function initials(name) {
+  return name
+    .split(' ')
+    .map(part => part[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase()
 }
 </script>
 
