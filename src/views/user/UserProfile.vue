@@ -6,7 +6,10 @@
       <AppSidebar class="hidden md:flex" />
 
       <main class="workspace">
-        <section class="profile-header">
+        <p v-if="loading" class="state-card">Loading profile...</p>
+        <p v-else-if="error" class="state-card error-state">{{ error }}</p>
+
+        <section v-else class="profile-header">
           <div class="cover-map">
             <div class="map-grid"></div>
             <div class="signal-ring"></div>
@@ -41,8 +44,9 @@
             </div>
 
             <div class="actions">
-              <RouterLink to="/profile/edit" class="secondary-action">Edit profile</RouterLink>
-              <RouterLink to="/create-post" class="primary-action">
+              <RouterLink v-if="isOwnProfile" to="/profile/edit" class="secondary-action">Edit profile</RouterLink>
+              <UserOptionsMenu v-else :user-id="profileUserId" />
+              <RouterLink v-if="isOwnProfile" to="/create-post" class="primary-action">
                 <Plus class="icon" />
                 Create post
               </RouterLink>
@@ -50,7 +54,7 @@
           </div>
         </section>
 
-        <section class="stats-grid" aria-label="Profile stats">
+        <section v-if="!loading && !error" class="stats-grid" aria-label="Profile stats">
           <article v-for="stat in stats" :key="stat.label" class="stat-card">
             <component :is="stat.icon" class="stat-icon" />
             <div>
@@ -60,7 +64,7 @@
           </article>
         </section>
 
-        <div class="content-grid">
+        <div v-if="!loading && !error" class="content-grid">
           <section class="panel">
             <div class="panel-header">
               <div>
@@ -104,8 +108,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
-import { RouterLink } from 'vue-router'
+import { computed, onMounted, ref, watch } from 'vue'
+import { RouterLink, useRoute } from 'vue-router'
 import {
   ClipboardList,
   Heart,
@@ -117,11 +121,22 @@ import {
 } from 'lucide-vue-next'
 import Navbar from '@/components/Navbar.vue'
 import AppSidebar from '@/components/AppSidebar.vue'
+import UserOptionsMenu from '@/components/UserOptionsMenu.vue'
+import { userApi, type UserProfile } from '@/services/api'
 import { useAuthStore } from '@/stores/auth'
 
 const auth = useAuthStore()
+const route = useRoute()
+const profile = ref<UserProfile | null>(null)
+const loading = ref(false)
+const error = ref('')
 
-const username = computed(() => auth.user?.username ?? 'neighbor')
+const routeUserId = computed(() => Number(route.params.userId))
+const authUserId = computed(() => auth.user?.userId ?? auth.user?.user_id ?? null)
+const isPublicProfile = computed(() => Number.isInteger(routeUserId.value) && routeUserId.value > 0)
+const isOwnProfile = computed(() => !isPublicProfile.value || routeUserId.value === authUserId.value)
+const profileUserId = computed(() => profile.value?.userId ?? profile.value?.user_id ?? routeUserId.value)
+const username = computed(() => profile.value?.username ?? auth.user?.username ?? 'neighbor')
 const displayName = computed(() =>
   username.value
     .split(/[._-]/)
@@ -130,11 +145,14 @@ const displayName = computed(() =>
     .join(' ') || 'Nearme Neighbor',
 )
 const profileImage = computed(
-  () => `https://i.pravatar.cc/150?u=${encodeURIComponent(username.value)}`,
+  () => profile.value?.profile_image || `https://i.pravatar.cc/150?u=${encodeURIComponent(username.value)}`,
 )
 
-const bio =
-  'Sharing useful local updates, nearby questions, and quick notices for neighbors in the commons.'
+const bio = computed(
+  () =>
+    profile.value?.bio ||
+    'Sharing useful local updates, nearby questions, and quick notices for neighbors in the commons.',
+)
 
 const tags = ['Local updates', 'Safety aware', 'Community helper']
 
@@ -158,6 +176,25 @@ const recentPosts = [
     meta: 'Message neighbors from the shared navigation.',
   },
 ]
+
+async function loadProfile() {
+  loading.value = true
+  error.value = ''
+
+  try {
+    profile.value = isPublicProfile.value
+      ? await userApi.getById(routeUserId.value)
+      : await userApi.getProfile()
+  } catch (err: unknown) {
+    error.value = err instanceof Error ? err.message : 'Failed to load profile.'
+    profile.value = null
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(loadProfile)
+watch(() => route.params.userId, loadProfile)
 </script>
 
 <style scoped>
@@ -178,6 +215,23 @@ const recentPosts = [
   min-width: 0;
   flex: 1;
   padding: 24px clamp(16px, 3vw, 32px) 40px;
+}
+
+.state-card {
+  border: 1px solid #e3ebf2;
+  border-radius: 18px;
+  background: #fff;
+  color: #587083;
+  font-size: 0.92rem;
+  font-weight: 800;
+  padding: 22px;
+  box-shadow: 0 1px 3px rgba(15, 45, 70, 0.04);
+}
+
+.error-state {
+  border-color: #fecdd3;
+  background: #fff1f2;
+  color: #be123c;
 }
 
 .profile-header,

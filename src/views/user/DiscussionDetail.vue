@@ -21,43 +21,54 @@
 
         <div class="detail-grid">
           <main class="min-w-0">
-            <article class="post-card">
+            <p v-if="loading" class="state-card">Loading post...</p>
+            <p v-else-if="error" class="state-card error-state">{{ error }}</p>
+
+            <article v-else-if="post" class="post-card">
               <div class="post-meta">
-                <span class="post-tag">Maintenance</span>
-                <span class="post-time">{{ post.time }}</span>
+                <span class="post-tag">{{ post.status }}</span>
+                <span class="post-time">{{ timeAgo(post.created_at) }}</span>
               </div>
 
               <h1 class="post-title">{{ post.title }}</h1>
 
               <div class="author-row">
-                <div class="author-avatar">{{ post.author.initials }}</div>
-                <div>
-                  <div class="author-name">{{ post.author.name }}</div>
+                <button class="author-avatar author-link" type="button" @click="goToProfile(post.user?.user_id)">
+                  {{ initials(post.user?.username || 'Neighbor') }}
+                </button>
+                <div class="author-copy">
+                  <button class="author-name author-name-button" type="button" @click="goToProfile(post.user?.user_id)">
+                    {{ post.user?.username || 'Neighbor' }}
+                  </button>
                   <div class="author-sub">
-                    {{ post.author.distance }} · <span class="verified-badge">Verified Resident</span>
+                    {{ post.visibility_radius }}m visibility · <span class="verified-badge">Verified Resident</span>
                   </div>
                 </div>
+                <UserOptionsMenu :user-id="post.user?.user_id" />
               </div>
 
               <div class="post-body">
-                <p v-for="(para, i) in post.body" :key="i">{{ para }}</p>
+                <p v-for="(para, i) in postParagraphs" :key="i">{{ para }}</p>
               </div>
 
               <div class="post-actions">
                 <button class="action-btn" :class="{ upvoted: post.upvoted }" type="button" @click="toggleUpvote">
-                  {{ post.upvotes }} Upvotes
+                  {{ reactionsCount }} Upvotes
                 </button>
                 <button class="action-btn" type="button" @click="focusReply">
                   {{ commentCount }} Comments
                 </button>
-                <span class="action-note">5 min read</span>
+                <span class="action-note">{{ timeLeft(post.expires_at) }} left</span>
               </div>
             </article>
 
             <CommentSection
+              v-if="post"
               ref="commentSectionRef"
               :comments="comments"
               :sort-by="sortBy"
+              :submitting="commentSubmitting"
+              :error-message="commentError"
               @update:sort-by="sortBy = $event"
               @add-comment="addComment"
               @submit-reply="submitReply"
@@ -68,19 +79,19 @@
             <section class="side-card">
               <div class="side-title">Live Community Pulse</div>
               <div class="pulse-label">
-                Support Strength <span>{{ pulse.pct }}%</span>
+                Activity Strength <span>{{ pulsePct }}%</span>
               </div>
               <div class="pulse-track">
-                <div class="pulse-fill" :style="{ width: pulse.pct + '%' }"></div>
+                <div class="pulse-fill" :style="{ width: pulsePct + '%' }"></div>
               </div>
               <div class="pulse-stats">
                 <div>
-                  <strong>{{ pulse.voters }}</strong>
-                  <span>Active voters</span>
+                  <strong>{{ reactionsCount }}</strong>
+                  <span>Reactions</span>
                 </div>
                 <div>
-                  <strong>{{ pulse.trend }}d</strong>
-                  <span>Trend age</span>
+                  <strong>{{ commentCount }}</strong>
+                  <span>Comments</span>
                 </div>
               </div>
             </section>
@@ -90,7 +101,7 @@
               <div class="map-pin"></div>
               <div class="map-caption">
                 <span>Location Impact</span>
-                <strong>West Gate Entrance</strong>
+                <strong>{{ post?.distance_label || `${post?.visibility_radius ?? 0}m visibility` }}</strong>
               </div>
             </section>
 
@@ -120,63 +131,55 @@
   </div>
 </template>
 
-<script setup>
-import { ref, computed } from 'vue'
+<script setup lang="ts">
+import { computed, onMounted, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import CommentSection from './CommentSection.vue'
 import Navbar from '@/components/Navbar.vue'
 import AppSidebar from '@/components/AppSidebar.vue'
+import UserOptionsMenu from '@/components/UserOptionsMenu.vue'
+import { commentApi, postApi, type ApiComment, type ApiPost } from '@/services/api'
+import { useAuthStore } from '@/stores/auth'
 
-const post = ref({
-  title: 'Improving the West Gate lighting',
-  time: '2 hours ago',
-  upvotes: 24,
-  upvoted: false,
-  author: { name: 'Marcus Chen', initials: 'MC', distance: '3 blocks away' },
-  body: [
-    "I've noticed that the lighting around the West Gate entrance has been flickering significantly over the past week. It feels quite dark near the pedestrian walkway after 8 PM, which might be a safety concern for those walking dogs or returning from late shifts.",
-    'I suggest we look into transitioning those fixtures to high-efficiency LED units with motion sensors. Not only would it improve visibility, but it would also lower our communal energy costs in the long run. Does anyone else feel the same?',
-  ],
-})
+type ViewComment = {
+  id: number
+  name: string
+  userId: number | null
+  initials: string
+  time: string
+  color: string
+  body: string
+  likes: number
+  showReply: boolean
+  replyText: string
+  replies: never[]
+}
 
-const comments = ref([
-  {
-    id: 1,
-    name: 'Sarah Miller',
-    initials: 'SM',
-    time: '1 hour ago',
-    color: 'linear-gradient(135deg,#0f766e,#22c1b6)',
-    body: 'Completely agree, Marcus. I walk my retriever there every night and the shadows make the uneven pavement hard to see. LEDs would be a great upgrade!',
-    likes: 8,
-    showReply: false,
-    replyText: '',
-    replies: [
-      {
-        name: 'David Vance',
-        initials: 'DV',
-        time: '45 mins ago',
-        color: 'linear-gradient(135deg,#164e63,#0e7490)',
-        body: 'I could help the board compare a few cost-effective options if we decide to move forward.',
-      },
-    ],
-  },
-  {
-    id: 2,
-    name: 'Jason K.',
-    initials: 'JK',
-    time: '30 mins ago',
-    color: 'linear-gradient(135deg,#475569,#64748b)',
-    body: "Has anyone checked if it's just a bulb or a wiring issue? If it's wiring, we might need a full inspection before swapping the units.",
-    likes: 2,
-    showReply: false,
-    replyText: '',
-    replies: [],
-  },
-])
+type DetailPost = ApiPost & {
+  upvoted: boolean
+}
 
+const route = useRoute()
+const router = useRouter()
+const auth = useAuthStore()
+
+const post = ref<DetailPost | null>(null)
+const comments = ref<ViewComment[]>([])
 const sortBy = ref('top')
-const commentSectionRef = ref(null)
+const loading = ref(false)
+const error = ref('')
+const commentSubmitting = ref(false)
+const commentError = ref('')
+const commentSectionRef = ref<InstanceType<typeof CommentSection> | null>(null)
 const commentCount = computed(() => comments.value.length)
-const pulse = ref({ pct: 88, voters: 14, trend: 2 })
+const reactionsCount = computed(() => post.value?.reactions?.length ?? post.value?.reactions_count ?? 0)
+const pulsePct = computed(() => Math.min(100, Math.max(12, (commentCount.value + reactionsCount.value) * 12)))
+const postParagraphs = computed(() =>
+  (post.value?.content || '')
+    .split(/\n+/)
+    .map((para) => para.trim())
+    .filter(Boolean),
+)
 
 const tips = [
   { text: "Stay polite and constructive; we're all neighbors here." },
@@ -185,44 +188,58 @@ const tips = [
 ]
 
 const related = [
-  { title: 'Shared Garden Irrigation', meta: '8 active voices · Utilities' },
-  { title: 'Visitor Parking Rules', meta: '15 active voices · Community' },
+  { title: 'Nearby visibility', meta: 'Posts are scoped to their local radius.' },
+  { title: 'Community safety', meta: 'Report content that feels unsafe.' },
 ]
 
 function toggleUpvote() {
+  if (!post.value) return
   post.value.upvoted = !post.value.upvoted
-  post.value.upvotes += post.value.upvoted ? 1 : -1
 }
 
 function focusReply() {
   commentSectionRef.value?.focusMainReply()
 }
 
-function addComment(text) {
+async function addComment(text: string) {
   if (!text.trim()) return
-  comments.value.push({
-    id: Date.now(),
-    name: 'You',
-    initials: 'JD',
-    time: 'just now',
-    color: 'linear-gradient(135deg,#0f766e,#22c1b6)',
-    body: text,
-    likes: 0,
-    showReply: false,
-    replyText: '',
-    replies: [],
-  })
+  if (!post.value) return
+
+  const userId = auth.user?.userId ?? auth.user?.user_id
+  if (!userId) {
+    commentError.value = 'You need to be logged in to comment.'
+    return
+  }
+
+  commentSubmitting.value = true
+  commentError.value = ''
+
+  try {
+    const created = await commentApi.create({
+      post_id: post.value.post_id,
+      user_id: userId,
+      content: text.trim(),
+    })
+    comments.value = [
+      toViewComment({
+        ...created,
+        user: {
+          user_id: userId,
+          username: auth.user?.username || 'Neighbor',
+        },
+      }),
+      ...comments.value,
+    ]
+  } catch (err: unknown) {
+    commentError.value = err instanceof Error ? err.message : 'Failed to add comment.'
+  } finally {
+    commentSubmitting.value = false
+  }
 }
 
-function submitReply(comment, text) {
+function submitReply(comment: ViewComment, text: string) {
   if (!text.trim()) return
-  comment.replies.push({
-    name: 'You',
-    initials: 'JD',
-    time: 'just now',
-    color: 'linear-gradient(135deg,#0f766e,#22c1b6)',
-    body: text,
-  })
+  commentError.value = 'Threaded replies are not supported by the comment API yet.'
   comment.replyText = ''
   comment.showReply = false
 }
@@ -230,6 +247,105 @@ function submitReply(comment, text) {
 function goBack() {
   window.history.back()
 }
+
+function goToProfile(userId?: number | null) {
+  if (!userId) return
+  router.push(`/users/${userId}`)
+}
+
+async function loadPostDetail() {
+  const postId = Number(route.params.postId)
+
+  if (!Number.isInteger(postId) || postId <= 0) {
+    error.value = 'Choose a post from the feed to view its discussion.'
+    post.value = null
+    comments.value = []
+    return
+  }
+
+  loading.value = true
+  error.value = ''
+  commentError.value = ''
+
+  try {
+    const [postData, commentData] = await Promise.all([
+      postApi.get(postId),
+      commentApi.listByPost(postId),
+    ])
+
+    post.value = {
+      ...postData,
+      upvoted: false,
+    }
+    comments.value = commentData.filter(isActiveComment).map(toViewComment)
+  } catch (err: unknown) {
+    error.value = err instanceof Error ? err.message : 'Failed to load post discussion.'
+    post.value = null
+    comments.value = []
+  } finally {
+    loading.value = false
+  }
+}
+
+function toViewComment(comment: ApiComment): ViewComment {
+  const username = comment.user?.username || 'Neighbor'
+
+  return {
+    id: comment.comment_id,
+    name: username,
+    userId: comment.user?.user_id ?? null,
+    initials: initials(username),
+    time: timeAgo(comment.created_at),
+    color: avatarGradient(username),
+    body: comment.content,
+    likes: 0,
+    showReply: false,
+    replyText: '',
+    replies: [],
+  }
+}
+
+function isActiveComment(comment: ApiComment) {
+  return comment.status === 'ACTIVE'
+}
+
+function initials(value: string) {
+  return value
+    .split(/[\s._-]+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part.charAt(0).toUpperCase())
+    .join('') || 'N'
+}
+
+function avatarGradient(value: string) {
+  let hash = 0
+  for (const char of value) hash = (hash * 31 + char.charCodeAt(0)) & 0xffffffff
+  const hue = Math.abs(hash) % 360
+  return `linear-gradient(135deg, hsl(${hue} 58% 32%), hsl(${(hue + 34) % 360} 66% 46%))`
+}
+
+function timeAgo(value: string) {
+  const diffMs = Date.now() - new Date(value).getTime()
+  const minutes = Math.max(0, Math.floor(diffMs / 60000))
+  if (minutes < 1) return 'just now'
+  if (minutes < 60) return `${minutes}m ago`
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `${hours}h ago`
+  return `${Math.floor(hours / 24)}d ago`
+}
+
+function timeLeft(value: string) {
+  const diffMs = new Date(value).getTime() - Date.now()
+  if (diffMs <= 0) return 'expired'
+  const minutes = Math.ceil(diffMs / 60000)
+  if (minutes < 60) return `${minutes}m`
+  const hours = Math.ceil(minutes / 60)
+  return `${hours}h`
+}
+
+onMounted(loadPostDetail)
+watch(() => route.params.postId, loadPostDetail)
 </script>
 
 <style scoped>
@@ -341,6 +457,7 @@ function goBack() {
 }
 
 .author-avatar {
+  border: 0;
   width: 42px;
   height: 42px;
   flex: 0 0 42px;
@@ -353,10 +470,34 @@ function goBack() {
   font-weight: 900;
 }
 
+.author-link {
+  cursor: pointer;
+}
+
+.author-link:hover {
+  filter: brightness(0.95);
+}
+
+.author-copy {
+  min-width: 0;
+  flex: 1;
+}
+
 .author-name {
   color: var(--text);
   font-size: 0.95rem;
   font-weight: 900;
+}
+
+.author-name-button {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+}
+
+.author-name-button:hover {
+  color: var(--accent);
 }
 
 .verified-badge {

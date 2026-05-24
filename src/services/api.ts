@@ -57,6 +57,47 @@ export interface ApiPost {
   distance_label?: string
 }
 
+export interface ApiCommentUser {
+  user_id: number
+  username: string
+  profile_image?: string | null
+}
+
+export interface ApiComment {
+  comment_id: number
+  content: string
+  status: string
+  created_at: string
+  updated_at: string
+  user?: ApiCommentUser | null
+}
+
+export interface ApiAdminReportUser {
+  userId: number
+  username: string
+  email?: string
+}
+
+export interface ApiAdminReport {
+  reportId: number
+  reporter: ApiAdminReportUser | null
+  targetType: 'POST' | 'COMMENT' | 'USER' | 'MESSAGE'
+  targetId: number
+  reason: string
+  status: 'PENDING' | 'REVIEWED'
+  reviewedBy: Omit<ApiAdminReportUser, 'email'> | null
+  reviewedAt: string | null
+  moderatorNote: string | null
+  createdAt: string
+}
+
+export interface CreateReportPayload {
+  reporter_id: number
+  target_type: 'POST' | 'COMMENT' | 'USER' | 'MESSAGE'
+  target_id: number
+  reason: string
+}
+
 export interface CreatePostPayload {
   user_id: number
   title: string
@@ -96,8 +137,40 @@ export const postApi = {
     return request<ApiPost[]>(`/posts?sort=${sort}`)
   },
 
+  get(postId: number): Promise<ApiPost> {
+    return request<ApiPost>(`/posts/${postId}`)
+  },
+
   create(payload: CreatePostPayload): Promise<ApiPost> {
     return request<ApiPost>('/posts', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    })
+  },
+}
+
+export const commentApi = {
+  listByPost(postId: number): Promise<ApiComment[]> {
+    return request<ApiComment[]>(`/comments/post/${postId}`)
+  },
+
+  create(payload: { post_id: number; user_id: number; content: string }): Promise<ApiComment> {
+    return request<ApiComment>('/comments', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    })
+  },
+}
+
+export const adminReportsApi = {
+  list(): Promise<ApiAdminReport[]> {
+    return request<ApiAdminReport[]>('/admin/reports')
+  },
+}
+
+export const reportApi = {
+  create(payload: CreateReportPayload): Promise<unknown> {
+    return request<unknown>('/reports', {
       method: 'POST',
       body: JSON.stringify(payload),
     })
@@ -130,6 +203,10 @@ export interface UpdateProfilePayload {
 export const userApi = {
   getProfile(): Promise<UserProfile> {
     return request<UserProfile>('/users/me')
+  },
+
+  getById(userId: number): Promise<UserProfile> {
+    return request<UserProfile>(`/users/${userId}`)
   },
 
   updateProfile(payload: UpdateProfilePayload): Promise<UserProfile> {

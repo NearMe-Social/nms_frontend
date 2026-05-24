@@ -44,6 +44,12 @@ const routes = [
     meta: { requiresAuth: true },
   },
   {
+    path: '/posts/:postId',
+    name: 'PostDetail',
+    component: DiscussionDetail,
+    meta: { requiresAuth: true },
+  },
+  {
     path: '/discussion/new',
     name: 'CreateDiscussion',
     component: CreateDiscussion,
@@ -88,6 +94,12 @@ const routes = [
   {
     path: '/profile',
     name: 'UserProfile',
+    component: UserProfile,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/users/:userId',
+    name: 'PublicUserProfile',
     component: UserProfile,
     meta: { requiresAuth: true },
   },

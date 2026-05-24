@@ -34,6 +34,9 @@
       <div class="animate-fade-up">
         <ReportTableComponent
           :reports="filteredReports"
+          :is-loading="isLoading"
+          :error="errorMessage"
+          @retry="fetchReports"
           @selectReport="selectedReport = $event"
         />
       </div>
@@ -43,98 +46,54 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { Flag } from 'lucide-vue-next'
 import Navbar from '@/components/Navbar.vue'
 import ReportFilterBar from '@/views/admin/ReportFilterBar.vue'
 import ReportTableComponent from '@/views/admin/ReportTableComponent.vue'
+import { adminReportsApi } from '@/services/api'
 
 const search = ref('')
 const selectedStatus = ref('all')
 const selectedType = ref('all')
 const selectedReport = ref(null)
+const reports = ref([])
+const isLoading = ref(false)
+const errorMessage = ref('')
 
+function mapReport(report) {
+  const reporterName = report.reporter?.username || report.reporter?.email || 'Unknown user'
 
-// STATIC MOCK DATA
+  return {
+    ...report,
+    id: report.reportId,
+    reportedBy: {
+      name: reporterName,
+      email: report.reporter?.email || '',
+      avatar: '',
+    },
+    type: report.targetType.toLowerCase(),
+    status: report.status.toLowerCase(),
+    created_at: report.createdAt,
+  }
+}
 
-const reports = ref([
-  {
-    id: 1001,
-    reportedBy: { name: 'Mesa Gaming', avatar: 'https://i.pravatar.cc/150?img=1' },
-    type: 'post',
-    reason: 'This post contains inappropriate content and spam links',
-    status: 'pending',
-    created_at: '2026-05-01T10:30:00',
-  },
-  {
-    id: 1002,
-    reportedBy: { name: 'David Chen', avatar: 'https://i.pravatar.cc/150?img=3' },
-    type: 'user',
-    reason: 'User is harassing other members in public posts',
-    status: 'reviewed',
-    created_at: '2026-05-02T14:20:00',
-  },
-  {
-    id: 1003,
-    reportedBy: { name: 'Hello BBy', avatar: 'https://i.pravatar.cc/150?img=5' },
-    type: 'comment',
-    reason: 'Hate speech and offensive language in comment',
-    status: 'resolved',
-    created_at: '2026-05-03T09:15:00',
-  },
-  {
-    id: 1004,
-    reportedBy: { name: 'James Park', avatar: 'https://i.pravatar.cc/150?img=8' },
-    type: 'post',
-    reason: 'Misleading information about local events',
-    status: 'rejected',
-    created_at: '2026-05-04T16:45:00',
-  },
-  {
-    id: 1005,
-    reportedBy: { name: 'Anna Lee', avatar: 'https://i.pravatar.cc/150?img=9' },
-    type: 'user',
-    reason: 'Fake account impersonating a real person',
-    status: 'pending',
-    created_at: '2026-05-05T11:00:00',
-  },
-  {
-    id: 1006,
-    reportedBy: { name: 'Tom Wilson', avatar: 'https://i.pravatar.cc/150?img=11' },
-    type: 'comment',
-    reason: 'Spam comments with promotional links',
-    status: 'pending',
-    created_at: '2026-05-06T08:30:00',
-  },
-])
+async function fetchReports() {
+  try {
+    isLoading.value = true
+    errorMessage.value = ''
+    const data = await adminReportsApi.list()
+    reports.value = data.map(mapReport)
+  } catch (error) {
+    console.error('Failed to fetch admin reports:', error)
+    errorMessage.value = error instanceof Error ? error.message : 'Failed to load reports'
+    reports.value = []
+  } finally {
+    isLoading.value = false
+  }
+}
 
-
-// DYNAMIC API — uncomment 
-
-// import { useAuthStore } from '@/stores/auth'
-// const auth = useAuthStore()
-// const isLoading = ref(false)
-//
-// async function fetchReports() {
-//   try {
-//     isLoading.value = true
-//     const response = await fetch('http://localhost:3000/reports', {
-//       headers: {
-//         Authorization: `Bearer ${auth.token}`,
-//       },
-//     })
-//     const data = await response.json()
-//     reports.value = data
-//   } catch (error) {
-//     console.error('Failed to fetch reports:', error)
-//   } finally {
-//     isLoading.value = false
-//   }
-// }
-//
-// onMounted(() => {
-//   fetchReports()
-// })
+onMounted(fetchReports)
 
 const pendingCount = computed(() =>
   reports.value.filter(r => r.status === 'pending').length
@@ -145,7 +104,8 @@ const filteredReports = computed(() => {
     const matchSearch =
       search.value === '' ||
       report.reason.toLowerCase().includes(search.value.toLowerCase()) ||
-      report.reportedBy.name.toLowerCase().includes(search.value.toLowerCase())
+      report.reportedBy.name.toLowerCase().includes(search.value.toLowerCase()) ||
+      report.reportedBy.email.toLowerCase().includes(search.value.toLowerCase())
     const matchStatus = selectedStatus.value === 'all' || report.status === selectedStatus.value
     const matchType = selectedType.value === 'all' || report.type === selectedType.value
     return matchSearch && matchStatus && matchType
