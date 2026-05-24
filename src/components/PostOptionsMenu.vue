@@ -18,6 +18,14 @@
         <button
           type="button"
           class="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2 transition-colors"
+          @click="handleBlock"
+        >
+          <Ban class="w-4 h-4 text-red-500" />
+          Block Post
+        </button>
+        <button
+          type="button"
+          class="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2 transition-colors"
           @click="handleReport"
         >
           <Flag class="w-4 h-4 text-red-500" />
@@ -28,13 +36,17 @@
 
     <!-- Click outside handler -->
     <div v-if="isOpen" class="fixed inset-0 z-40" @click="isOpen = false" />
+
+    <!-- Block Post Dialog Component -->
+    <BlockPostDialog ref="blockPostDialog" :post-id="postId" />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { MoreVertical, Flag } from 'lucide-vue-next'
+import { MoreVertical, Flag, Ban } from 'lucide-vue-next'
+import BlockPostDialog from './BlockPostDialog.vue'
 
 interface Props {
   postId: string | number
@@ -44,9 +56,15 @@ const props = defineProps<Props>()
 
 const router = useRouter()
 const isOpen = ref(false)
+const blockPostDialog = ref<InstanceType<typeof BlockPostDialog>>()
 
 function toggleDropdown() {
   isOpen.value = !isOpen.value
+}
+
+function handleBlock() {
+  isOpen.value = false
+  blockPostDialog.value?.open()
 }
 
 function handleReport() {
