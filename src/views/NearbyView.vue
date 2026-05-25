@@ -259,7 +259,7 @@ watch(() => geo.coords.value, refreshNearby)
               <span>{{ userDistance(user) }}</span>
             </div>
             <div class="person-actions">
-              <RouterLink to="/chat">Message</RouterLink>
+              <RouterLink :to="{ path: '/chat', query: { userId: user.id } }">Message</RouterLink>
               <button type="button">Report</button>
             </div>
           </article>
