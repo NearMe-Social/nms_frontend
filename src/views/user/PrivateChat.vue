@@ -35,7 +35,7 @@
                 :key="conversation.id"
                 type="button"
                 class="conversation-card"
-                :class="{ active: conversation.id === activeConversation.id }"
+                :class="{ active: activeConversation && conversation.id === activeConversation.id }"
                 @click="selectConversation(conversation.id)"
               >
                 <div class="avatar-wrap">
@@ -55,7 +55,7 @@
           </div>
         </section>
 
-        <section class="active-chat">
+        <section v-if="activeConversation" class="active-chat">
           <header class="chat-header">
             <button
               v-if="isListCollapsed"
@@ -147,15 +147,31 @@
             </button>
           </footer>
         </section>
+
+        <section v-else class="active-chat empty-chat">
+          <div class="empty-state">
+            <h2>No conversations yet</h2>
+            <p>Start a conversation from a nearby user profile.</p>
+          </div>
+        </section>
       </main>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
+import { io, type Socket } from 'socket.io-client'
 import AppSidebar from '@/components/AppSidebar.vue'
 import Navbar from '@/components/Navbar.vue'
+import {
+  conversationApi,
+  messageApi,
+  type ApiConversation,
+  type ApiMessage,
+} from '@/services/api'
+import { useAuthStore } from '@/stores/auth'
 import {
   CheckCheck,
   Info,
@@ -180,6 +196,7 @@ type ChatMessage = {
 
 type Conversation = {
   id: number
+  participantId: number | null
   name: string
   avatar: string
   online: boolean
@@ -189,128 +206,42 @@ type Conversation = {
   unread?: number
 }
 
-const conversations: Conversation[] = [
-  {
-    id: 1,
-    name: 'Amina Johnson',
-    avatar: 'https://i.pravatar.cc/200?img=47',
-    online: true,
-    presence: 'Active now',
-    preview: 'Perfect. I’m online for the next hour.',
-    time: '09:19',
-    unread: 2,
-  },
-  {
-    id: 2,
-    name: 'Sokha Lim',
-    avatar: 'https://i.pravatar.cc/200?img=32',
-    online: false,
-    presence: 'Seen 12 minutes ago',
-    preview: 'Thanks for the road repair update.',
-    time: 'Yesterday',
-  },
-  {
-    id: 3,
-    name: 'Maya Chen',
-    avatar: 'https://i.pravatar.cc/200?img=5',
-    online: true,
-    presence: 'Active now',
-    preview: 'Is the meetup still happening?',
-    time: 'Tue',
-  },
-  {
-    id: 4,
-    name: 'Dara Vann',
-    avatar: 'https://i.pravatar.cc/200?img=12',
-    online: false,
-    presence: 'Seen yesterday',
-    preview: 'I found the contact number.',
-    time: 'Mon',
-  },
-]
-
-const activeConversationId = ref(1)
+const auth = useAuthStore()
+const route = useRoute()
+const conversations = ref<Conversation[]>([])
+const activeConversationId = ref<number | null>(null)
 const isListCollapsed = ref(false)
 const searchTerm = ref('')
 const threadRef = ref<HTMLElement | null>(null)
 const composerRef = ref<HTMLTextAreaElement | null>(null)
 const draft = ref('')
 const messages = ref<ChatMessage[]>([])
-
-const conversationMessages: Record<number, ChatMessage[]> = {
-  1: [
-    {
-      id: 1,
-      sender: 'them',
-      text: 'Hey, I saw your update about the west gate lighting. Do you want to compare notes before we message the board?',
-      time: '09:12',
-    },
-    {
-      id: 2,
-      sender: 'me',
-      text: 'Absolutely. I walked by last night and the darker section is still near the pedestrian path.',
-      time: '09:14',
-    },
-    {
-      id: 3,
-      sender: 'them',
-      text: 'Yes please. I can also ask maintenance whether the fixtures need replacement.',
-      time: '09:16',
-    },
-    {
-      id: 4,
-      sender: 'me',
-      text: 'Great. I’ll draft a short summary and send it over here first.',
-      time: '09:18',
-    },
-  ],
-  2: [
-    {
-      id: 1,
-      sender: 'them',
-      text: 'Thanks for posting about the road repair. Saved me a detour.',
-      time: '08:40',
-    },
-  ],
-  3: [
-    {
-      id: 1,
-      sender: 'them',
-      text: 'Is the meetup still happening near the north lawn?',
-      time: '10:03',
-    },
-  ],
-  4: [
-    {
-      id: 1,
-      sender: 'them',
-      text: 'I found the contact number for the building manager.',
-      time: 'Yesterday',
-    },
-  ],
-}
+const loading = ref(false)
+const error = ref('')
+const socket = ref<Socket | null>(null)
+const socketConnected = ref(false)
 
 const activeConversation = computed(
-  (): Conversation =>
-    conversations.find((conversation) => conversation.id === activeConversationId.value) ??
-    conversations[0]!,
+  (): Conversation | null =>
+    conversations.value.find((conversation) => conversation.id === activeConversationId.value) ?? null,
 )
 const filteredConversations = computed(() => {
   const needle = searchTerm.value.trim().toLowerCase()
-  if (!needle) return conversations
+  if (!needle) return conversations.value
 
-  return conversations.filter(
+  return conversations.value.filter(
     (conversation) =>
       conversation.name.toLowerCase().includes(needle) ||
       conversation.preview.toLowerCase().includes(needle),
   )
 })
 const messageCount = computed(() => messages.value.length)
-const canSend = computed(() => draft.value.trim().length > 0)
+const canSend = computed(() => !!activeConversation.value && draft.value.trim().length > 0)
 
-function selectConversation(id: number) {
+async function selectConversation(id: number) {
   activeConversationId.value = id
-  messages.value = [...(conversationMessages[id] ?? [])]
+  await loadMessages(id)
+  joinConversation(id)
   void nextTick(scrollToBottom)
 }
 
@@ -318,20 +249,35 @@ function formatTime(date = new Date()) {
   return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 }
 
-function sendMessage() {
+async function sendMessage() {
   const text = draft.value.trim()
-  if (!text) return
+  const conversationId = activeConversationId.value
+  if (!text || !conversationId) return
 
-  messages.value.push({
-    id: Date.now(),
-    sender: 'me',
-    text,
-    time: formatTime(),
-  })
-
-  conversationMessages[activeConversationId.value] = [...messages.value]
   draft.value = ''
-  void nextTick(scrollToBottom)
+
+  if (socket.value?.connected) {
+    socket.value.emit(
+      'sendMessage',
+      { conversationId, content: text },
+      (response: { success?: boolean; message?: ApiMessage; error?: string }) => {
+        if (response?.error) {
+          error.value = response.error
+          return
+        }
+        if (response?.message) upsertMessage(response.message)
+      },
+    )
+    return
+  }
+
+  try {
+    const created = await messageApi.create(conversationId, text)
+    upsertMessage(created)
+  } catch (err: unknown) {
+    error.value = err instanceof Error ? err.message : 'Failed to send message.'
+    draft.value = text
+  }
 }
 
 function handleComposerKeydown(event: KeyboardEvent) {
@@ -346,8 +292,148 @@ function scrollToBottom() {
   thread.scrollTo({ top: thread.scrollHeight, behavior: 'smooth' })
 }
 
+function currentUserId() {
+  return auth.user?.userId ?? auth.user?.user_id ?? null
+}
+
+function toConversation(conversation: ApiConversation): Conversation {
+  const me = currentUserId()
+  const otherParticipant =
+    conversation.participants?.find((participant) => participant.user_id !== me) ??
+    conversation.participants?.[0]
+  const user = otherParticipant?.user
+  const latestMessage = [...(conversation.messages ?? [])].sort(
+    (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+  )[0]
+  const name = user?.username || 'Neighbor'
+
+  return {
+    id: conversation.conversation_id,
+    participantId: user?.user_id ?? otherParticipant?.user_id ?? null,
+    name,
+    avatar: user?.profile_image || `https://i.pravatar.cc/200?u=${encodeURIComponent(name)}`,
+    online: false,
+    presence: 'Offline',
+    preview: latestMessage?.content || 'No messages yet',
+    time: latestMessage ? formatTime(new Date(latestMessage.created_at)) : formatTime(new Date(conversation.updated_at)),
+  }
+}
+
+function toChatMessage(message: ApiMessage): ChatMessage {
+  return {
+    id: message.message_id,
+    sender: message.sender_id === currentUserId() ? 'me' : 'them',
+    text: message.content,
+    time: formatTime(new Date(message.created_at)),
+  }
+}
+
+async function loadConversations() {
+  loading.value = true
+  error.value = ''
+
+  try {
+    const data = await conversationApi.list()
+    conversations.value = data.map(toConversation)
+
+    const targetUserId = Number(route.query.userId)
+
+    if (Number.isInteger(targetUserId) && targetUserId > 0) {
+      await openConversationWith(targetUserId)
+    } else if (conversations.value.length > 0) {
+      await selectConversation(activeConversationId.value ?? conversations.value[0]!.id)
+    }
+  } catch (err: unknown) {
+    error.value = err instanceof Error ? err.message : 'Failed to load conversations.'
+  } finally {
+    loading.value = false
+  }
+}
+
+async function openConversationWith(userId: number) {
+  const existing = conversations.value.find((conversation) => conversation.participantId === userId)
+
+  if (existing) {
+    await selectConversation(existing.id)
+    return
+  }
+
+  const created = await conversationApi.create([userId])
+  const conversation = toConversation(created)
+  conversations.value = [conversation, ...conversations.value]
+  await selectConversation(conversation.id)
+}
+
+async function loadMessages(conversationId: number) {
+  try {
+    const page = await messageApi.list(conversationId, 0, 50)
+    messages.value = page.data.map(toChatMessage)
+    await messageApi.markSeen(conversationId)
+  } catch (err: unknown) {
+    error.value = err instanceof Error ? err.message : 'Failed to load messages.'
+    messages.value = []
+  }
+}
+
+function upsertMessage(message: ApiMessage) {
+  if (message.conversation_id !== activeConversationId.value) return
+
+  const mapped = toChatMessage(message)
+  const existingIndex = messages.value.findIndex((item) => item.id === mapped.id)
+
+  if (existingIndex >= 0) {
+    messages.value.splice(existingIndex, 1, mapped)
+  } else {
+    messages.value.push(mapped)
+  }
+
+  updateConversationPreview(message)
+  void nextTick(scrollToBottom)
+}
+
+function updateConversationPreview(message: ApiMessage) {
+  const conversation = conversations.value.find((item) => item.id === message.conversation_id)
+  if (!conversation) return
+
+  conversation.preview = message.content
+  conversation.time = formatTime(new Date(message.created_at))
+}
+
+function connectSocket() {
+  const token = localStorage.getItem('token')
+  if (!token) return
+
+  socket.value = io(`${import.meta.env.VITE_API_URL}/chat`, {
+    auth: { token },
+    transports: ['websocket', 'polling'],
+  })
+
+  socket.value.on('connect', () => {
+    socketConnected.value = true
+    if (activeConversationId.value) joinConversation(activeConversationId.value)
+  })
+
+  socket.value.on('disconnect', () => {
+    socketConnected.value = false
+  })
+
+  socket.value.on('newMessage', (message: ApiMessage) => {
+    upsertMessage(message)
+  })
+}
+
+function joinConversation(conversationId: number) {
+  if (!socket.value?.connected) return
+  socket.value.emit('joinConversation', conversationId)
+}
+
 onMounted(() => {
-  selectConversation(activeConversationId.value)
+  connectSocket()
+  void loadConversations()
+})
+
+onUnmounted(() => {
+  socket.value?.disconnect()
 })
 
 watch(activeConversationId, () => {

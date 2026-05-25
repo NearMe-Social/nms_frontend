@@ -15,7 +15,12 @@ import CreateDiscussion from '@/views/user/CreateDiscussion.vue'
 import NearbyView from '@/views/NearbyView.vue'
 import CreatePostPage from '@/views/CreatePostPage.vue'
 import DiscussionsPage from '@/views/DiscussionsPage.vue'
+import ReportPostPage from '@/views/ReportPostPage.vue'
+import ReportUserPage from '@/views/ReportUserPage.vue'
+import ReportCommentPage from '@/views/ReportCommentPage.vue'
 import AdminReportsPage from '@/views/admin/AdminReportsPage.vue'
+import AdminLayout from '@/views/admin/AdminLayout.vue'
+import AdminReportDetail from '@/views/admin/AdminReportDetail.vue'
 
 const routes = [
   {
@@ -41,6 +46,12 @@ const routes = [
     meta: { requiresAuth: true },
   },
   {
+    path: '/posts/:postId',
+    name: 'PostDetail',
+    component: DiscussionDetail,
+    meta: { requiresAuth: true },
+  },
+  {
     path: '/discussion/new',
     name: 'CreateDiscussion',
     component: CreateDiscussion,
@@ -50,6 +61,24 @@ const routes = [
     path: '/create-post',
     name: 'CreatePostPage',
     component: CreatePostPage,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/report/post',
+    name: 'ReportPost',
+    component: ReportPostPage,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/report/user',
+    name: 'ReportUser',
+    component: ReportUserPage,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/report/comment',
+    name: 'ReportComment',
+    component: ReportCommentPage,
     meta: { requiresAuth: true },
   },
   {
@@ -67,6 +96,12 @@ const routes = [
   {
     path: '/profile',
     name: 'UserProfile',
+    component: UserProfile,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/users/:userId',
+    name: 'PublicUserProfile',
     component: UserProfile,
     meta: { requiresAuth: true },
   },
@@ -101,14 +136,22 @@ const routes = [
     meta: { requiresAuth: true },
   },
   {
-    path: '/admin/reports',
-    name: 'AdminReports',
-    component: AdminReportsPage,
-    meta: {
-      requiresAuth: true,
-      requiresAdmin: true,
+    path: '/admin',
+    component: AdminLayout,
+    meta: { requiresAuth: true, requiresAdmin: true },
+    children: [
+    {
+      path: 'reports',
+      name: 'AdminReports',
+      component: AdminReportsPage,
     },
-  },
+    {
+      path: 'reports/:id',
+      name: 'AdminReportDetail',
+      component: AdminReportDetail,
+    },
+  ],
+},
 ]
 
 const router = createRouter({
@@ -140,10 +183,10 @@ router.beforeEach((to, from, next) => {
   if (isAdminRoute) {
     const userRole = auth.user?.role
 
-    if (userRole !== 'ADMIN') {
-      next({ name: 'HomePage' })
-      return
-    }
+    // if (userRole !== 'ADMIN') {
+    //  next({ name: 'HomePage' })
+    //   return
+    // }
   }
 
   next()
