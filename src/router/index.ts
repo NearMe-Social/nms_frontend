@@ -16,6 +16,8 @@ import NearbyView from '@/views/NearbyView.vue'
 import CreatePostPage from '@/views/CreatePostPage.vue'
 import DiscussionsPage from '@/views/DiscussionsPage.vue'
 import AdminReportsPage from '@/views/admin/AdminReportsPage.vue'
+import AdminLayout from '@/views/admin/AdminLayout.vue'
+import AdminReportDetail from '@/views/admin/AdminReportDetail.vue'
 
 const routes = [
   {
@@ -101,14 +103,22 @@ const routes = [
     meta: { requiresAuth: true },
   },
   {
-    path: '/admin/reports',
-    name: 'AdminReports',
-    component: AdminReportsPage,
-    meta: {
-      requiresAuth: true,
-      requiresAdmin: true,
+    path: '/admin',
+    component: AdminLayout,
+    meta: { requiresAuth: true, requiresAdmin: true },
+    children: [
+    {
+      path: 'reports',
+      name: 'AdminReports',
+      component: AdminReportsPage,
     },
-  },
+    {
+      path: 'reports/:id',
+      name: 'AdminReportDetail',
+      component: AdminReportDetail,
+    },
+  ],
+},
 ]
 
 const router = createRouter({
@@ -140,10 +150,10 @@ router.beforeEach((to, from, next) => {
   if (isAdminRoute) {
     const userRole = auth.user?.role
 
-    //if (userRole !== 'ADMIN') {
-     // next({ name: 'HomePage' })
-      //return
-    //}
+    // if (userRole !== 'ADMIN') {
+    //  next({ name: 'HomePage' })
+    //   return
+    // }
   }
 
   next()
