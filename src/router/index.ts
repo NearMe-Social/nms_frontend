@@ -22,6 +22,10 @@ import AdminReportsPage from '@/views/admin/AdminReportsPage.vue'
 import AdminLayout from '@/views/admin/AdminLayout.vue'
 import AdminReportDetail from '@/views/admin/AdminReportDetail.vue'
 
+import AdminUsersPage from '@/views/admins/AdminUsersPage.vue';
+import AdminModerationPage from '@/views/admins/AdminModerationPage.vue';
+
+
 const routes = [
   {
     path: '/login',
@@ -135,7 +139,7 @@ const routes = [
     component: NearbyView,
     meta: { requiresAuth: true },
   },
-  {
+
     path: '/admin',
     component: AdminLayout,
     meta: { requiresAuth: true, requiresAdmin: true },
@@ -150,6 +154,14 @@ const routes = [
       name: 'AdminReportDetail',
       component: AdminReportDetail,
     },
+    {
+      path: 'users',
+      component: AdminUsersPage
+    },
+    {
+      path: 'moderation',
+      component: AdminModerationPage
+    }
   ],
 },
 ]
@@ -183,10 +195,10 @@ router.beforeEach((to, from, next) => {
   if (isAdminRoute) {
     const userRole = auth.user?.role
 
-    // if (userRole !== 'ADMIN') {
-    //  next({ name: 'HomePage' })
-    //   return
-    // }
+    if (userRole !== 'ADMIN') {
+     next({ name: 'HomePage' })
+      return
+    }
   }
 
   next()
