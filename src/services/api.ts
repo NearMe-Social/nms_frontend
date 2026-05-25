@@ -72,6 +72,38 @@ export interface ApiComment {
   user?: ApiCommentUser | null
 }
 
+export interface ApiConversationParticipant {
+  conversation_participant_id: number
+  conversation_id: number
+  user_id: number
+  joined_at: string
+  user?: PostUser | null
+}
+
+export interface ApiMessage {
+  message_id: number
+  conversation_id: number
+  sender_id: number
+  content: string
+  status: string
+  read_at: string | null
+  created_at: string
+  sender?: PostUser | null
+}
+
+export interface ApiConversation {
+  conversation_id: number
+  created_at: string
+  updated_at: string
+  participants?: ApiConversationParticipant[]
+  messages?: ApiMessage[]
+}
+
+export interface ApiMessagePage {
+  total: number
+  data: ApiMessage[]
+}
+
 export interface ApiAdminReportUser {
   userId: number
   username: string
@@ -96,6 +128,11 @@ export interface CreateReportPayload {
   target_type: 'POST' | 'COMMENT' | 'USER' | 'MESSAGE'
   target_id: number
   reason: string
+}
+
+export interface CreateBlockPayload {
+  blocker_id: number
+  blocked_user_id: number
 }
 
 export interface CreatePostPayload {
@@ -162,6 +199,38 @@ export const commentApi = {
   },
 }
 
+export const conversationApi = {
+  list(): Promise<ApiConversation[]> {
+    return request<ApiConversation[]>('/conversations')
+  },
+
+  create(participantIds: number[]): Promise<ApiConversation> {
+    return request<ApiConversation>('/conversations', {
+      method: 'POST',
+      body: JSON.stringify({ participantIds }),
+    })
+  },
+}
+
+export const messageApi = {
+  list(conversationId: number, page = 0, size = 50): Promise<ApiMessagePage> {
+    return request<ApiMessagePage>(`/conversations/${conversationId}/messages?page=${page}&size=${size}`)
+  },
+
+  create(conversationId: number, content: string): Promise<ApiMessage> {
+    return request<ApiMessage>(`/conversations/${conversationId}/messages`, {
+      method: 'POST',
+      body: JSON.stringify({ content }),
+    })
+  },
+
+  markSeen(conversationId: number): Promise<{ success: true }> {
+    return request<{ success: true }>(`/conversations/${conversationId}/messages/seen`, {
+      method: 'PATCH',
+    })
+  },
+}
+
 export const adminReportsApi = {
   list(): Promise<ApiAdminReport[]> {
     return request<ApiAdminReport[]>('/admin/reports')
@@ -171,6 +240,15 @@ export const adminReportsApi = {
 export const reportApi = {
   create(payload: CreateReportPayload): Promise<unknown> {
     return request<unknown>('/reports', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    })
+  },
+}
+
+export const blockApi = {
+  create(payload: CreateBlockPayload): Promise<unknown> {
+    return request<unknown>('/blocks', {
       method: 'POST',
       body: JSON.stringify(payload),
     })

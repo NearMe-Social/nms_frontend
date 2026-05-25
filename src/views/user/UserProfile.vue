@@ -46,6 +46,14 @@
             <div class="actions">
               <RouterLink v-if="isOwnProfile" to="/profile/edit" class="secondary-action">Edit profile</RouterLink>
               <UserOptionsMenu v-else :user-id="profileUserId" />
+              <RouterLink
+                v-if="!isOwnProfile"
+                :to="{ path: '/chat', query: { userId: profileUserId } }"
+                class="primary-action"
+              >
+                <MessageSquare class="icon" />
+                Message
+              </RouterLink>
               <RouterLink v-if="isOwnProfile" to="/create-post" class="primary-action">
                 <Plus class="icon" />
                 Create post

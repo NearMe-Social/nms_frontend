@@ -22,18 +22,28 @@
           <Flag class="w-4 h-4 text-red-500" />
           Report User
         </button>
+        <button
+          type="button"
+          class="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2 transition-colors"
+          @click="handleBlock"
+        >
+          <Ban class="w-4 h-4 text-red-500" />
+          Block User
+        </button>
       </div>
     </Transition>
 
     <div v-if="isOpen" class="fixed inset-0 z-40" @click="isOpen = false" />
+    <BlockUserDialog ref="blockUserDialog" :user-id="userId" />
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { Flag, MoreVertical } from 'lucide-vue-next'
+import { Ban, Flag, MoreVertical } from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/auth'
+import BlockUserDialog from './BlockUserDialog.vue'
 
 const props = defineProps<{
   userId?: number | string | null
@@ -42,10 +52,11 @@ const props = defineProps<{
 const router = useRouter()
 const auth = useAuthStore()
 const isOpen = ref(false)
+const blockUserDialog = ref<InstanceType<typeof BlockUserDialog>>()
+const userId = computed(() => Number(props.userId))
 const canReport = computed(() => {
-  const userId = Number(props.userId)
   const authUserId = auth.user?.userId ?? auth.user?.user_id
-  return Number.isInteger(userId) && userId > 0 && userId !== authUserId
+  return Number.isInteger(userId.value) && userId.value > 0 && userId.value !== authUserId
 })
 
 function toggleDropdown() {
@@ -54,14 +65,18 @@ function toggleDropdown() {
 
 function handleReport() {
   isOpen.value = false
-  const userId = Number(props.userId)
 
-  if (!Number.isInteger(userId) || userId <= 0) return
+  if (!Number.isInteger(userId.value) || userId.value <= 0) return
 
   router.push({
     path: '/report/user',
-    query: { userId },
+    query: { userId: userId.value },
   })
+}
+
+function handleBlock() {
+  isOpen.value = false
+  blockUserDialog.value?.open()
 }
 </script>
 
