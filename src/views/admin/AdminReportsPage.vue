@@ -304,7 +304,10 @@ function formatDate(date) {
 }
 
 function goToDetail(report) {
-  router.push({ name: 'AdminReportDetail', params: { id: report.id }, state: { report } })
+  router.push({ 
+    name: 'AdminReportDetail', 
+    params: { id: report.id }
+  })
 }
 
 function clearFilters() {

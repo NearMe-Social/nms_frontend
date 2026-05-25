@@ -1,6 +1,5 @@
 <template>
   <div class="p-6 flex flex-col gap-5 animate-fade-up">
-
     
     <div class="flex items-center gap-3">
       <button
@@ -21,10 +20,8 @@
     </div>
 
     <div class="flex gap-5 items-start">
-
   
       <div class="flex-1 flex flex-col gap-4 min-w-0">
-
         
         <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
           <div class="flex items-center justify-between px-5 py-3.5 border-b border-gray-100">
@@ -37,7 +34,6 @@
               View Original Post
             </button>
           </div>
-
           <div class="p-5">
             <div class="flex items-center gap-3 mb-3">
               <img
@@ -50,9 +46,7 @@
               </div>
             </div>
             <p class="text-sm text-gray-700 leading-relaxed mb-4">{{ report?.content }}</p>
-
-            <!-- Sensitive image placeholder -->
-            <div class="w-full h-48 bg-gray-900 rounded-xl flex flex-col items-center justify-center gap-2 cursor-pointer group"
+            <div class="w-full h-48 bg-gray-900 rounded-xl flex flex-col items-center justify-center gap-2 cursor-pointer"
               @click="showContent = !showContent">
               <template v-if="!showContent">
                 <EyeOff class="w-8 h-8 text-gray-500" />
@@ -69,7 +63,6 @@
           </div>
         </div>
 
-        <!-- Investigation timeline -->
         <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
           <div class="flex items-center gap-2 px-5 py-3.5 border-b border-gray-100">
             <Clock class="w-4 h-4 text-gray-400" />
@@ -99,13 +92,9 @@
             </div>
           </div>
         </div>
-
       </div>
 
-     
       <div class="w-72 shrink-0 flex flex-col gap-4">
-
-   
         <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
           <div class="px-5 py-4 border-b border-gray-100">
             <div class="flex items-center gap-2">
@@ -114,7 +103,6 @@
             </div>
           </div>
           <div class="p-5 flex flex-col gap-4">
-
             <div>
               <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Current Status</p>
               <div class="relative">
@@ -130,7 +118,6 @@
                 <ChevronDown class="w-4 h-4 text-gray-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
               </div>
             </div>
-
             <div>
               <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Internal Notes</p>
               <textarea
@@ -140,7 +127,6 @@
                 class="w-full text-sm text-gray-700 placeholder-gray-400 bg-gray-50 border border-gray-200 rounded-xl p-3 outline-none resize-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all duration-200"
               ></textarea>
             </div>
-
             <div class="flex flex-col gap-2">
               <button
                 @click="handleAction('resolved')"
@@ -168,11 +154,9 @@
                 Reject Report (Keep Content)
               </button>
             </div>
-
           </div>
         </div>
 
-      
         <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
           <div class="px-5 py-3.5 border-b border-gray-100">
             <span class="text-sm font-bold text-gray-800">Reporter Details</span>
@@ -204,7 +188,6 @@
           </div>
         </div>
 
-      
         <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
           <div class="px-5 py-3.5 border-b border-gray-100">
             <span class="text-sm font-bold text-gray-800">Target User Context</span>
@@ -232,7 +215,7 @@
 
 <script setup>
 import { ref, computed } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import {
   ArrowLeft, Eye, EyeOff, ExternalLink, Clock,
   AlertTriangle, Zap, ChevronDown, Trash2, UserX,
@@ -241,18 +224,71 @@ import {
 import ReportStatusBadge from '@/views/admin/ReportStatusBadge.vue'
 
 const router = useRouter()
+const route = useRoute()
 
-// Get report from router state
-const report = ref(history.state?.report || {
-  id: 92841,
-  reportedBy: { name: 'alex_rivera', avatar: 'https://i.pravatar.cc/150?img=1' },
-  target: 'POST ID: PST-1029',
-  reason: 'Harassment',
-  status: 'pending',
-  priority: 'high',
-  created_at: '2023-10-24T14:32:00',
-  content: 'Just saw the craziest thing downtown! This shouldn\'t be allowed in our neighborhood. Complete garbage. #citylife #unbelievable',
-})
+
+// ALL MOCK REPORTS — must match AdminReportsPage.vue
+
+const allReports = [
+  {
+    id: 92841,
+    reportedBy: { name: 'alex_rivera', avatar: 'https://i.pravatar.cc/150?img=1' },
+    target: 'POST ID: PST-1029',
+    reason: 'Harassment',
+    status: 'pending',
+    priority: 'high',
+    created_at: '2023-10-24T14:32:00',
+    content: 'Just saw the craziest thing downtown! This shouldn\'t be allowed in our neighborhood. Complete garbage. #citylife #unbelievable',
+  },
+  {
+    id: 92840,
+    reportedBy: { name: 'maria_j', avatar: 'https://i.pravatar.cc/150?img=3' },
+    target: 'CMT ID: CMT-442',
+    reason: 'Spam',
+    status: 'resolved',
+    priority: 'low',
+    created_at: '2023-10-24T10:15:00',
+    content: 'Buy cheap products at www.spam.com click here now!!!',
+  },
+  {
+    id: 92839,
+    reportedBy: { name: 'tom_k', avatar: 'https://i.pravatar.cc/150?img=5' },
+    target: 'USER ID: USR-991',
+    reason: 'Inappropriate Profile',
+    status: 'rejected',
+    priority: 'medium',
+    created_at: '2023-10-23T09:00:00',
+    content: 'This user has an inappropriate profile picture.',
+  },
+  {
+    id: 92838,
+    reportedBy: { name: 'liam_jones', avatar: 'https://i.pravatar.cc/150?img=8' },
+    target: 'POST ID: PST-1088',
+    reason: 'Hate Speech',
+    status: 'pending',
+    priority: 'high',
+    created_at: '2023-10-23T08:30:00',
+    content: 'This post contains hateful content targeting a specific group.',
+  },
+  {
+    id: 92837,
+    reportedBy: { name: 'anna_lee', avatar: 'https://i.pravatar.cc/150?img=9' },
+    target: 'USER ID: USR-445',
+    reason: 'Fake Account',
+    status: 'pending',
+    priority: 'medium',
+    created_at: '2023-10-22T16:00:00',
+    content: 'This account is impersonating a real person.',
+  },
+]
+
+
+// Find report by route param ID or fall back to history state
+const report = ref(
+  history.state?.report ||
+  allReports.find(r => r.id === Number(route.params.id)) ||
+  allReports[0]
+)
 
 const showContent = ref(false)
 const currentStatus = ref('in_review')
@@ -296,7 +332,8 @@ const timeline = ref([
 function formatDate(date) {
   if (!date) return ''
   return new Date(date).toLocaleDateString('en-US', {
-    month: 'long', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit'
+    month: 'long', day: 'numeric', year: 'numeric',
+    hour: '2-digit', minute: '2-digit'
   })
 }
 
