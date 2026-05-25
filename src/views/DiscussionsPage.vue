@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import Navbar from '@/components/Navbar.vue'
 import AppSidebar from '@/components/AppSidebar.vue'
+import PostOptionsMenu from '@/components/PostOptionsMenu.vue'
 import { postApi, type ApiPost } from '@/services/api'
 import { useAuthStore } from '@/stores/auth'
 import {
@@ -198,9 +199,12 @@ onMounted(loadPosts)
                       <h2 class="text-lg font-black leading-tight text-slate-900">{{ post.title }}</h2>
                       <p class="mt-2 text-sm leading-6 text-slate-600">{{ post.body }}</p>
                     </div>
-                    <button class="rounded-full p-2 text-slate-400 transition hover:bg-slate-100 hover:text-cyan-800">
-                      <PencilLine class="h-4 w-4" />
-                    </button>
+                    <div class="flex gap-2 shrink-0">
+                      <button class="rounded-full p-2 text-slate-400 transition hover:bg-slate-100 hover:text-cyan-800">
+                        <PencilLine class="h-4 w-4" />
+                      </button>
+                      <PostOptionsMenu :post-id="post.id" />
+                    </div>
                   </div>
 
                   <div class="mt-5 flex flex-wrap items-center gap-4 text-xs font-semibold text-slate-500">

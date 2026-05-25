@@ -169,6 +169,15 @@
             <ChevronRight class="w-4 h-4" />
           </button>
         </div>
+      <!-- Table -->
+      <div class="animate-fade-up">
+        <ReportTableComponent
+          :reports="filteredReports"
+          :is-loading="isLoading"
+          :error="errorMessage"
+          @retry="fetchReports"
+          @selectReport="selectedReport = $event"
+        />
       </div>
 
     </div>
@@ -176,19 +185,23 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import {
   Search, Download, ChevronDown,
   ChevronLeft, ChevronRight, FolderOpen
 } from 'lucide-vue-next'
 import ReportStatusBadge from '@/views/admin/ReportStatusBadge.vue'
+import { ref, computed, onMounted } from 'vue'
+import { Flag } from 'lucide-vue-next'
+import Navbar from '@/components/Navbar.vue'
+import ReportFilterBar from '@/views/admin/ReportFilterBar.vue'
+import ReportTableComponent from '@/views/admin/ReportTableComponent.vue'
+import { adminReportsApi } from '@/services/api'
 
 const router = useRouter()
 const search = ref('')
 const selectedStatus = ref('all')
 const selectedType = ref('all')
-const isLoading = ref(false)
 
 const statusOptions = [
   { value: 'all', label: 'All' },
@@ -203,84 +216,44 @@ const typeOptions = [
   { value: 'user', label: 'User' },
   { value: 'comment', label: 'Comment' },
 ]
+const selectedReport = ref(null)
+const reports = ref([])
+const isLoading = ref(false)
+const errorMessage = ref('')
 
+function mapReport(report) {
+  const reporterName = report.reporter?.username || report.reporter?.email || 'Unknown user'
 
-// STATIC MOCK DATA 
+  return {
+    ...report,
+    id: report.reportId,
+    reportedBy: {
+      name: reporterName,
+      email: report.reporter?.email || '',
+      avatar: '',
+    },
+    type: report.targetType.toLowerCase(),
+    status: report.status.toLowerCase(),
+    created_at: report.createdAt,
+  }
+}
 
-const reports = ref([
-  {
-    id: 92841,
-    reportedBy: { name: 'alex_rivera', avatar: 'https://i.pravatar.cc/150?img=1' },
-    target: 'POST ID: PST-1029',
-    reason: 'Harassment',
-    status: 'pending',
-    created_at: '2023-10-24T14:32:00',
-    content: 'Just saw the craziest thing downtown! This shouldn\'t be allowed in our neighborhood.',
-    priority: 'high',
-  },
-  {
-    id: 92840,
-    reportedBy: { name: 'maria_j', avatar: 'https://i.pravatar.cc/150?img=3' },
-    target: 'CMT ID: CMT-442',
-    reason: 'Spam',
-    status: 'resolved',
-    created_at: '2023-10-24T10:15:00',
-    content: 'Buy cheap products at www.spam.com click here now!!!',
-    priority: 'low',
-  },
-  {
-    id: 92839,
-    reportedBy: { name: 'tom_k', avatar: 'https://i.pravatar.cc/150?img=5' },
-    target: 'USER ID: USR-991',
-    reason: 'Inappropriate Profile',
-    status: 'rejected',
-    created_at: '2023-10-23T09:00:00',
-    content: 'This user has an inappropriate profile picture.',
-    priority: 'medium',
-  },
-  {
-    id: 92838,
-    reportedBy: { name: 'liam_jones', avatar: 'https://i.pravatar.cc/150?img=8' },
-    target: 'POST ID: PST-1088',
-    reason: 'Hate Speech',
-    status: 'pending',
-    created_at: '2023-10-23T08:30:00',
-    content: 'This post contains hateful content targeting a specific group.',
-    priority: 'high',
-  },
-  {
-    id: 92837,
-    reportedBy: { name: 'anna_lee', avatar: 'https://i.pravatar.cc/150?img=9' },
-    target: 'USER ID: USR-445',
-    reason: 'Fake Account',
-    status: 'pending',
-    created_at: '2023-10-22T16:00:00',
-    content: 'This account is impersonating a real person.',
-    priority: 'medium',
-  },
-])
+async function fetchReports() {
+  try {
+    isLoading.value = true
+    errorMessage.value = ''
+    const data = await adminReportsApi.list()
+    reports.value = data.map(mapReport)
+  } catch (error) {
+    console.error('Failed to fetch admin reports:', error)
+    errorMessage.value = error instanceof Error ? error.message : 'Failed to load reports'
+    reports.value = []
+  } finally {
+    isLoading.value = false
+  }
+}
 
-
-
-// DYNAMIC API 
-
-// import { useAuthStore } from '@/stores/auth'
-// const auth = useAuthStore()
-//
-// async function fetchReports() {
-//   try {
-//     isLoading.value = true
-//     const response = await fetch('http://localhost:3000/reports', {
-//       headers: { Authorization: `Bearer ${auth.token}` },
-//     })
-//     reports.value = await response.json()
-//   } catch (error) {
-//     console.error('Failed to fetch reports:', error)
-//   } finally {
-//     isLoading.value = false
-//   }
-// }
-// onMounted(() => { fetchReports() })
+onMounted(fetchReports)
 
 
 const filteredReports = computed(() => {
@@ -289,7 +262,7 @@ const filteredReports = computed(() => {
       search.value === '' ||
       report.reason.toLowerCase().includes(search.value.toLowerCase()) ||
       report.reportedBy.name.toLowerCase().includes(search.value.toLowerCase()) ||
-      String(report.id).includes(search.value)
+      report.reportedBy.email.toLowerCase().includes(search.value.toLowerCase())
     const matchStatus = selectedStatus.value === 'all' || report.status === selectedStatus.value
     const matchType = selectedType.value === 'all' ||
       report.target.toLowerCase().includes(selectedType.value)

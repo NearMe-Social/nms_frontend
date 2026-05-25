@@ -64,22 +64,35 @@
         </p>
 
         <section v-else-if="posts.length > 0" class="flex flex-col gap-4">
-          <RouterLink
+          <div
             v-for="post in posts"
             :key="post.post_id"
-            to="/discussion"
-            class="bg-white rounded-[18px] p-5 md:p-6 flex flex-col gap-4 shadow-sm ring-1 ring-slate-200/70 hover:shadow-md transition-shadow no-underline"
+            class="bg-white rounded-[18px] p-5 md:p-6 flex flex-col gap-4 shadow-sm ring-1 ring-slate-200/70 hover:shadow-md transition-shadow no-underline cursor-pointer"
+            role="link"
+            tabindex="0"
+            @click="navigateToPost(post.post_id)"
+            @keydown.enter="navigateToPost(post.post_id)"
           >
             <div class="flex items-start justify-between">
-              <div class="flex items-center gap-3">
-                <RouterLink to="/profile" @click.stop>
+              <div class="flex items-center gap-3 min-w-0">
+                <RouterLink
+                  :to="profileRoute(post.user?.user_id)"
+                  class="shrink-0"
+                  @click.stop
+                >
                   <img
                     :src="post.user?.profile_image || `https://i.pravatar.cc/150?u=${post.user?.username || post.post_id}`"
                     class="w-10 h-10 md:w-11 md:h-11 rounded-full object-cover"
                   />
                 </RouterLink>
-                <div>
-                  <p class="text-sm font-semibold text-gray-800">{{ post.user?.username || 'Neighbor' }}</p>
+                <div class="min-w-0">
+                  <RouterLink
+                    :to="profileRoute(post.user?.user_id)"
+                    class="text-sm font-semibold text-gray-800 hover:text-teal-700 no-underline"
+                    @click.stop
+                  >
+                    {{ post.user?.username || 'Neighbor' }}
+                  </RouterLink>
                   <div class="flex items-center gap-2 mt-0.5 flex-wrap">
                     <span class="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full flex items-center gap-1">
                       <MapPin class="w-3 h-3" /> {{ post.visibility_radius }}m visibility
@@ -88,9 +101,13 @@
                   </div>
                 </div>
               </div>
-              <span class="text-xs bg-orange-50 text-orange-500 border border-orange-200 px-2 py-1 rounded-full shrink-0 flex items-center gap-1">
-                <Clock class="w-3 h-3" /> {{ timeLeft(post.expires_at) }}
-              </span>
+              <div class="flex items-center gap-2 shrink-0">
+                <span class="text-xs bg-orange-50 text-orange-500 border border-orange-200 px-2 py-1 rounded-full flex items-center gap-1">
+                  <Clock class="w-3 h-3" /> {{ timeLeft(post.expires_at) }}
+                </span>
+                <UserOptionsMenu :user-id="post.user?.user_id" @click.stop />
+                <PostOptionsMenu :post-id="post.post_id" @click.stop />
+              </div>
             </div>
 
             <div>
@@ -100,18 +117,18 @@
 
             <div class="flex items-center justify-between pt-2 border-t border-gray-100">
               <div class="flex gap-1">
-                <button type="button" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm text-gray-400 hover:bg-gray-100 transition">
+                <button type="button" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm text-gray-400 hover:bg-gray-100 transition" @click.stop>
                   <Heart class="w-4 h-4" /> {{ post.reactions?.length ?? post.reactions_count ?? 0 }}
                 </button>
-                <button type="button" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm text-gray-400 hover:bg-gray-100 transition">
+                <button type="button" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm text-gray-400 hover:bg-gray-100 transition" @click.stop>
                   <MessageCircle class="w-4 h-4" /> {{ post.comments?.length ?? post.comments_count ?? 0 }}
                 </button>
               </div>
-              <button type="button" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm text-gray-400 hover:bg-gray-100 transition">
+              <button type="button" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm text-gray-400 hover:bg-gray-100 transition" @click.stop>
                 <Share2 class="w-4 h-4" />
               </button>
             </div>
-          </RouterLink>
+          </div>
         </section>
 
         <section v-else class="rounded-[18px] bg-white p-8 text-center text-sm font-semibold text-gray-500 ring-1 ring-slate-200/70">
@@ -169,16 +186,27 @@
 
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { RouterLink } from 'vue-router'
+import { RouterLink, useRouter } from 'vue-router'
 import Navbar from '@/components/Navbar.vue'
 import AppSidebar from '@/components/AppSidebar.vue'
+import PostOptionsMenu from '@/components/PostOptionsMenu.vue'
+import UserOptionsMenu from '@/components/UserOptionsMenu.vue'
 import { postApi, type ApiPost } from '@/services/api'
 import { MapPin, Bell, MessageCircle, Plus, User, Heart, Share2, Clock, Zap } from 'lucide-vue-next'
 
+const router = useRouter()
 const posts = ref<ApiPost[]>([])
 const loading = ref(true)
 const error = ref('')
 const sortMode = ref<'latest' | 'active'>('latest')
+
+function navigateToPost(postId: number) {
+  router.push(`/posts/${postId}`)
+}
+
+function profileRoute(userId?: number | null) {
+  return userId ? `/users/${userId}` : '/profile'
+}
 
 async function loadPosts() {
   loading.value = true
