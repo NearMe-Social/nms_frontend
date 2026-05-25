@@ -6,6 +6,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useGeolocation } from '@/composables/useGeolocation'
 import Navbar from '@/components/Navbar.vue'
 import AppSidebar from '@/components/AppSidebar.vue'
+import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import {
   Bell,
   CircleHelp,
@@ -35,6 +36,7 @@ const router = useRouter()
 const auth = useAuthStore()
 const geo = useGeolocation()
 const submitError = ref('')
+const confirmDialog = ref<InstanceType<typeof ConfirmDialog> | null>(null)
 
 const isReadyToSubmit = computed(
   () =>

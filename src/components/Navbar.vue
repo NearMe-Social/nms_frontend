@@ -33,7 +33,7 @@
         <Settings class="icon" />
       </RouterLink>
       <RouterLink to="/profile" class="profile-link" title="Profile">
-        <img src="https://i.pravatar.cc/150?img=12" alt="Profile" />
+        <img :src="profileImage" :alt="`${username} profile`" />
       </RouterLink>
       <button class="icon-link logout-button" type="button" title="Log out" @click="handleLogout">
         <LogOut class="icon" />
@@ -43,6 +43,7 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { Bell, LogOut, Search, Settings } from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/auth'
@@ -50,6 +51,11 @@ import { useAuthStore } from '@/stores/auth'
 const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
+const username = computed(() => auth.user?.username || 'neighbor')
+const profileImage = computed(() => {
+  const profile = auth.user?.profile as { profile_image?: string } | undefined
+  return profile?.profile_image || `https://i.pravatar.cc/150?u=${encodeURIComponent(username.value)}`
+})
 
 function handleLogout() {
   auth.logout()

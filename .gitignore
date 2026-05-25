@@ -23,7 +23,7 @@ coverage
 *.njsproj
 *.sln
 *.sw?
-*.json
+package-lock.json
 
 *.tsbuildinfo
 

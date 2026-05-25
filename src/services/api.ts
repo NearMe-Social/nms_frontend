@@ -1,8 +1,8 @@
-const BASE_URL = 'http://localhost:3000'
+const API_URL = import.meta.env.VITE_API_URL;
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = localStorage.getItem('token')
-  const res = await fetch(`${BASE_URL}${path}`, {
+  const res = await fetch(`${API_URL}${path}`, {
     headers: {
       'Content-Type': 'application/json',
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -57,6 +57,84 @@ export interface ApiPost {
   distance_label?: string
 }
 
+export interface ApiCommentUser {
+  user_id: number
+  username: string
+  profile_image?: string | null
+}
+
+export interface ApiComment {
+  comment_id: number
+  content: string
+  status: string
+  created_at: string
+  updated_at: string
+  user?: ApiCommentUser | null
+}
+
+export interface ApiConversationParticipant {
+  conversation_participant_id: number
+  conversation_id: number
+  user_id: number
+  joined_at: string
+  user?: PostUser | null
+}
+
+export interface ApiMessage {
+  message_id: number
+  conversation_id: number
+  sender_id: number
+  content: string
+  status: string
+  read_at: string | null
+  created_at: string
+  sender?: PostUser | null
+}
+
+export interface ApiConversation {
+  conversation_id: number
+  created_at: string
+  updated_at: string
+  participants?: ApiConversationParticipant[]
+  messages?: ApiMessage[]
+}
+
+export interface ApiMessagePage {
+  total: number
+  data: ApiMessage[]
+}
+
+export interface ApiAdminReportUser {
+  userId: number
+  username: string
+  email?: string
+}
+
+export interface ApiAdminReport {
+  reportId: number
+  reporter: ApiAdminReportUser | null
+  targetType: 'POST' | 'COMMENT' | 'USER' | 'MESSAGE'
+  targetId: number
+  reason: string
+  status: 'PENDING' | 'REVIEWED'
+  reviewedBy: Omit<ApiAdminReportUser, 'email'> | null
+  reviewedAt: string | null
+  moderatorNote: string | null
+  createdAt: string
+}
+
+export interface CreateReportPayload {
+  reporter_id: number
+  target_type: 'POST' | 'COMMENT' | 'USER' | 'MESSAGE'
+  target_id: number
+  reason: string
+}
+
+export interface CreateBlockPayload {
+  blocker_id: number
+  blocked_user_id: number
+}
+
 export interface CreatePostPayload {
   user_id: number
   title: string
@@ -96,8 +174,81 @@ export const postApi = {
     return request<ApiPost[]>(`/posts?sort=${sort}`)
   },
 
+  get(postId: number): Promise<ApiPost> {
+    return request<ApiPost>(`/posts/${postId}`)
+  },
+
   create(payload: CreatePostPayload): Promise<ApiPost> {
     return request<ApiPost>('/posts', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    })
+  },
+}
+
+export const commentApi = {
+  listByPost(postId: number): Promise<ApiComment[]> {
+    return request<ApiComment[]>(`/comments/post/${postId}`)
+  },
+
+  create(payload: { post_id: number; user_id: number; content: string }): Promise<ApiComment> {
+    return request<ApiComment>('/comments', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    })
+  },
+}
+
+export const conversationApi = {
+  list(): Promise<ApiConversation[]> {
+    return request<ApiConversation[]>('/conversations')
+  },
+
+  create(participantIds: number[]): Promise<ApiConversation> {
+    return request<ApiConversation>('/conversations', {
+      method: 'POST',
+      body: JSON.stringify({ participantIds }),
+    })
+  },
+}
+
+export const messageApi = {
+  list(conversationId: number, page = 0, size = 50): Promise<ApiMessagePage> {
+    return request<ApiMessagePage>(`/conversations/${conversationId}/messages?page=${page}&size=${size}`)
+  },
+
+  create(conversationId: number, content: string): Promise<ApiMessage> {
+    return request<ApiMessage>(`/conversations/${conversationId}/messages`, {
+      method: 'POST',
+      body: JSON.stringify({ content }),
+    })
+  },
+
+  markSeen(conversationId: number): Promise<{ success: true }> {
+    return request<{ success: true }>(`/conversations/${conversationId}/messages/seen`, {
+      method: 'PATCH',
+    })
+  },
+}
+
+export const adminReportsApi = {
+  list(): Promise<ApiAdminReport[]> {
+    return request<ApiAdminReport[]>('/admin/reports')
+  },
+}
+
+export const reportApi = {
+  create(payload: CreateReportPayload): Promise<unknown> {
+    return request<unknown>('/reports', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    })
+  },
+}
+
+export const blockApi = {
+  create(payload: CreateBlockPayload): Promise<unknown> {
+    return request<unknown>('/blocks', {
       method: 'POST',
       body: JSON.stringify(payload),
     })
@@ -132,6 +283,10 @@ export const userApi = {
     return request<UserProfile>('/users/me')
   },
 
+  getById(userId: number): Promise<UserProfile> {
+    return request<UserProfile>(`/users/${userId}`)
+  },
+
   updateProfile(payload: UpdateProfilePayload): Promise<UserProfile> {
     return request<UserProfile>('/users/me', {
       method: 'PATCH',
@@ -142,13 +297,11 @@ export const userApi = {
   uploadProfileImage(file: File): Promise<{ url: string }> {
     const formData = new FormData()
     formData.append('file', file)
-    return fetch(`${BASE_URL}/user/profile-image`, {
+    return fetch(`${API_URL}/user/profile-image`, {
       method: 'POST',
-      headers: {
-        ...(localStorage.getItem('token')
+      headers: (localStorage.getItem('token')
           ? { Authorization: `Bearer ${localStorage.getItem('token')}` }
           : {}),
-      },
       body: formData,
     }).then((res) => res.json())
   },
