@@ -19,6 +19,7 @@ import ReportPostPage from '@/views/ReportPostPage.vue'
 import ReportUserPage from '@/views/ReportUserPage.vue'
 import ReportCommentPage from '@/views/ReportCommentPage.vue'
 import AdminReportsPage from '@/views/admin/AdminReportsPage.vue'
+import AdminDashboardPage from '@/views/admin/AdminDashboardPage.vue'
 
 const routes = [
   {
@@ -130,6 +131,16 @@ const routes = [
       requiresAdmin: true,
     },
   },
+  {
+    path: '/admin/dashboard',
+    name: 'AdminDashboard',
+    component: AdminDashboardPage,
+    meta: {
+      requiresAuth: true,
+      requiresAdmin: true,
+    },
+  },
+]
 ]
 
 const router = createRouter({
