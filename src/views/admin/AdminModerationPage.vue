@@ -104,9 +104,6 @@ import {
   Trash2
 } from 'lucide-vue-next'
 import FlaggedContentList from './FlaggedContentList.vue';
-import ContentPreviewCard from './ContentPreviewCard.vue';
-import HideRemoveRestoreButtons from './HideRemoveRestoreButtons.vue';
-import ModerationEmptyState from './ModerationEmptyState.vue';
 
 
 const ChevronIcon = ChevronRight

@@ -123,6 +123,51 @@ export interface ApiAdminReport {
   createdAt: string
 }
 
+export interface UpdateAdminReportStatusPayload {
+  status: 'PENDING' | 'REVIEWED'
+  moderatorNote?: string
+}
+
+export interface ApiAdminTargetSnapshot {
+  type: 'POST' | 'COMMENT' | 'USER' | 'MESSAGE'
+  id: number
+  title?: string
+  content?: string | null
+  status?: string
+  username?: string
+  email?: string
+  role?: string
+  isActive?: boolean
+  postId?: number | null
+  note?: string
+  author?: {
+    userId: number
+    username: string
+  } | null
+  createdAt?: string
+  updatedAt?: string
+}
+
+export interface ApiFlaggedContent {
+  report: ApiAdminReport
+  target: ApiAdminTargetSnapshot | null
+}
+
+export interface ApiAdminUser {
+  userId: number
+  username: string
+  email: string
+  firstName: string
+  lastName: string
+  role: string
+  isActive: boolean
+  profileImage: string | null
+  bio: string | null
+  locationUpdatedAt: string | null
+  createdAt: string
+  updatedAt: string
+}
+
 export interface CreateReportPayload {
   reporter_id: number
   target_type: 'POST' | 'COMMENT' | 'USER' | 'MESSAGE'
@@ -234,6 +279,61 @@ export const messageApi = {
 export const adminReportsApi = {
   list(): Promise<ApiAdminReport[]> {
     return request<ApiAdminReport[]>('/admin/reports')
+  },
+
+  get(reportId: number): Promise<ApiAdminReport> {
+    return request<ApiAdminReport>(`/admin/reports/${reportId}`)
+  },
+
+  updateStatus(
+    reportId: number,
+    payload: UpdateAdminReportStatusPayload,
+  ): Promise<ApiAdminReport> {
+    return request<ApiAdminReport>(`/admin/reports/${reportId}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    })
+  },
+}
+
+export const adminContentApi = {
+  flagged(): Promise<ApiFlaggedContent[]> {
+    return request<ApiFlaggedContent[]>('/admin/content/flagged')
+  },
+
+  updateStatus(
+    targetType: 'POST' | 'COMMENT',
+    targetId: number,
+    action: 'hide' | 'remove' | 'restore',
+  ): Promise<ApiAdminTargetSnapshot> {
+    return request<ApiAdminTargetSnapshot>(`/admin/content/${targetType}/${targetId}/${action}`, {
+      method: 'PATCH',
+    })
+  },
+}
+
+export const adminUsersApi = {
+  list(): Promise<ApiAdminUser[]> {
+    return request<ApiAdminUser[]>('/admin/users')
+  },
+
+  updateStatus(userId: number, isActive: boolean): Promise<ApiAdminUser> {
+    return request<ApiAdminUser>(`/admin/users/${userId}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ isActive }),
+    })
+  },
+
+  suspend(userId: number): Promise<ApiAdminUser> {
+    return request<ApiAdminUser>(`/admin/users/${userId}/suspend`, {
+      method: 'PATCH',
+    })
+  },
+
+  activate(userId: number): Promise<ApiAdminUser> {
+    return request<ApiAdminUser>(`/admin/users/${userId}/activate`, {
+      method: 'PATCH',
+    })
   },
 }
 

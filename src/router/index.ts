@@ -21,9 +21,8 @@ import ReportCommentPage from '@/views/ReportCommentPage.vue'
 import AdminReportsPage from '@/views/admin/AdminReportsPage.vue'
 import AdminLayout from '@/views/admin/AdminLayout.vue'
 import AdminReportDetail from '@/views/admin/AdminReportDetail.vue'
-
-import AdminUsersPage from '@/views/admins/AdminUsersPage.vue';
-import AdminModerationPage from '@/views/admins/AdminModerationPage.vue';
+import AdminUsersPage from '@/views/admin/AdminUsersPage.vue'
+import AdminModerationPage from '@/views/admin/AdminModerationPage.vue'
 
 
 const routes = [
@@ -139,31 +138,33 @@ const routes = [
     component: NearbyView,
     meta: { requiresAuth: true },
   },
-
+  {
     path: '/admin',
     component: AdminLayout,
     meta: { requiresAuth: true, requiresAdmin: true },
     children: [
-    {
-      path: 'reports',
-      name: 'AdminReports',
-      component: AdminReportsPage,
-    },
-    {
-      path: 'reports/:id',
-      name: 'AdminReportDetail',
-      component: AdminReportDetail,
-    },
-    {
-      path: 'users',
-      component: AdminUsersPage
-    },
-    {
-      path: 'moderation',
-      component: AdminModerationPage
-    }
-  ],
-},
+      {
+        path: 'reports',
+        name: 'AdminReports',
+        component: AdminReportsPage,
+      },
+      {
+        path: 'reports/:id',
+        name: 'AdminReportDetail',
+        component: AdminReportDetail,
+      },
+      {
+        path: 'users',
+        name: 'AdminUsers',
+        component: AdminUsersPage,
+      },
+      {
+        path: 'moderation',
+        name: 'AdminModeration',
+        component: AdminModerationPage,
+      },
+    ],
+  },
 ]
 
 const router = createRouter({

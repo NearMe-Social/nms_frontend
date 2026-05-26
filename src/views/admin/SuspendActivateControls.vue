@@ -38,7 +38,6 @@
       <div v-if="moreOpen" class="more-menu" v-click-outside="() => moreOpen = false">
         <button class="menu-item" @click="emit('view', userId); moreOpen = false"><EyeIcon /> View Profile</button>
         <button class="menu-item" @click="emit('warn', userId); moreOpen = false"><AlertIcon /> Send Warning</button>
-        <button class="menu-item danger" @click="emit('ban', userId); moreOpen = false"><BanIcon /> Permanent Ban</button>
       </div>
     </template>
 
@@ -50,9 +49,6 @@
       <button v-if="status === 'suspended'" class="block-btn activate" @click="ask('activate')">
         <CheckIcon class="bico" /> Reactivate Account
       </button>
-      <button class="block-btn ban" @click="emit('ban', userId)">
-        <BanIcon class="bico" /> Permanent Ban
-      </button>
     </template>
   </div>
 </template>
@@ -62,7 +58,7 @@ import { ref } from 'vue'
 
 const props = defineProps({
   status: { type: String, required: true },
-  userId: { type: String, required: true },
+  userId: { type: [String, Number], required: true },
   variant: { type: String, default: 'row' }, 
 })
 
@@ -90,7 +86,6 @@ const vClickOutside = { mounted(el, { value }) { el._clickOut = e => { if (!el.c
 </script>
 
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&display=swap');
 *, *::before, *::after { 
     box-sizing: border-box; 
     margin: 0; 
@@ -102,7 +97,6 @@ const vClickOutside = { mounted(el, { value }) { el._clickOut = e => { if (!el.c
     align-items: center; 
     gap: 5px; 
     position: relative; 
-    font-family: 'DM Sans', sans-serif; 
 }
 
 
@@ -113,7 +107,6 @@ const vClickOutside = { mounted(el, { value }) { el._clickOut = e => { if (!el.c
     padding: 5px 10px; 
     border-radius: 6px; 
     border: 1px solid; 
-    font-family: 'DM Sans', sans-serif; 
     font-size: 12px; 
     font-weight: 500; 
     cursor: pointer; 
@@ -174,7 +167,6 @@ const vClickOutside = { mounted(el, { value }) { el._clickOut = e => { if (!el.c
     padding: 9px 13px; 
     border: none; 
     background: transparent; 
-    font-family: 'DM Sans', sans-serif; 
     font-size: 13px; 
     color: #374151; 
     cursor: pointer; 
@@ -202,7 +194,6 @@ const vClickOutside = { mounted(el, { value }) { el._clickOut = e => { if (!el.c
     padding: 9px 16px; 
     border-radius: 8px; 
     border: 1px solid; 
-    font-family: 'DM Sans', sans-serif; 
     font-size: 13px; 
     font-weight: 600; 
     cursor: pointer; 
@@ -308,7 +299,6 @@ const vClickOutside = { mounted(el, { value }) { el._clickOut = e => { if (!el.c
     padding: 9px; 
     border-radius: 8px; 
     border: 1px solid; 
-    font-family: 'DM Sans', sans-serif; 
     font-size: 13px; 
     font-weight: 600; 
     cursor: pointer; 

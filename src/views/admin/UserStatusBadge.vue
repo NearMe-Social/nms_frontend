@@ -32,14 +32,11 @@ const labelMap = { active: 'Active', suspended: 'Suspended', pending: 'Pending',
 </script>
 
 <style scoped>
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@500;600&display=swap');
-
 .status-badge {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  font-family: 'DM Sans', sans-serif;
-  font-size: 11.5px;
+  font-size: 13px;
   font-weight: 600;
   border-radius: 20px;
   padding: 3px 9px 3px 7px;
