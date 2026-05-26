@@ -29,6 +29,10 @@
           @clear="clearFilters"
         />
       </div>
+      <!-- Trends -->
+      <div class="animate-fade-up">
+        <ReportingTrendsSection :reports="reports" />
+      </div>
 
       <!-- Table -->
       <div class="animate-fade-up">
@@ -52,6 +56,7 @@ import Navbar from '@/components/Navbar.vue'
 import ReportFilterBar from '@/views/admin/ReportFilterBar.vue'
 import ReportTableComponent from '@/views/admin/ReportTableComponent.vue'
 import { adminReportsApi } from '@/services/api'
+import ReportingTrendsSection from '@/views/admin/ReportingTrendsSection.vue'
 
 const search = ref('')
 const selectedStatus = ref('all')
