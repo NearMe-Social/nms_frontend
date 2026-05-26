@@ -21,6 +21,9 @@ import ReportCommentPage from '@/views/ReportCommentPage.vue'
 import AdminReportsPage from '@/views/admin/AdminReportsPage.vue'
 import AdminLayout from '@/views/admin/AdminLayout.vue'
 import AdminReportDetail from '@/views/admin/AdminReportDetail.vue'
+import AdminUsersPage from '@/views/admin/AdminUsersPage.vue'
+import AdminModerationPage from '@/views/admin/AdminModerationPage.vue'
+
 
 const routes = [
   {
@@ -140,18 +143,28 @@ const routes = [
     component: AdminLayout,
     meta: { requiresAuth: true, requiresAdmin: true },
     children: [
-    {
-      path: 'reports',
-      name: 'AdminReports',
-      component: AdminReportsPage,
-    },
-    {
-      path: 'reports/:id',
-      name: 'AdminReportDetail',
-      component: AdminReportDetail,
-    },
-  ],
-},
+      {
+        path: 'reports',
+        name: 'AdminReports',
+        component: AdminReportsPage,
+      },
+      {
+        path: 'reports/:id',
+        name: 'AdminReportDetail',
+        component: AdminReportDetail,
+      },
+      {
+        path: 'users',
+        name: 'AdminUsers',
+        component: AdminUsersPage,
+      },
+      {
+        path: 'moderation',
+        name: 'AdminModeration',
+        component: AdminModerationPage,
+      },
+    ],
+  },
 ]
 
 const router = createRouter({
@@ -183,10 +196,10 @@ router.beforeEach((to, from, next) => {
   if (isAdminRoute) {
     const userRole = auth.user?.role
 
-    // if (userRole !== 'ADMIN') {
-    //  next({ name: 'HomePage' })
-    //   return
-    // }
+    if (userRole !== 'ADMIN') {
+     next({ name: 'HomePage' })
+      return
+    }
   }
 
   next()
