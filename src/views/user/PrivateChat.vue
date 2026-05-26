@@ -119,10 +119,22 @@
                 </div>
                 <span class="message-meta">
                   {{ message.time }}
-                  <CheckCheck v-if="message.sender === 'me'" class="tiny-icon" />
+                  <template v-if="message.sender === 'me'">
+                    <CheckCheck class="tiny-icon" :class="{ seen: message.readAt }" />
+                    {{ message.readAt ? 'Seen' : 'Sent' }}
+                  </template>
                 </span>
               </div>
             </article>
+
+            <div v-if="typingConversationId === activeConversation.id" class="typing-row">
+              <img :src="activeConversation.avatar" :alt="activeConversation.name" />
+              <div class="typing-bubble" aria-live="polite">
+                <span />
+                <span />
+                <span />
+              </div>
+            </div>
           </section>
 
           <footer class="composer">
@@ -134,6 +146,7 @@
               v-model="draft"
               rows="1"
               placeholder="Type your message..."
+              @input="handleTypingInput"
               @keydown="handleComposerKeydown"
             />
             <button
@@ -162,7 +175,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { io, type Socket } from 'socket.io-client'
 import AppSidebar from '@/components/AppSidebar.vue'
 import Navbar from '@/components/Navbar.vue'
 import {
@@ -172,6 +184,7 @@ import {
   type ApiMessage,
 } from '@/services/api'
 import { useAuthStore } from '@/stores/auth'
+import { useChatSocketStore } from '@/stores/chatSocket'
 import {
   CheckCheck,
   Info,
@@ -192,6 +205,7 @@ type ChatMessage = {
   sender: ChatSender
   text: string
   time: string
+  readAt: string | null
 }
 
 type Conversation = {
@@ -207,6 +221,7 @@ type Conversation = {
 }
 
 const auth = useAuthStore()
+const chatSocket = useChatSocketStore()
 const route = useRoute()
 const conversations = ref<Conversation[]>([])
 const activeConversationId = ref<number | null>(null)
@@ -218,8 +233,9 @@ const draft = ref('')
 const messages = ref<ChatMessage[]>([])
 const loading = ref(false)
 const error = ref('')
-const socket = ref<Socket | null>(null)
-const socketConnected = ref(false)
+const typingConversationId = ref<number | null>(null)
+let typingTimeout: ReturnType<typeof setTimeout> | null = null
+let socketListenerStops: Array<() => void> = []
 
 const activeConversation = computed(
   (): Conversation | null =>
@@ -239,6 +255,12 @@ const messageCount = computed(() => messages.value.length)
 const canSend = computed(() => !!activeConversation.value && draft.value.trim().length > 0)
 
 async function selectConversation(id: number) {
+  const previousConversationId = activeConversationId.value
+  if (previousConversationId && previousConversationId !== id) {
+    stopTyping(previousConversationId)
+    leaveConversation(previousConversationId)
+  }
+
   activeConversationId.value = id
   await loadMessages(id)
   joinConversation(id)
@@ -256,8 +278,8 @@ async function sendMessage() {
 
   draft.value = ''
 
-  if (socket.value?.connected) {
-    socket.value.emit(
+  if (chatSocket.connected) {
+    chatSocket.emit(
       'sendMessage',
       { conversationId, content: text },
       (response: { success?: boolean; message?: ApiMessage; error?: string }) => {
@@ -284,6 +306,18 @@ function handleComposerKeydown(event: KeyboardEvent) {
   if (event.key !== 'Enter' || event.shiftKey) return
   event.preventDefault()
   sendMessage()
+}
+
+function handleTypingInput() {
+  const conversationId = activeConversationId.value
+  if (!conversationId || !chatSocket.connected) return
+
+  chatSocket.emit('typingStarted', { conversationId })
+
+  if (typingTimeout) clearTimeout(typingTimeout)
+  typingTimeout = setTimeout(() => {
+    stopTyping(conversationId)
+  }, 1200)
 }
 
 function scrollToBottom() {
@@ -325,6 +359,7 @@ function toChatMessage(message: ApiMessage): ChatMessage {
     sender: message.sender_id === currentUserId() ? 'me' : 'them',
     text: message.content,
     time: formatTime(new Date(message.created_at)),
+    readAt: message.read_at,
   }
 }
 
@@ -369,6 +404,8 @@ async function loadMessages(conversationId: number) {
     const page = await messageApi.list(conversationId, 0, 50)
     messages.value = page.data.map(toChatMessage)
     await messageApi.markSeen(conversationId)
+    chatSocket.markConversationRead(conversationId)
+    emitSeen(conversationId)
   } catch (err: unknown) {
     error.value = err instanceof Error ? err.message : 'Failed to load messages.'
     messages.value = []
@@ -376,7 +413,14 @@ async function loadMessages(conversationId: number) {
 }
 
 function upsertMessage(message: ApiMessage) {
-  if (message.conversation_id !== activeConversationId.value) return
+  updateConversationPreview(message)
+
+  if (message.conversation_id !== activeConversationId.value) {
+    if (!conversations.value.some((item) => item.id === message.conversation_id)) {
+      void refreshConversationsSilently()
+    }
+    return
+  }
 
   const mapped = toChatMessage(message)
   const existingIndex = messages.value.findIndex((item) => item.id === mapped.id)
@@ -387,7 +431,6 @@ function upsertMessage(message: ApiMessage) {
     messages.value.push(mapped)
   }
 
-  updateConversationPreview(message)
   void nextTick(scrollToBottom)
 }
 
@@ -397,48 +440,120 @@ function updateConversationPreview(message: ApiMessage) {
 
   conversation.preview = message.content
   conversation.time = formatTime(new Date(message.created_at))
+
+  const index = conversations.value.findIndex((item) => item.id === message.conversation_id)
+  if (index > 0) {
+    conversations.value.splice(index, 1)
+    conversations.value.unshift(conversation)
+  }
 }
 
-function connectSocket() {
-  const token = localStorage.getItem('token')
-  if (!token) return
+async function refreshConversationsSilently() {
+  try {
+    const data = await conversationApi.list()
+    conversations.value = data.map(toConversation)
+  } catch (err: unknown) {
+    error.value = err instanceof Error ? err.message : 'Failed to refresh conversations.'
+  }
+}
 
-  socket.value = io(`${import.meta.env.VITE_API_URL}/chat`, {
-    auth: { token },
-    transports: ['websocket', 'polling'],
-  })
+function markConversationSeen(conversationId: number, readAt: string) {
+  if (conversationId !== activeConversationId.value) return
 
-  socket.value.on('connect', () => {
-    socketConnected.value = true
-    if (activeConversationId.value) joinConversation(activeConversationId.value)
-  })
+  messages.value = messages.value.map((message) =>
+    message.sender === 'me' ? { ...message, readAt } : message,
+  )
+}
 
-  socket.value.on('disconnect', () => {
-    socketConnected.value = false
-  })
+function emitSeen(conversationId: number) {
+  if (!chatSocket.connected) return
+  chatSocket.emit('markSeen', { conversationId })
+}
 
-  socket.value.on('newMessage', (message: ApiMessage) => {
-    upsertMessage(message)
-  })
+function stopTyping(conversationId = activeConversationId.value) {
+  if (typingTimeout) {
+    clearTimeout(typingTimeout)
+    typingTimeout = null
+  }
+
+  if (!conversationId || !chatSocket.connected) return
+  chatSocket.emit('typingStopped', { conversationId })
+}
+
+function registerSocketListeners() {
+  chatSocket.connect()
+  socketListenerStops.forEach((stop) => stop())
+  socketListenerStops = [
+    chatSocket.on('connect', () => {
+      if (activeConversationId.value) joinConversation(activeConversationId.value)
+    }),
+    chatSocket.on('typingStarted', (event: { conversationId: number; userId: number }) => {
+      if (event.userId === currentUserId()) return
+      typingConversationId.value = event.conversationId
+    }),
+    chatSocket.on('typingStopped', (event: { conversationId: number; userId: number }) => {
+      if (event.userId === currentUserId()) return
+      if (typingConversationId.value === event.conversationId) {
+        typingConversationId.value = null
+      }
+    }),
+    chatSocket.on(
+      'messagesSeen',
+      (event: { conversationId: number; userId: number; readAt: string }) => {
+        if (event.userId === currentUserId()) return
+        markConversationSeen(event.conversationId, event.readAt)
+      },
+    ),
+  ]
+
+  if (chatSocket.connected && activeConversationId.value) {
+    joinConversation(activeConversationId.value)
+  }
 }
 
 function joinConversation(conversationId: number) {
-  if (!socket.value?.connected) return
-  socket.value.emit('joinConversation', conversationId)
+  if (!chatSocket.connected) return
+  chatSocket.emit('joinConversation', conversationId)
+}
+
+function leaveConversation(conversationId: number) {
+  if (!chatSocket.connected) return
+  chatSocket.emit('leaveConversation', conversationId)
 }
 
 onMounted(() => {
-  connectSocket()
+  registerSocketListeners()
   void loadConversations()
 })
 
 onUnmounted(() => {
-  socket.value?.disconnect()
+  stopTyping()
+  if (activeConversationId.value) leaveConversation(activeConversationId.value)
+  socketListenerStops.forEach((stop) => stop())
+  socketListenerStops = []
 })
 
 watch(activeConversationId, () => {
   draft.value = ''
 })
+
+watch(
+  () => chatSocket.messageEventId,
+  () => {
+    const message = chatSocket.lastMessage
+    if (!message) return
+
+    upsertMessage(message)
+    if (
+      message.conversation_id === activeConversationId.value &&
+      message.sender_id !== currentUserId()
+    ) {
+      chatSocket.markConversationRead(message.conversation_id)
+      void messageApi.markSeen(message.conversation_id)
+      emitSeen(message.conversation_id)
+    }
+  },
+)
 </script>
 
 <style scoped>
@@ -765,6 +880,48 @@ h2 {
   margin-bottom: 16px;
 }
 
+.typing-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.typing-row img {
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  border-radius: 12px;
+  object-fit: cover;
+}
+
+.typing-bubble {
+  display: inline-flex;
+  gap: 5px;
+  align-items: center;
+  border-radius: 18px;
+  border-bottom-left-radius: 6px;
+  background: #fff;
+  padding: 13px 15px;
+  box-shadow: 0 8px 20px rgba(15, 45, 70, 0.05);
+}
+
+.typing-bubble span {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  animation: typing-pulse 1s infinite ease-in-out;
+  background: #7890a2;
+}
+
+.typing-bubble span:nth-child(2) {
+  animation-delay: 0.12s;
+}
+
+.typing-bubble span:nth-child(3) {
+  animation-delay: 0.24s;
+}
+
 .message-row.theirs {
   justify-content: flex-start;
 }
@@ -822,7 +979,25 @@ h2 {
 .tiny-icon {
   width: 13px;
   height: 13px;
+  color: #9cafbd;
+}
+
+.tiny-icon.seen {
   color: #0f8a7c;
+}
+
+@keyframes typing-pulse {
+  0%,
+  80%,
+  100% {
+    opacity: 0.35;
+    transform: translateY(0);
+  }
+
+  40% {
+    opacity: 1;
+    transform: translateY(-3px);
+  }
 }
 
 .composer {
