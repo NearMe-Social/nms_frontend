@@ -19,6 +19,11 @@ import ReportPostPage from '@/views/ReportPostPage.vue'
 import ReportUserPage from '@/views/ReportUserPage.vue'
 import ReportCommentPage from '@/views/ReportCommentPage.vue'
 import AdminReportsPage from '@/views/admin/AdminReportsPage.vue'
+import AdminLayout from '@/views/admin/AdminLayout.vue'
+import AdminReportDetail from '@/views/admin/AdminReportDetail.vue'
+import AdminUsersPage from '@/views/admin/AdminUsersPage.vue'
+import AdminModerationPage from '@/views/admin/AdminModerationPage.vue'
+
 
 const routes = [
   {
@@ -134,13 +139,31 @@ const routes = [
     meta: { requiresAuth: true },
   },
   {
-    path: '/admin/reports',
-    name: 'AdminReports',
-    component: AdminReportsPage,
-    meta: {
-      requiresAuth: true,
-      requiresAdmin: true,
-    },
+    path: '/admin',
+    component: AdminLayout,
+    meta: { requiresAuth: true, requiresAdmin: true },
+    children: [
+      {
+        path: 'reports',
+        name: 'AdminReports',
+        component: AdminReportsPage,
+      },
+      {
+        path: 'reports/:id',
+        name: 'AdminReportDetail',
+        component: AdminReportDetail,
+      },
+      {
+        path: 'users',
+        name: 'AdminUsers',
+        component: AdminUsersPage,
+      },
+      {
+        path: 'moderation',
+        name: 'AdminModeration',
+        component: AdminModerationPage,
+      },
+    ],
   },
 ]
 
@@ -174,7 +197,7 @@ router.beforeEach((to, from, next) => {
     const userRole = auth.user?.role
 
     if (userRole !== 'ADMIN') {
-      next({ name: 'HomePage' })
+     next({ name: 'HomePage' })
       return
     }
   }

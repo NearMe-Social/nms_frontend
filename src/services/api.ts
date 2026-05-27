@@ -72,6 +72,38 @@ export interface ApiComment {
   user?: ApiCommentUser | null
 }
 
+export interface ApiConversationParticipant {
+  conversation_participant_id: number
+  conversation_id: number
+  user_id: number
+  joined_at: string
+  user?: PostUser | null
+}
+
+export interface ApiMessage {
+  message_id: number
+  conversation_id: number
+  sender_id: number
+  content: string
+  status: string
+  read_at: string | null
+  created_at: string
+  sender?: PostUser | null
+}
+
+export interface ApiConversation {
+  conversation_id: number
+  created_at: string
+  updated_at: string
+  participants?: ApiConversationParticipant[]
+  messages?: ApiMessage[]
+}
+
+export interface ApiMessagePage {
+  total: number
+  data: ApiMessage[]
+}
+
 export interface ApiAdminReportUser {
   userId: number
   username: string
@@ -91,11 +123,61 @@ export interface ApiAdminReport {
   createdAt: string
 }
 
+export interface UpdateAdminReportStatusPayload {
+  status: 'PENDING' | 'REVIEWED'
+  moderatorNote?: string
+}
+
+export interface ApiAdminTargetSnapshot {
+  type: 'POST' | 'COMMENT' | 'USER' | 'MESSAGE'
+  id: number
+  title?: string
+  content?: string | null
+  status?: string
+  username?: string
+  email?: string
+  role?: string
+  isActive?: boolean
+  postId?: number | null
+  note?: string
+  author?: {
+    userId: number
+    username: string
+  } | null
+  createdAt?: string
+  updatedAt?: string
+}
+
+export interface ApiFlaggedContent {
+  report: ApiAdminReport
+  target: ApiAdminTargetSnapshot | null
+}
+
+export interface ApiAdminUser {
+  userId: number
+  username: string
+  email: string
+  firstName: string
+  lastName: string
+  role: string
+  isActive: boolean
+  profileImage: string | null
+  bio: string | null
+  locationUpdatedAt: string | null
+  createdAt: string
+  updatedAt: string
+}
+
 export interface CreateReportPayload {
   reporter_id: number
   target_type: 'POST' | 'COMMENT' | 'USER' | 'MESSAGE'
   target_id: number
   reason: string
+}
+
+export interface CreateBlockPayload {
+  blocker_id: number
+  blocked_user_id: number
 }
 
 export interface CreatePostPayload {
@@ -162,15 +244,111 @@ export const commentApi = {
   },
 }
 
+export const conversationApi = {
+  list(): Promise<ApiConversation[]> {
+    return request<ApiConversation[]>('/conversations')
+  },
+
+  create(participantIds: number[]): Promise<ApiConversation> {
+    return request<ApiConversation>('/conversations', {
+      method: 'POST',
+      body: JSON.stringify({ participantIds }),
+    })
+  },
+}
+
+export const messageApi = {
+  list(conversationId: number, page = 0, size = 50): Promise<ApiMessagePage> {
+    return request<ApiMessagePage>(`/conversations/${conversationId}/messages?page=${page}&size=${size}`)
+  },
+
+  create(conversationId: number, content: string): Promise<ApiMessage> {
+    return request<ApiMessage>(`/conversations/${conversationId}/messages`, {
+      method: 'POST',
+      body: JSON.stringify({ content }),
+    })
+  },
+
+  markSeen(conversationId: number): Promise<{ success: true }> {
+    return request<{ success: true }>(`/conversations/${conversationId}/messages/seen`, {
+      method: 'PATCH',
+    })
+  },
+}
+
 export const adminReportsApi = {
   list(): Promise<ApiAdminReport[]> {
     return request<ApiAdminReport[]>('/admin/reports')
+  },
+
+  get(reportId: number): Promise<ApiAdminReport> {
+    return request<ApiAdminReport>(`/admin/reports/${reportId}`)
+  },
+
+  updateStatus(
+    reportId: number,
+    payload: UpdateAdminReportStatusPayload,
+  ): Promise<ApiAdminReport> {
+    return request<ApiAdminReport>(`/admin/reports/${reportId}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    })
+  },
+}
+
+export const adminContentApi = {
+  flagged(): Promise<ApiFlaggedContent[]> {
+    return request<ApiFlaggedContent[]>('/admin/content/flagged')
+  },
+
+  updateStatus(
+    targetType: 'POST' | 'COMMENT',
+    targetId: number,
+    action: 'hide' | 'remove' | 'restore',
+  ): Promise<ApiAdminTargetSnapshot> {
+    return request<ApiAdminTargetSnapshot>(`/admin/content/${targetType}/${targetId}/${action}`, {
+      method: 'PATCH',
+    })
+  },
+}
+
+export const adminUsersApi = {
+  list(): Promise<ApiAdminUser[]> {
+    return request<ApiAdminUser[]>('/admin/users')
+  },
+
+  updateStatus(userId: number, isActive: boolean): Promise<ApiAdminUser> {
+    return request<ApiAdminUser>(`/admin/users/${userId}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ isActive }),
+    })
+  },
+
+  suspend(userId: number): Promise<ApiAdminUser> {
+    return request<ApiAdminUser>(`/admin/users/${userId}/suspend`, {
+      method: 'PATCH',
+    })
+  },
+
+  activate(userId: number): Promise<ApiAdminUser> {
+    return request<ApiAdminUser>(`/admin/users/${userId}/activate`, {
+      method: 'PATCH',
+    })
   },
 }
 
 export const reportApi = {
   create(payload: CreateReportPayload): Promise<unknown> {
     return request<unknown>('/reports', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    })
+  },
+}
+
+export const blockApi = {
+  create(payload: CreateBlockPayload): Promise<unknown> {
+    return request<unknown>('/blocks', {
       method: 'POST',
       body: JSON.stringify(payload),
     })
