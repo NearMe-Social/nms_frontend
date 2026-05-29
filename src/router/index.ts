@@ -1,3 +1,4 @@
+import AdminDashboardPage from '@/views/admin/AdminDashboardPage.vue'
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 
@@ -23,7 +24,6 @@ import AdminLayout from '@/views/admin/AdminLayout.vue'
 import AdminReportDetail from '@/views/admin/AdminReportDetail.vue'
 import AdminUsersPage from '@/views/admin/AdminUsersPage.vue'
 import AdminModerationPage from '@/views/admin/AdminModerationPage.vue'
-
 
 const routes = [
   {
@@ -144,6 +144,11 @@ const routes = [
     meta: { requiresAuth: true, requiresAdmin: true },
     children: [
       {
+        path: '',
+        name: 'AdminDashboard',
+        component: AdminDashboardPage,
+      },
+      {
         path: 'reports',
         name: 'AdminReports',
         component: AdminReportsPage,
@@ -197,7 +202,7 @@ router.beforeEach((to, from, next) => {
     const userRole = auth.user?.role
 
     if (userRole !== 'ADMIN') {
-     next({ name: 'HomePage' })
+      next({ name: 'HomePage' })
       return
     }
   }
