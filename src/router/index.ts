@@ -23,6 +23,8 @@ import AdminLayout from '@/views/admin/AdminLayout.vue'
 import AdminReportDetail from '@/views/admin/AdminReportDetail.vue'
 import AdminUsersPage from '@/views/admin/AdminUsersPage.vue'
 import AdminModerationPage from '@/views/admin/AdminModerationPage.vue'
+import OtpPage from '@/views/auth/OtpPage.vue'
+
 
 
 const routes = [
@@ -137,6 +139,11 @@ const routes = [
     name: 'Nearby',
     component: NearbyView,
     meta: { requiresAuth: true },
+  },
+  {
+    path: '/verify-otp',
+    name: 'OtpPage',
+    component: OtpPage,
   },
   {
     path: '/admin',
