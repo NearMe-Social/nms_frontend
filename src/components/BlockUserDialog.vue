@@ -19,12 +19,15 @@
 import { ref } from 'vue'
 import ConfirmDialog from './ConfirmDialog.vue'
 import Toast from './Toast.vue'
+import { blockApi } from '@/services/api'
+import { useAuthStore } from '@/stores/auth'
 
 interface Props {
   userId: string | number
 }
 
 const props = defineProps<Props>()
+const auth = useAuthStore()
 
 const emit = defineEmits<{
   blocked: []
@@ -39,8 +42,23 @@ const errorToast = ref<InstanceType<typeof Toast>>()
 async function confirmBlock() {
   try {
     blockLoading.value = true
-    // TODO: Implement API call for blocking user
-    // await userApi.block(props.userId)
+
+    const blockerId = auth.user?.userId ?? auth.user?.user_id
+    const blockedUserId = Number(props.userId)
+
+    if (!blockerId) {
+      throw new Error('Please log in again before blocking this user.')
+    }
+
+    if (!Number.isInteger(blockedUserId) || blockedUserId <= 0) {
+      throw new Error('Missing user to block.')
+    }
+
+    await blockApi.create({
+      blocker_id: blockerId,
+      blocked_user_id: blockedUserId,
+    })
+
     successToast.value?.open()
     emit('blocked')
   } catch (error) {

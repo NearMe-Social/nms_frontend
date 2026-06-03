@@ -1,73 +1,79 @@
 <template>
-  <div class="min-h-screen bg-gray-50">
-    <Navbar />
-
-    <div class="w-full px-6 py-6 flex flex-col gap-6">
-
-      <!-- Page header -->
-      <div class="flex items-center justify-between animate-fade-down">
-        <div>
-          <h1 class="text-2xl font-bold text-gray-800">Admin Reports</h1>
-          <p class="text-gray-400 text-sm mt-1">Manage and review all user submitted reports</p>
-        </div>
-        <div class="flex items-center gap-2">
-          <div class="bg-white border border-gray-200 rounded-xl px-4 py-2 flex items-center gap-2 shadow-sm">
-            <Flag class="w-4 h-4 text-red-400" />
-            <span class="text-sm font-semibold text-gray-700">
-              {{ pendingCount }} Pending
-            </span>
-          </div>
-        </div>
+  <div class="p-6 flex flex-col gap-5">
+    <div class="flex items-center justify-between gap-4 animate-fade-down">
+      <div>
+        <h1 class="text-xl font-bold text-gray-800">Report Management</h1>
+        <p class="text-gray-400 text-sm mt-0.5">Review and resolve community flagged content.</p>
       </div>
-
-      <!-- Filter bar -->
-      <div class="animate-fade-down-delay">
-        <ReportFilterBar
-          v-model:search="search"
-          v-model:status="selectedStatus"
-          v-model:type="selectedType"
-          @clear="clearFilters"
-        />
-      </div>
+      <button
+        class="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-gray-600 bg-white border border-gray-200 hover:bg-gray-50 transition-all duration-200 shadow-sm"
+      >
+        <Download class="w-4 h-4" />
+        Export Log
+      </button>
+    </div>
       <!-- Trends -->
       <div class="animate-fade-up">
         <ReportingTrendsSection :reports="reports" />
       </div>
 
-      <!-- Table -->
-      <div class="animate-fade-up">
-        <ReportTableComponent
-          :reports="filteredReports"
-          :is-loading="isLoading"
-          :error="errorMessage"
-          @retry="fetchReports"
-          @selectReport="selectedReport = $event"
-        />
-      </div>
+    <div class="flex flex-wrap items-center justify-between gap-3 animate-fade-up">
+      <ReportFilterBar
+        :status="selectedStatus"
+        :type="selectedType"
+        @update:status="selectedStatus = $event"
+        @update:type="selectedType = $event"
+        @clear="clearFilters"
+      />
 
+      <div class="flex items-center gap-3">
+        <div class="flex items-center bg-white border border-gray-200 rounded-xl px-3 py-2 gap-2 w-64 shadow-sm">
+          <Search class="w-3.5 h-3.5 text-gray-400 shrink-0" />
+          <input
+            v-model="search"
+            type="text"
+            placeholder="Search reports, users..."
+            class="bg-transparent text-xs text-gray-600 outline-none w-full placeholder-gray-400"
+          />
+        </div>
+        <span class="text-xs text-gray-400 whitespace-nowrap">
+          Showing {{ filteredReports.length }} of {{ reports.length }}
+        </span>
+      </div>
+    </div>
+
+    <div class="animate-fade-up">
+      <ReportTableComponent
+        :reports="filteredReports"
+        :is-loading="isLoading"
+        :error="errorMessage"
+        @retry="fetchReports"
+        @selectReport="goToDetail"
+      />
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
-import { Flag } from 'lucide-vue-next'
-import Navbar from '@/components/Navbar.vue'
+import { computed, onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
+import { Download, Search } from 'lucide-vue-next'
 import ReportFilterBar from '@/views/admin/ReportFilterBar.vue'
 import ReportTableComponent from '@/views/admin/ReportTableComponent.vue'
 import { adminReportsApi } from '@/services/api'
 import ReportingTrendsSection from '@/views/admin/ReportingTrendsSection.vue'
 
+const router = useRouter()
 const search = ref('')
 const selectedStatus = ref('all')
 const selectedType = ref('all')
-const selectedReport = ref(null)
 const reports = ref([])
 const isLoading = ref(false)
 const errorMessage = ref('')
 
 function mapReport(report) {
   const reporterName = report.reporter?.username || report.reporter?.email || 'Unknown user'
+  const targetType = report.targetType?.toLowerCase() || 'unknown'
 
   return {
     ...report,
@@ -77,8 +83,9 @@ function mapReport(report) {
       email: report.reporter?.email || '',
       avatar: '',
     },
-    type: report.targetType.toLowerCase(),
-    status: report.status.toLowerCase(),
+    target: `${targetType.toUpperCase()} ID: ${report.targetId}`,
+    type: targetType,
+    status: report.status?.toLowerCase() || 'pending',
     created_at: report.createdAt,
   }
 }
@@ -98,30 +105,38 @@ async function fetchReports() {
   }
 }
 
-onMounted(fetchReports)
-
-const pendingCount = computed(() =>
-  reports.value.filter(r => r.status === 'pending').length
-)
-
 const filteredReports = computed(() => {
-  return reports.value.filter(report => {
-    const matchSearch =
-      search.value === '' ||
-      report.reason.toLowerCase().includes(search.value.toLowerCase()) ||
-      report.reportedBy.name.toLowerCase().includes(search.value.toLowerCase()) ||
-      report.reportedBy.email.toLowerCase().includes(search.value.toLowerCase())
-    const matchStatus = selectedStatus.value === 'all' || report.status === selectedStatus.value
-    const matchType = selectedType.value === 'all' || report.type === selectedType.value
-    return matchSearch && matchStatus && matchType
+  const query = search.value.trim().toLowerCase()
+
+  return reports.value.filter((report) => {
+    const matchesSearch =
+      query === '' ||
+      report.reason.toLowerCase().includes(query) ||
+      report.target.toLowerCase().includes(query) ||
+      report.reportedBy.name.toLowerCase().includes(query) ||
+      report.reportedBy.email.toLowerCase().includes(query)
+
+    const matchesStatus = selectedStatus.value === 'all' || report.status === selectedStatus.value
+    const matchesType = selectedType.value === 'all' || report.type === selectedType.value
+
+    return matchesSearch && matchesStatus && matchesType
   })
 })
+
+function goToDetail(report) {
+  router.push({
+    name: 'AdminReportDetail',
+    params: { id: report.id },
+  })
+}
 
 function clearFilters() {
   search.value = ''
   selectedStatus.value = 'all'
   selectedType.value = 'all'
 }
+
+onMounted(fetchReports)
 </script>
 
 <style scoped>
@@ -129,12 +144,8 @@ function clearFilters() {
   animation: fadeDown 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
-.animate-fade-down-delay {
-  animation: fadeDown 0.5s cubic-bezier(0.22, 1, 0.36, 1) 0.1s both;
-}
-
 .animate-fade-up {
-  animation: fadeUp 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.2s both;
+  animation: fadeUp 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.1s both;
 }
 
 @keyframes fadeDown {
