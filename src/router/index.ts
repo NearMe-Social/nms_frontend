@@ -3,6 +3,7 @@ import { useAuthStore } from '@/stores/auth'
 
 import Login from '@/views/auth/LoginPage.vue'
 import Register from '@/views/auth/RegisterPage.vue'
+import SelectProfile from '@/views/auth/SelectProfilePage.vue'
 import HomePage from '@/views/user/HomePage.vue'
 import UserProfile from '@/views/user/UserProfile.vue'
 import EditProfile from '@/views/user/EditProfile.vue'
@@ -19,10 +20,13 @@ import ReportPostPage from '@/views/ReportPostPage.vue'
 import ReportUserPage from '@/views/ReportUserPage.vue'
 import ReportCommentPage from '@/views/ReportCommentPage.vue'
 import AdminReportsPage from '@/views/admin/AdminReportsPage.vue'
+import AdminDashboardPage from '@/views/admin/AdminDashboardPage.vue'
 import AdminLayout from '@/views/admin/AdminLayout.vue'
 import AdminReportDetail from '@/views/admin/AdminReportDetail.vue'
 import AdminUsersPage from '@/views/admin/AdminUsersPage.vue'
 import AdminModerationPage from '@/views/admin/AdminModerationPage.vue'
+import OtpPage from '@/views/auth/OtpPage.vue'
+
 
 
 const routes = [
@@ -35,6 +39,12 @@ const routes = [
     path: '/register',
     name: 'Register',
     component: Register,
+  },
+  {
+    path: '/select-profile',
+    name: 'SelectProfile',
+    component: SelectProfile,
+    meta: { requiresAuth: true },
   },
   {
     path: '/permission-request',
@@ -139,6 +149,11 @@ const routes = [
     meta: { requiresAuth: true },
   },
   {
+    path: '/verify-otp',
+    name: 'OtpPage',
+    component: OtpPage,
+  },
+  {
     path: '/admin',
     component: AdminLayout,
     meta: { requiresAuth: true, requiresAdmin: true },
@@ -164,6 +179,15 @@ const routes = [
         component: AdminModerationPage,
       },
     ],
+  },
+  {
+    path: '/admin/dashboard',
+    name: 'AdminDashboard',
+    component: AdminDashboardPage,
+    meta: {
+      requiresAuth: true,
+      requiresAdmin: true,
+    },
   },
 ]
 
