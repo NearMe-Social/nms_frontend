@@ -3,6 +3,7 @@ import { useAuthStore } from '@/stores/auth'
 
 import Login from '@/views/auth/LoginPage.vue'
 import Register from '@/views/auth/RegisterPage.vue'
+import SelectProfile from '@/views/auth/SelectProfilePage.vue'
 import HomePage from '@/views/user/HomePage.vue'
 import UserProfile from '@/views/user/UserProfile.vue'
 import EditProfile from '@/views/user/EditProfile.vue'
@@ -31,6 +32,12 @@ const routes = [
     path: '/register',
     name: 'Register',
     component: Register,
+  },
+  {
+    path: '/select-profile',
+    name: 'SelectProfile',
+    component: SelectProfile,
+    meta: { requiresAuth: true },
   },
   {
     path: '/permission-request',
@@ -140,7 +147,6 @@ const routes = [
       requiresAdmin: true,
     },
   },
-]
 ]
 
 const router = createRouter({
