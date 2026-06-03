@@ -12,6 +12,10 @@
         Export Log
       </button>
     </div>
+      <!-- Trends -->
+      <div class="animate-fade-up">
+        <ReportingTrendsSection :reports="reports" />
+      </div>
 
     <div class="flex flex-wrap items-center justify-between gap-3 animate-fade-up">
       <ReportFilterBar
@@ -57,6 +61,7 @@ import { Download, Search } from 'lucide-vue-next'
 import ReportFilterBar from '@/views/admin/ReportFilterBar.vue'
 import ReportTableComponent from '@/views/admin/ReportTableComponent.vue'
 import { adminReportsApi } from '@/services/api'
+import ReportingTrendsSection from '@/views/admin/ReportingTrendsSection.vue'
 
 const router = useRouter()
 const search = ref('')
