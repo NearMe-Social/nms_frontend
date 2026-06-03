@@ -21,6 +21,13 @@ import ReportUserPage from '@/views/ReportUserPage.vue'
 import ReportCommentPage from '@/views/ReportCommentPage.vue'
 import AdminReportsPage from '@/views/admin/AdminReportsPage.vue'
 import AdminDashboardPage from '@/views/admin/AdminDashboardPage.vue'
+import AdminLayout from '@/views/admin/AdminLayout.vue'
+import AdminReportDetail from '@/views/admin/AdminReportDetail.vue'
+import AdminUsersPage from '@/views/admin/AdminUsersPage.vue'
+import AdminModerationPage from '@/views/admin/AdminModerationPage.vue'
+import OtpPage from '@/views/auth/OtpPage.vue'
+
+
 
 const routes = [
   {
@@ -48,6 +55,12 @@ const routes = [
   {
     path: '/discussion',
     name: 'DiscussionDetail',
+    component: DiscussionDetail,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/posts/:postId',
+    name: 'PostDetail',
     component: DiscussionDetail,
     meta: { requiresAuth: true },
   },
@@ -100,6 +113,12 @@ const routes = [
     meta: { requiresAuth: true },
   },
   {
+    path: '/users/:userId',
+    name: 'PublicUserProfile',
+    component: UserProfile,
+    meta: { requiresAuth: true },
+  },
+  {
     path: '/profile/edit',
     name: 'EditProfile',
     component: EditProfile,
@@ -130,13 +149,36 @@ const routes = [
     meta: { requiresAuth: true },
   },
   {
-    path: '/admin/reports',
-    name: 'AdminReports',
-    component: AdminReportsPage,
-    meta: {
-      requiresAuth: true,
-      requiresAdmin: true,
-    },
+    path: '/verify-otp',
+    name: 'OtpPage',
+    component: OtpPage,
+  },
+  {
+    path: '/admin',
+    component: AdminLayout,
+    meta: { requiresAuth: true, requiresAdmin: true },
+    children: [
+      {
+        path: 'reports',
+        name: 'AdminReports',
+        component: AdminReportsPage,
+      },
+      {
+        path: 'reports/:id',
+        name: 'AdminReportDetail',
+        component: AdminReportDetail,
+      },
+      {
+        path: 'users',
+        name: 'AdminUsers',
+        component: AdminUsersPage,
+      },
+      {
+        path: 'moderation',
+        name: 'AdminModeration',
+        component: AdminModerationPage,
+      },
+    ],
   },
   {
     path: '/admin/dashboard',
@@ -179,7 +221,7 @@ router.beforeEach((to, from, next) => {
     const userRole = auth.user?.role
 
     if (userRole !== 'ADMIN') {
-      next({ name: 'HomePage' })
+     next({ name: 'HomePage' })
       return
     }
   }
