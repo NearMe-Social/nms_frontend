@@ -8,22 +8,23 @@ import { useAuthStore } from '@/stores/auth'
 import GeoErrorState from '@/components/GeoErrorState.vue'
 import AppSidebar from '@/components/AppSidebar.vue'
 import Navbar from '@/components/Navbar.vue'
+import * as L from 'leaflet'
 
 const nearbyStore = useNearbyStore()
 const auth = useAuthStore()
 const geo = useGeolocation()
 
+const mapElement = ref<HTMLDivElement | null>(null)
+const map = ref<L.Map | null>(null)
+const userCircle = ref<L.Circle | null>(null)
+const userMarker = ref<L.CircleMarker | null>(null)
+const nearbyMarkers = ref<L.CircleMarker[]>([])
+
 const radius = ref(100)
 const sortMode = ref<'latest' | 'active'>('latest')
-const privacyMode = ref('Neighbors Only')
+const privacyMode = ref<'Neighbors Only' | 'Approximate Distance Only' | 'Hidden From Search'>('Neighbors Only')
 
 const radiusOptions = [50, 100, 200]
-const mapPins = [
-  { id: 'northwest', left: '18%', top: '18%', color: 'green' },
-  { id: 'west', left: '32%', top: '55%', color: 'blue' },
-  { id: 'northeast', left: '59%', top: '28%', color: 'pink' },
-  { id: 'southeast', left: '72%', top: '82%', color: 'orange' },
-]
 
 const filteredUsers = computed(() => {
   const inRadius = nearbyStore.users.filter((user) => user.distance_m <= radius.value)
@@ -71,31 +72,152 @@ function userDistance(user: NearbyUser) {
   return user.distance_label ?? approximateDistance(user.distance_m)
 }
 
-function pinForUser(user: NearbyUser, index: number) {
-  const pin = mapPins[index % mapPins.length]
+function getPrivacyPinPosition(user: NearbyUser) {
+  const base = geo.coords.value
+  if (!base) {
+    return { lat: 0, lng: 0 }
+  }
+
+  const distance = Math.min(user.distance_m, radius.value)
+  const angle = Math.random() * Math.PI * 2
+  const ring = 0.3 + Math.random() * 0.5
+  const offset = Math.max(20, distance * ring)
+
+  const latOffset = (Math.cos(angle) * offset) / 111300
+  const lngOffset = (Math.sin(angle) * offset) / (111300 * Math.cos((base.lat * Math.PI) / 180))
+
   return {
-    ...pin,
-    id: user.id,
-    label: user.username.slice(0, 1).toUpperCase(),
+    lat: base.lat + latOffset,
+    lng: base.lng + lngOffset,
   }
 }
 
-async function init() {
-  await geo.request()
+function clearNearbyMarkers() {
+  nearbyMarkers.value.forEach((marker) => marker.remove())
+  nearbyMarkers.value = []
+}
+
+function createMap(position: { lat: number; lng: number }) {
+  if (!mapElement.value || map.value) return
+
+  map.value = L.map(mapElement.value, {
+    zoomControl: true,
+    attributionControl: false,
+  }).setView([position.lat, position.lng], 15)
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; OpenStreetMap contributors',
+  }).addTo(map.value)
+
+  map.value.invalidateSize()
+
+  userCircle.value = L.circle([position.lat, position.lng], {
+    radius: radius.value,
+    color: '#3b82f6',
+    fillColor: '#bfdbfe',
+    fillOpacity: 0.18,
+    weight: 2,
+  }).addTo(map.value)
+
+  userMarker.value = L.circleMarker([position.lat, position.lng], {
+    radius: 8,
+    color: '#047857',
+    fillColor: '#22c55e',
+    fillOpacity: 0.9,
+    weight: 2,
+  }).addTo(map.value)
+}
+
+function updateMap(position: { lat: number; lng: number }) {
+  if (!map.value) {
+    createMap(position)
+    return
+  }
+
+  map.value.invalidateSize()
+  map.value.setView([position.lat, position.lng], map.value.getZoom())
+  userMarker.value?.setLatLng([position.lat, position.lng])
+  userCircle.value?.setLatLng([position.lat, position.lng]).setRadius(radius.value)
+}
+
+function drawNearbyMarkers(position: { lat: number; lng: number }) {
+  clearNearbyMarkers()
+
+  if (privacyMode.value === 'Hidden From Search') {
+    return
+  }
+
+  filteredUsers.value.slice(0, 10).forEach((user) => {
+    const coords = getPrivacyPinPosition(user)
+    const marker = L.circleMarker([coords.lat, coords.lng], {
+      radius: 7,
+      color: '#1d4ed8',
+      fillColor: '#93c5fd',
+      fillOpacity: 0.9,
+      weight: 2,
+    }).addTo(map.value!) // eslint-disable-line @typescript-eslint/no-non-null-assertion
+
+    marker.bindTooltip(`${user.username} • ${userDistance(user)}`, {
+      permanent: false,
+      direction: 'top',
+    })
+
+    nearbyMarkers.value.push(marker)
+  })
 }
 
 async function refreshNearby() {
   const position = geo.coords.value
   if (!position) return
-  await nearbyStore.fetchNearby(position.lat, position.lng, radius.value)
-  nearbyStore.startPolling(position.lat, position.lng, radius.value)
+
+  const shareLocation = privacyMode.value !== 'Hidden From Search'
+  await nearbyStore.fetchNearby(position.lat, position.lng, radius.value, shareLocation)
+
+  if (!map.value) {
+    createMap(position)
+  } else {
+    updateMap(position)
+  }
+
+  drawNearbyMarkers(position)
+  nearbyStore.startPolling(position.lat, position.lng, radius.value, shareLocation)
 }
+
+async function init() {
+  await geo.request()
+
+  if (geo.coords.value) {
+    createMap(geo.coords.value)
+    await refreshNearby()
+  }
+}
+
+watch(radius, async () => {
+  if (!geo.coords.value) return
+  if (userCircle.value) {
+    userCircle.value.setRadius(radius.value)
+  }
+  await refreshNearby()
+})
+
+watch(
+  () => geo.coords.value,
+  async (newCoords) => {
+    if (!newCoords) return
+    if (!map.value) {
+      createMap(newCoords)
+    }
+    await refreshNearby()
+  },
+)
+
+watch(privacyMode, async () => {
+  if (!geo.coords.value) return
+  await refreshNearby()
+})
 
 onMounted(init)
 onUnmounted(() => nearbyStore.stopPolling())
-
-watch(radius, refreshNearby)
-watch(() => geo.coords.value, refreshNearby)
 </script>
 
 <template>
@@ -181,33 +303,7 @@ watch(() => geo.coords.value, refreshNearby)
       />
 
       <section v-else class="map-panel" aria-label="Approximate nearby map">
-        <div class="map-canvas">
-          <div class="map-grid"></div>
-          <div class="river"></div>
-          <div class="road road-a"></div>
-          <div class="road road-b"></div>
-          <div class="road road-c"></div>
-          <div class="privacy-radius" :style="{ '--radius-size': `${radius * 1.15}px` }">
-            <span></span>
-          </div>
-          <div class="self-pin">
-            <MapPin />
-          </div>
-
-          <template v-if="filteredUsers.length > 0">
-            <button
-              v-for="(user, index) in filteredUsers.slice(0, 4)"
-              :key="user.id"
-              type="button"
-              class="user-pin"
-              :class="pinForUser(user, index).color"
-              :style="{ left: pinForUser(user, index).left, top: pinForUser(user, index).top }"
-              :title="`${user.username}, ${userDistance(user)}`"
-            >
-              <UserRound />
-            </button>
-          </template>
-        </div>
+        <div ref="mapElement" id="nearby-map" class="map-canvas"></div>
       </section>
 
       <section class="status-grid">
@@ -447,18 +543,26 @@ watch(() => geo.coords.value, refreshNearby)
 .map-panel {
   display: flex;
   justify-content: center;
-  margin: 10px 0 26px;
+  margin: 10px auto 26px;
+  width: 100%;
+  max-width: 760px;
+  padding: 0 10px;
 }
 
 .map-canvas {
   position: relative;
-  width: min(680px, 100%);
-  aspect-ratio: 1.5;
+  width: 100%;
+  max-width: 760px;
+  min-height: 360px;
+  height: 420px;
   overflow: hidden;
   border: 3px solid #202020;
-  background:
-    linear-gradient(35deg, transparent 0 68%, rgba(174, 224, 244, 0.82) 68% 76%, transparent 76%),
-    #edf0e6;
+  background: #edf0e6;
+}
+
+.leaflet-container {
+  width: 100%;
+  height: 100%;
 }
 
 .map-grid {
