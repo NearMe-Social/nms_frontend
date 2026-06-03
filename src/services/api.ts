@@ -212,6 +212,20 @@ export const authApi = {
       body: JSON.stringify(payload),
     })
   },
+
+  sendOtp(email: string): Promise<{ message: string }> {
+    return request<{ message: string }>('/auth/send-otp', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    })
+  },
+
+  verifyOtp(email: string, otp: string): Promise<AuthResponse> {
+    return request<AuthResponse>('/auth/verify-otp', {
+      method: 'POST',
+      body: JSON.stringify({ email, otp }),
+    })
+  },
 }
 
 export const postApi = {
