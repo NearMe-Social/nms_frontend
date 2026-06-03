@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import { API_URL } from '@/services/api'
 
 export interface NotificationData {
   notification_id: number
@@ -24,7 +25,7 @@ export const useNotificationStore = defineStore('notifications', () => {
     error.value = null
 
     try {
-      const res = await fetch('http://localhost:3000/notifications', {
+      const res = await fetch(`${API_URL}/notifications`, {
         headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',

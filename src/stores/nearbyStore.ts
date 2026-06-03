@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { useAuthStore } from './auth'
+import { API_URL } from '@/services/api'
 
 export interface NearbyUser {
   id: string
@@ -26,7 +27,7 @@ export const useNearbyStore = defineStore('nearby', () => {
       throw new Error('You need to be logged in before sharing nearby location.')
     }
 
-    const res = await fetch('http://localhost:3000/users/me/location', {
+    const res = await fetch(`${API_URL}/users/me/location`, {
       method: 'PATCH',
       headers: {
         Authorization: `Bearer ${authStore.token}`,
@@ -41,13 +42,15 @@ export const useNearbyStore = defineStore('nearby', () => {
     }
   }
 
-  async function fetchNearby(lat: number, lng: number, radius = 200) {
+  async function fetchNearby(lat: number, lng: number, radius = 200, shareLocation = true) {
     const authStore = useAuthStore()
     loading.value = true
     error.value = null
 
     try {
-      await updateMyLocation(lat, lng)
+      if(shareLocation) {
+        await updateMyLocation(lat, lng)
+      }
 
       const params = new URLSearchParams({
         lat: String(lat),
@@ -55,7 +58,7 @@ export const useNearbyStore = defineStore('nearby', () => {
         radius: String(radius),
       })
 
-      const res = await fetch(`http://localhost:3000/users/nearby?${params.toString()}`, {
+      const res = await fetch(`${API_URL}/users/nearby?${params.toString()}`, {
         headers: {
           ...(authStore.token ? { Authorization: `Bearer ${authStore.token}` } : {}),
           'Content-Type': 'application/json',
@@ -76,9 +79,9 @@ export const useNearbyStore = defineStore('nearby', () => {
     }
   }
 
-  function startPolling(lat: number, lng: number, radius = 200) {
+  function startPolling(lat: number, lng: number, radius = 200, shareLocation = true) {
     stopPolling()
-    refreshTimer = setInterval(() => fetchNearby(lat, lng, radius), 30_000)
+    refreshTimer = setInterval(() => fetchNearby(lat, lng, radius, shareLocation), 30_000)
   }
 
   function stopPolling() {
