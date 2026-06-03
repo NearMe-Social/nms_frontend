@@ -41,6 +41,9 @@ const routes = [
     component: Register,
   },
   {
+  path: '/auth/google/callback',
+  name: 'GoogleCallback',
+  component: () => import('@/views/auth/GoogleCallback.vue'),
     path: '/select-profile',
     name: 'SelectProfile',
     component: SelectProfile,
