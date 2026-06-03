@@ -56,7 +56,7 @@
             :disabled="resendCooldown > 0"
             @click="handleResend"
           >
-            {{ resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Resend Code' }}
+            {{ resendCooldown > 0 ? 'Resend in ' + resendCooldown + 's' : 'Resend Code' }}
           </button>
         </div>
 
@@ -95,11 +95,26 @@ let cooldownTimer: ReturnType<typeof setInterval> | null = null
 const isComplete = computed(() => otpDigits.value.every(d => d !== ''))
 const otpValue = computed(() => otpDigits.value.join(''))
 
-onMounted(() => {
+onMounted(async () => {
   // Focus first input
   setTimeout(() => inputRefs.value[0]?.focus(), 100)
-  // Start resend cooldown
+
+  // Start cooldown immediately (whether send succeeds or fails)
   startCooldown()
+
+  if (email.value) {
+    try {
+      console.log('[OTP] Attempting to send OTP to:', email.value)
+      await authApi.sendOtp(email.value)
+      console.log('[OTP] OTP sent successfully')
+      errorMsg.value = ''
+      hasError.value = false
+    } catch (err: unknown) {
+      const errorText = err instanceof Error ? err.message : 'Failed to send OTP. Please try again.'
+      console.error('[OTP ERROR]', errorText)
+      errorMsg.value = errorText
+    }
+  }
 })
 
 onUnmounted(() => {
@@ -186,9 +201,10 @@ async function handleResend() {
     hasError.value = false
     otpDigits.value = ['', '', '', '', '', '']
     inputRefs.value[0]?.focus()
-    startCooldown()
   } catch (err: unknown) {
     errorMsg.value = err instanceof Error ? err.message : 'Failed to resend OTP.'
+  } finally {
+    startCooldown()
   }
 }
 </script>
