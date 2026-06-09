@@ -1,4 +1,4 @@
-export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = localStorage.getItem('token')
@@ -55,6 +55,14 @@ export interface ApiPost {
   reactions_count?: number
   distance_m?: number
   distance_label?: string
+}
+
+export interface ApiSearchUser {
+  user_id: number
+  username: string
+  first_name: string
+  last_name: string
+  profile_image?: string | null
 }
 
 export interface ApiCommentUser {
@@ -245,6 +253,18 @@ export const postApi = {
   },
 }
 
+export const searchApi = {
+  async search(query: string): Promise<{ users: ApiSearchUser[]; posts: ApiPost[] }> {
+    const encodedQuery = encodeURIComponent(query.trim())
+    const [users, posts] = await Promise.all([
+      request<ApiSearchUser[]>(`/users/search?q=${encodedQuery}`),
+      request<ApiPost[]>(`/posts/search?q=${encodedQuery}`),
+    ])
+
+    return { users, posts }
+  },
+}
+
 export const commentApi = {
   listByPost(postId: number): Promise<ApiComment[]> {
     return request<ApiComment[]>(`/comments/post/${postId}`)
@@ -273,7 +293,9 @@ export const conversationApi = {
 
 export const messageApi = {
   list(conversationId: number, page = 0, size = 50): Promise<ApiMessagePage> {
-    return request<ApiMessagePage>(`/conversations/${conversationId}/messages?page=${page}&size=${size}`)
+    return request<ApiMessagePage>(
+      `/conversations/${conversationId}/messages?page=${page}&size=${size}`,
+    )
   },
 
   create(conversationId: number, content: string): Promise<ApiMessage> {
@@ -299,10 +321,7 @@ export const adminReportsApi = {
     return request<ApiAdminReport>(`/admin/reports/${reportId}`)
   },
 
-  updateStatus(
-    reportId: number,
-    payload: UpdateAdminReportStatusPayload,
-  ): Promise<ApiAdminReport> {
+  updateStatus(reportId: number, payload: UpdateAdminReportStatusPayload): Promise<ApiAdminReport> {
     return request<ApiAdminReport>(`/admin/reports/${reportId}/status`, {
       method: 'PATCH',
       body: JSON.stringify(payload),
@@ -413,9 +432,9 @@ export const userApi = {
     formData.append('file', file)
     return fetch(`${API_URL}/user/profile-image`, {
       method: 'POST',
-      headers: (localStorage.getItem('token')
-          ? { Authorization: `Bearer ${localStorage.getItem('token')}` }
-          : {}),
+      headers: localStorage.getItem('token')
+        ? { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        : {},
       body: formData,
     }).then((res) => res.json())
   },

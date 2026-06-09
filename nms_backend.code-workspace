@@ -1,0 +1,11 @@
+{
+	"folders": [
+		{
+			"path": "../nms_backend"
+		},
+		{
+			"path": "."
+		}
+	],
+	"settings": {}
+}
