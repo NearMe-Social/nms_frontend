@@ -105,8 +105,11 @@
                 <span class="text-xs bg-orange-50 text-orange-500 border border-orange-200 px-2 py-1 rounded-full flex items-center gap-1">
                   <Clock class="w-3 h-3" /> {{ timeLeft(post.expires_at) }}
                 </span>
-                <UserOptionsMenu :user-id="post.user?.user_id" @click.stop />
-                <PostOptionsMenu :post-id="post.post_id" @click.stop />
+                <PostOptionsMenu
+                  :post-id="post.post_id"
+                  :user-id="post.user?.user_id"
+                  @click.stop
+                />
               </div>
             </div>
 
@@ -190,7 +193,6 @@ import { RouterLink, useRouter } from 'vue-router'
 import Navbar from '@/components/Navbar.vue'
 import AppSidebar from '@/components/AppSidebar.vue'
 import PostOptionsMenu from '@/components/PostOptionsMenu.vue'
-import UserOptionsMenu from '@/components/UserOptionsMenu.vue'
 import { postApi, type ApiPost } from '@/services/api'
 import { MapPin, Bell, MessageCircle, Plus, User, Heart, Share2, Clock, Zap } from 'lucide-vue-next'
 
