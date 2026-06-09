@@ -111,7 +111,10 @@ async function handleLogin() {
 }
 
 function handleSocialLogin(provider: string) {
-    console.log('social login', provider)
+    if (provider === 'google') {
+        window.location.href =
+            'http://localhost:3000/auth/google'
+    }
 }
 </script>
 

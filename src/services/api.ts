@@ -1,4 +1,4 @@
-const API_URL = import.meta.env.VITE_API_URL;
+export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = localStorage.getItem('token')
@@ -210,6 +210,20 @@ export const authApi = {
     return request<AuthResponse>('/auth/register', {
       method: 'POST',
       body: JSON.stringify(payload),
+    })
+  },
+
+  sendOtp(email: string): Promise<{ message: string }> {
+    return request<{ message: string }>('/auth/send-otp', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    })
+  },
+
+  verifyOtp(email: string, otp: string): Promise<AuthResponse> {
+    return request<AuthResponse>('/auth/verify-otp', {
+      method: 'POST',
+      body: JSON.stringify({ email, otp }),
     })
   },
 }
