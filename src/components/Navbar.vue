@@ -130,10 +130,12 @@ import { Bell, FileText, LoaderCircle, LogOut, Search, Settings, X } from 'lucid
 import { useAuthStore } from '@/stores/auth'
 import { searchApi, type ApiPost, type ApiSearchUser } from '@/services/api'
 import UserAvatar from '@/components/UserAvatar.vue'
+import { useGeolocation } from '@/composables/useGeolocation'
 
 const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
+const geo = useGeolocation()
 const searchArea = ref<HTMLElement | null>(null)
 const searchInput = ref<HTMLInputElement | null>(null)
 const searchQuery = ref('')
@@ -175,7 +177,8 @@ watch(searchQuery, (value) => {
 
 async function runSearch(query: string, requestId: number) {
   try {
-    const results = await searchApi.search(query)
+    const position = await geo.request()
+    const results = await searchApi.search(query, position)
     if (requestId !== searchRequestId) return
 
     searchUsers.value = results.users

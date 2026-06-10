@@ -1,63 +1,98 @@
 <template>
-  <div class="min-h-screen bg-[#f4f7fb] text-slate-700">
+  <div class="discussion-page">
     <Navbar />
 
-    <div class="flex min-w-0">
+    <div class="page-shell">
       <AppSidebar class="hidden md:flex" />
 
-      <div class="detail-page">
-        <div class="mb-5 flex flex-wrap items-center justify-between gap-3">
-          <button class="back-btn" type="button" @click="goBack">
-            <span aria-hidden="true">←</span>
-            The Neighborhood
+      <main class="workspace">
+        <header class="page-heading">
+          <button class="back-button" type="button" @click="goBack">
+            <ArrowLeft />
+            Back
           </button>
 
-          <div class="detail-context">
-            <span>Courtyard</span>
-            <span>Explore</span>
-            <span>Alerts</span>
+          <div class="heading-copy">
+            <span class="eyebrow"><MessageCircle /> Community discussion</span>
+            <h1>{{ post?.title || 'Join the conversation' }}</h1>
+            <p>
+              {{
+                post
+                  ? 'Read the full update and share a helpful response.'
+                  : 'Choose a post from the nearby feed to read and respond.'
+              }}
+            </p>
           </div>
-        </div>
+        </header>
 
-        <div class="detail-grid">
-          <main class="min-w-0">
-            <p v-if="loading" class="state-card">Loading post...</p>
-            <p v-else-if="error" class="state-card error-state">{{ error }}</p>
+        <section v-if="loading" class="state-card loading-state">
+          <span class="loading-mark"></span>
+          <div>
+            <h2>Loading discussion</h2>
+            <p>Getting the post and its latest comments.</p>
+          </div>
+        </section>
 
-            <article v-else-if="post" class="post-card">
-              <div class="post-meta">
-                <span class="post-tag">{{ post.status }}</span>
-                <span class="post-time">{{ timeAgo(post.created_at) }}</span>
-              </div>
+        <section v-else-if="error" class="state-card error-state">
+          <span class="state-icon"><FileText /></span>
+          <div>
+            <h2>{{ hasPostId ? 'Discussion unavailable' : 'Choose a post to discuss' }}</h2>
+            <p>{{ error }}</p>
+          </div>
+          <button v-if="hasPostId" type="button" @click="loadPostDetail">
+            <RefreshCw />
+            Try again
+          </button>
+          <RouterLink v-else to="/">
+            Browse nearby posts
+            <ArrowRight />
+          </RouterLink>
+        </section>
 
-              <h1 class="post-title">{{ post.title }}</h1>
-
-              <div class="author-row">
-                <button
-                  class="author-avatar author-link"
-                  type="button"
-                  @click="goToProfile(post.user?.user_id)"
-                >
-                  {{ initials(post.user?.username || 'Neighbor') }}
-                </button>
-                <div class="author-copy">
-                  <button
-                    class="author-name author-name-button"
-                    type="button"
-                    @click="goToProfile(post.user?.user_id)"
-                  >
-                    {{ post.user?.username || 'Neighbor' }}
-                  </button>
-                  <div class="author-sub">
-                    {{ post.visibility_radius }}m visibility ·
-                    <span class="verified-badge">Verified Resident</span>
-                  </div>
+        <div v-else-if="post" class="detail-grid">
+          <div class="discussion-column">
+            <article class="post-card">
+              <div class="post-topline">
+                <div class="post-labels">
+                  <span class="post-tag">{{ post.status }}</span>
+                  <span class="post-time"><Clock3 /> {{ timeAgo(post.created_at) }}</span>
                 </div>
                 <UserOptionsMenu :user-id="post.user?.user_id" />
               </div>
 
+              <div class="author-row">
+                <button
+                  class="author-link"
+                  type="button"
+                  :disabled="!post.user?.user_id"
+                  @click="goToProfile(post.user?.user_id)"
+                >
+                  <UserAvatar
+                    :src="post.user?.profile_image"
+                    :username="post.user?.username || 'Neighbor'"
+                    :alt="`${post.user?.username || 'Neighbor'} profile`"
+                    class="author-avatar"
+                  />
+                </button>
+                <div class="author-copy">
+                  <button
+                    class="author-name"
+                    type="button"
+                    :disabled="!post.user?.user_id"
+                    @click="goToProfile(post.user?.user_id)"
+                  >
+                    {{ post.user?.username || 'Neighbor' }}
+                  </button>
+                  <span><MapPin /> Shared within {{ post.visibility_radius }}m</span>
+                </div>
+              </div>
+
+              <h2 class="post-title">{{ post.title }}</h2>
+
               <div class="post-body">
-                <p v-for="(para, i) in postParagraphs" :key="i">{{ para }}</p>
+                <p v-for="(paragraph, index) in postParagraphs" :key="index">
+                  {{ paragraph }}
+                </p>
               </div>
 
               <img
@@ -67,24 +102,26 @@
                 class="post-image"
               />
 
-              <div class="post-actions">
+              <footer class="post-actions">
                 <button
-                  class="action-btn"
-                  :class="{ upvoted: post.upvoted }"
                   type="button"
+                  :class="{ active: post.upvoted }"
                   @click="toggleUpvote"
                 >
-                  {{ reactionsCount }} Upvotes
+                  <Heart />
+                  <span>{{ reactionsCount }}</span>
+                  <small>{{ post.upvoted ? 'Reacted' : 'React' }}</small>
                 </button>
-                <button class="action-btn" type="button" @click="focusReply">
-                  {{ commentCount }} Comments
+                <button type="button" @click="focusReply">
+                  <MessageCircle />
+                  <span>{{ commentCount }}</span>
+                  <small>Comments</small>
                 </button>
-                <span class="action-note">{{ timeLeft(post.expires_at) }} left</span>
-              </div>
+                <span class="expiry-note"><Clock3 /> {{ timeLeft(post.expires_at) }} left</span>
+              </footer>
             </article>
 
             <CommentSection
-              v-if="post"
               ref="commentSectionRef"
               :comments="comments"
               :sort-by="sortBy"
@@ -94,18 +131,13 @@
               @add-comment="addComment"
               @submit-reply="submitReply"
             />
-          </main>
+          </div>
 
           <aside class="detail-sidebar">
-            <section class="side-card">
-              <div class="side-title">Live Community Pulse</div>
-              <div class="pulse-label">
-                Activity Strength <span>{{ pulsePct }}%</span>
-              </div>
-              <div class="pulse-track">
-                <div class="pulse-fill" :style="{ width: pulsePct + '%' }"></div>
-              </div>
-              <div class="pulse-stats">
+            <section class="side-card overview-card">
+              <span class="side-eyebrow">At a glance</span>
+              <h2>Discussion activity</h2>
+              <div class="stat-grid">
                 <div>
                   <strong>{{ reactionsCount }}</strong>
                   <span>Reactions</span>
@@ -114,62 +146,70 @@
                   <strong>{{ commentCount }}</strong>
                   <span>Comments</span>
                 </div>
-              </div>
-            </section>
-
-            <section class="map-card">
-              <div class="map-grid"></div>
-              <div class="map-pin"></div>
-              <div class="map-caption">
-                <span>Location Impact</span>
-                <strong>{{
-                  post?.distance_label || `${post?.visibility_radius ?? 0}m visibility`
-                }}</strong>
-              </div>
-            </section>
-
-            <section class="side-card">
-              <div class="side-title">Discussion Tips</div>
-              <div class="tips-list">
-                <div v-for="t in tips" :key="t.text" class="tip-item">
-                  <span></span>
-                  <p>{{ t.text }}</p>
+                <div>
+                  <strong>{{ post.visibility_radius }}m</strong>
+                  <span>Visibility</span>
                 </div>
               </div>
             </section>
 
-            <section class="side-card">
-              <div class="side-title">Related Topics</div>
-              <div class="related-list">
-                <button v-for="r in related" :key="r.title" type="button" class="related-item">
-                  <strong>{{ r.title }}</strong>
-                  <span>{{ r.meta }}</span>
-                </button>
+            <section class="side-card privacy-card">
+              <span class="side-icon"><ShieldCheck /></span>
+              <div>
+                <h2>Location stays approximate</h2>
+                <p>The post radius is shown, but the author's precise position is not shared.</p>
               </div>
+            </section>
+
+            <section class="side-card">
+              <span class="side-eyebrow">Keep it useful</span>
+              <h2>Good discussion habits</h2>
+              <ul class="tips-list">
+                <li v-for="tip in tips" :key="tip">
+                  <CheckCircle2 />
+                  <span>{{ tip }}</span>
+                </li>
+              </ul>
             </section>
           </aside>
         </div>
-      </div>
+      </main>
     </div>
+
     <MobileBottomNav />
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { RouterLink, useRoute, useRouter } from 'vue-router'
+import {
+  ArrowLeft,
+  ArrowRight,
+  CheckCircle2,
+  Clock3,
+  FileText,
+  Heart,
+  MapPin,
+  MessageCircle,
+  RefreshCw,
+  ShieldCheck,
+} from 'lucide-vue-next'
 import CommentSection from './CommentSection.vue'
 import Navbar from '@/components/Navbar.vue'
 import AppSidebar from '@/components/AppSidebar.vue'
+import UserAvatar from '@/components/UserAvatar.vue'
 import UserOptionsMenu from '@/components/UserOptionsMenu.vue'
 import MobileBottomNav from '@/components/MobileBottomNav.vue'
 import { commentApi, postApi, type ApiComment, type ApiPost } from '@/services/api'
 import { useAuthStore } from '@/stores/auth'
+import { useGeolocation } from '@/composables/useGeolocation'
 
 type ViewComment = {
   id: number
   name: string
   userId: number | null
+  avatar: string | null
   initials: string
   time: string
   color: string
@@ -177,7 +217,15 @@ type ViewComment = {
   likes: number
   showReply: boolean
   replyText: string
-  replies: never[]
+  replies: ViewReply[]
+}
+
+type ViewReply = {
+  name: string
+  initials: string
+  time: string
+  color: string
+  body: string
 }
 
 type DetailPost = ApiPost & {
@@ -187,6 +235,7 @@ type DetailPost = ApiPost & {
 const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
+const geo = useGeolocation()
 
 const post = ref<DetailPost | null>(null)
 const comments = ref<ViewComment[]>([])
@@ -196,29 +245,26 @@ const error = ref('')
 const commentSubmitting = ref(false)
 const commentError = ref('')
 const commentSectionRef = ref<InstanceType<typeof CommentSection> | null>(null)
+
+const hasPostId = computed(() => {
+  const postId = Number(route.params.postId)
+  return Number.isInteger(postId) && postId > 0
+})
 const commentCount = computed(() => comments.value.length)
 const reactionsCount = computed(
   () => post.value?.reactions?.length ?? post.value?.reactions_count ?? 0,
 )
-const pulsePct = computed(() =>
-  Math.min(100, Math.max(12, (commentCount.value + reactionsCount.value) * 12)),
-)
 const postParagraphs = computed(() =>
   (post.value?.content || '')
     .split(/\n+/)
-    .map((para) => para.trim())
+    .map((paragraph) => paragraph.trim())
     .filter(Boolean),
 )
 
 const tips = [
-  { text: "Stay polite and constructive; we're all neighbors here." },
-  { text: 'Suggest solutions alongside identifying problems.' },
-  { text: 'Mention neighbors who might have relevant expertise.' },
-]
-
-const related = [
-  { title: 'Nearby visibility', meta: 'Posts are scoped to their local radius.' },
-  { title: 'Community safety', meta: 'Report content that feels unsafe.' },
+  'Be specific and respectful.',
+  'Add information that helps move the conversation forward.',
+  'Use report controls if a response feels unsafe.',
 ]
 
 function toggleUpvote() {
@@ -231,8 +277,7 @@ function focusReply() {
 }
 
 async function addComment(text: string) {
-  if (!text.trim()) return
-  if (!post.value) return
+  if (!text.trim() || !post.value) return
 
   const userId = auth.user?.userId ?? auth.user?.user_id
   if (!userId) {
@@ -255,6 +300,7 @@ async function addComment(text: string) {
         user: {
           user_id: userId,
           username: auth.user?.username || 'Neighbor',
+          profile_image: auth.user?.profile_image || null,
         },
       }),
       ...comments.value,
@@ -274,7 +320,7 @@ function submitReply(comment: ViewComment, text: string) {
 }
 
 function goBack() {
-  window.history.back()
+  router.back()
 }
 
 function goToProfile(userId?: number | null) {
@@ -286,7 +332,7 @@ async function loadPostDetail() {
   const postId = Number(route.params.postId)
 
   if (!Number.isInteger(postId) || postId <= 0) {
-    error.value = 'Choose a post from the feed to view its discussion.'
+    error.value = 'Open any post from the feed or My Posts to view its discussion here.'
     post.value = null
     comments.value = []
     return
@@ -297,10 +343,9 @@ async function loadPostDetail() {
   commentError.value = ''
 
   try {
-    const [postData, commentData] = await Promise.all([
-      postApi.get(postId),
-      commentApi.listByPost(postId),
-    ])
+    const position = await geo.request()
+    const postData = await postApi.get(postId, position)
+    const commentData = await commentApi.listByPost(postId)
 
     post.value = {
       ...postData,
@@ -323,6 +368,7 @@ function toViewComment(comment: ApiComment): ViewComment {
     id: comment.comment_id,
     name: username,
     userId: comment.user?.user_id ?? null,
+    avatar: comment.user?.profile_image ?? null,
     initials: initials(username),
     time: timeAgo(comment.created_at),
     color: avatarGradient(username),
@@ -359,7 +405,7 @@ function avatarGradient(value: string) {
 function timeAgo(value: string) {
   const diffMs = Date.now() - new Date(value).getTime()
   const minutes = Math.max(0, Math.floor(diffMs / 60000))
-  if (minutes < 1) return 'just now'
+  if (minutes < 1) return 'Just now'
   if (minutes < 60) return `${minutes}m ago`
   const hours = Math.floor(minutes / 60)
   if (hours < 24) return `${hours}h ago`
@@ -368,7 +414,7 @@ function timeAgo(value: string) {
 
 function timeLeft(value: string) {
   const diffMs = new Date(value).getTime() - Date.now()
-  if (diffMs <= 0) return 'expired'
+  if (diffMs <= 0) return 'Expired'
   const minutes = Math.ceil(diffMs / 60000)
   if (minutes < 60) return `${minutes}m`
   const hours = Math.ceil(minutes / 60)
@@ -380,55 +426,116 @@ watch(() => route.params.postId, loadPostDetail)
 </script>
 
 <style scoped>
-.detail-page {
-  --accent: #0f766e;
-  --accent-dark: #164e63;
-  --accent-soft: #e7f7f7;
-  --border: #dbe6ee;
-  --card: #ffffff;
-  --muted: #64748b;
-  --text: #172033;
+.discussion-page {
+  min-height: 100vh;
+  background: #f4f7fb;
+  color: #20384c;
+}
+
+.page-shell {
+  display: flex;
+  min-width: 0;
+}
+
+.workspace {
+  --accent: #0f8179;
+  --accent-dark: #0b6963;
+  --accent-light: #e8f6f5;
+  --border: #e0e9ef;
+  --card: #fff;
+  --text: #172b3e;
+  --text-muted: #71869a;
   --radius: 18px;
-  --shadow: 0 16px 36px rgba(15, 35, 55, 0.08);
+  --shadow: 0 8px 24px rgba(20, 45, 70, 0.045);
   width: 100%;
   min-width: 0;
   flex: 1;
-  padding: 22px clamp(16px, 2vw, 28px) 40px;
+  padding: 22px clamp(16px, 3vw, 40px) 48px;
+}
+
+.page-heading {
+  max-width: 880px;
+  margin-bottom: 22px;
+}
+
+.back-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  color: #687f92;
+  font-size: 0.76rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.back-button:hover {
+  color: var(--accent);
+}
+
+.back-button svg {
+  width: 16px;
+  height: 16px;
+}
+
+.heading-copy {
+  margin-top: 19px;
+}
+
+.eyebrow,
+.post-time,
+.author-copy span,
+.expiry-note {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.eyebrow {
+  color: #0e7c86;
+  font-size: 0.7rem;
+  font-weight: 850;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.eyebrow svg {
+  width: 15px;
+  height: 15px;
+}
+
+.heading-copy h1 {
+  margin: 7px 0 0;
+  color: var(--text);
+  font-size: clamp(1.8rem, 4vw, 2.8rem);
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  line-height: 1.08;
+}
+
+.heading-copy p {
+  margin: 10px 0 0;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  line-height: 1.6;
 }
 
 .detail-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 300px;
-  gap: 22px;
+  gap: 20px;
   align-items: start;
 }
 
-.back-btn,
-.detail-context {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  color: var(--muted);
-  font-size: 0.82rem;
-  font-weight: 800;
-}
-
-.back-btn {
-  border: 0;
-  background: transparent;
-  cursor: pointer;
-  color: var(--text);
-}
-
-.detail-context span {
-  border-radius: 999px;
-  background: #fff;
-  padding: 7px 11px;
-  box-shadow: 0 1px 0 rgba(15, 35, 55, 0.04);
+.discussion-column {
+  min-width: 0;
 }
 
 .post-card,
-.side-card {
+.side-card,
+.state-card {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: var(--card);
@@ -436,113 +543,117 @@ watch(() => route.params.postId, loadPostDetail)
 }
 
 .post-card {
-  padding: clamp(20px, 2vw, 28px);
-  border-left: 4px solid var(--accent);
+  padding: clamp(20px, 3vw, 30px);
 }
 
-.post-meta,
-.post-actions,
-.pulse-stats {
+.post-topline,
+.post-labels,
+.author-row,
+.post-actions {
   display: flex;
   align-items: center;
 }
 
-.post-meta {
+.post-topline {
   justify-content: space-between;
-  gap: 12px;
+  gap: 15px;
+}
+
+.post-labels {
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
 .post-tag {
   border-radius: 999px;
-  background: var(--accent-soft);
+  background: var(--accent-light);
   padding: 5px 10px;
   color: var(--accent);
-  font-size: 0.68rem;
-  font-weight: 950;
-  letter-spacing: 0.14em;
+  font-size: 0.65rem;
+  font-weight: 850;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
-.post-time,
-.author-sub,
-.action-note {
-  color: var(--muted);
-  font-size: 0.78rem;
+.post-time {
+  color: #8394a3;
+  font-size: 0.72rem;
   font-weight: 700;
 }
 
-.post-title {
-  margin: 18px 0 14px;
-  color: var(--text);
-  font-size: clamp(1.6rem, 2.4vw, 2.15rem);
-  font-weight: 950;
-  letter-spacing: -0.02em;
-  line-height: 1.12;
+.post-time svg,
+.author-copy span svg,
+.expiry-note svg {
+  width: 14px;
+  height: 14px;
 }
 
 .author-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 20px;
+  gap: 11px;
+  margin-top: 20px;
 }
 
-.author-avatar {
-  border: 0;
-  width: 42px;
-  height: 42px;
-  flex: 0 0 42px;
-  display: grid;
-  place-items: center;
-  border-radius: 999px;
-  background: linear-gradient(135deg, var(--accent), #22c1b6);
-  color: #fff;
-  font-size: 0.82rem;
-  font-weight: 900;
-}
-
-.author-link {
-  cursor: pointer;
-}
-
-.author-link:hover {
-  filter: brightness(0.95);
-}
-
-.author-copy {
-  min-width: 0;
-  flex: 1;
-}
-
+.author-link,
 .author-name {
-  color: var(--text);
-  font-size: 0.95rem;
-  font-weight: 900;
-}
-
-.author-name-button {
   border: 0;
   background: transparent;
   padding: 0;
   cursor: pointer;
 }
 
-.author-name-button:hover {
+.author-link:disabled,
+.author-name:disabled {
+  cursor: default;
+}
+
+.author-avatar {
+  width: 43px;
+  height: 43px;
+  border-radius: 14px;
+  font-size: 1rem;
+}
+
+.author-copy {
+  min-width: 0;
+}
+
+.author-name {
+  display: block;
+  color: var(--text);
+  font-size: 0.88rem;
+  font-weight: 850;
+}
+
+.author-name:not(:disabled):hover {
   color: var(--accent);
 }
 
-.verified-badge {
-  color: var(--accent);
+.author-copy span {
+  margin-top: 4px;
+  color: #8294a4;
+  font-size: 0.7rem;
+  font-weight: 650;
+}
+
+.post-title {
+  max-width: 820px;
+  margin: 22px 0 0;
+  color: var(--text);
+  font-size: clamp(1.45rem, 3vw, 2rem);
+  font-weight: 900;
+  letter-spacing: -0.025em;
+  line-height: 1.2;
 }
 
 .post-body {
-  max-width: 72ch;
+  max-width: 76ch;
+  margin-top: 15px;
 }
 
 .post-body p {
-  margin: 0 0 14px;
-  color: #334155;
-  font-size: 0.94rem;
+  margin: 0 0 13px;
+  color: #40576b;
+  font-size: 0.93rem;
   line-height: 1.75;
 }
 
@@ -550,7 +661,7 @@ watch(() => route.params.postId, loadPostDetail)
   width: 100%;
   max-height: 560px;
   display: block;
-  margin-top: 18px;
+  margin-top: 20px;
   border: 1px solid var(--border);
   border-radius: 16px;
   object-fit: cover;
@@ -558,235 +669,298 @@ watch(() => route.params.postId, loadPostDetail)
 
 .post-actions {
   flex-wrap: wrap;
-  gap: 10px;
-  margin-top: 20px;
-  border-top: 1px solid var(--border);
+  gap: 8px;
+  margin-top: 22px;
+  border-top: 1px solid #edf2f5;
   padding-top: 16px;
 }
 
-.action-btn {
+.post-actions button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
   border: 0;
-  border-radius: 999px;
-  background: #f1f5f9;
-  padding: 8px 12px;
-  color: var(--muted);
+  border-radius: 10px;
+  background: #f3f7f9;
+  padding: 9px 11px;
+  color: #667d90;
   cursor: pointer;
-  font-size: 0.8rem;
-  font-weight: 900;
 }
 
-.action-btn:hover,
-.action-btn.upvoted {
-  background: var(--accent-soft);
+.post-actions button:hover,
+.post-actions button.active {
+  background: var(--accent-light);
   color: var(--accent);
 }
 
-.action-note {
+.post-actions button svg {
+  width: 16px;
+  height: 16px;
+}
+
+.post-actions button span {
+  font-size: 0.78rem;
+  font-weight: 850;
+}
+
+.post-actions button small {
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.expiry-note {
   margin-left: auto;
+  color: #8193a2;
+  font-size: 0.72rem;
+  font-weight: 750;
 }
 
 .detail-sidebar {
   display: grid;
-  gap: 16px;
+  gap: 14px;
+  position: sticky;
+  top: 84px;
 }
 
 .side-card {
   padding: 18px;
 }
 
-.side-title {
-  margin-bottom: 13px;
+.side-eyebrow {
+  color: #0e7c86;
+  font-size: 0.65rem;
+  font-weight: 850;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.side-card h2 {
+  margin: 6px 0 0;
   color: var(--text);
-  font-size: 0.9rem;
-  font-weight: 950;
+  font-size: 0.92rem;
+  font-weight: 850;
 }
 
-.pulse-label {
-  display: flex;
-  justify-content: space-between;
-  color: var(--muted);
-  font-size: 0.76rem;
-  font-weight: 800;
-}
-
-.pulse-label span {
-  color: var(--accent);
-}
-
-.pulse-track {
-  height: 8px;
-  margin-top: 8px;
-  overflow: hidden;
-  border-radius: 999px;
-  background: #e2e8f0;
-}
-
-.pulse-fill {
-  height: 100%;
-  border-radius: inherit;
-  background: linear-gradient(90deg, var(--accent), #22c1b6);
-}
-
-.pulse-stats {
-  grid-template-columns: 1fr 1fr;
+.stat-grid {
   display: grid;
-  gap: 10px;
-  margin-top: 14px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+  margin-top: 15px;
 }
 
-.pulse-stats div {
-  border-radius: 14px;
-  background: #f8fafc;
-  padding: 12px;
+.stat-grid div {
+  min-width: 0;
+  border-radius: 12px;
+  background: #f5f8fa;
+  padding: 11px 6px;
   text-align: center;
 }
 
-.pulse-stats strong {
+.stat-grid strong,
+.stat-grid span {
   display: block;
-  color: var(--text);
-  font-size: 1.35rem;
-  font-weight: 950;
 }
 
-.pulse-stats span {
-  display: block;
-  margin-top: 3px;
-  color: var(--muted);
-  font-size: 0.66rem;
-  font-weight: 900;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-}
-
-.map-card {
-  position: relative;
-  min-height: 170px;
+.stat-grid strong {
   overflow: hidden;
-  border-radius: var(--radius);
-  background: linear-gradient(135deg, #164e63, #0f766e);
-  box-shadow: var(--shadow);
-}
-
-.map-grid {
-  position: absolute;
-  inset: 0;
-  opacity: 0.34;
-  background-image:
-    linear-gradient(rgba(255, 255, 255, 0.45) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.45) 1px, transparent 1px);
-  background-size: 26px 26px;
-}
-
-.map-pin {
-  position: absolute;
-  left: 50%;
-  top: 48%;
-  width: 11px;
-  height: 11px;
-  border-radius: 999px;
-  background: #083344;
-  box-shadow:
-    0 0 0 18px rgba(186, 230, 253, 0.35),
-    0 0 0 44px rgba(186, 230, 253, 0.22);
-}
-
-.map-caption {
-  position: absolute;
-  inset-inline: 0;
-  bottom: 0;
-  padding: 14px 16px;
-  background: linear-gradient(transparent, rgba(8, 47, 73, 0.9));
-  color: #fff;
-}
-
-.map-caption span {
-  display: block;
-  font-size: 0.65rem;
+  color: var(--text);
+  font-size: 1rem;
   font-weight: 900;
-  letter-spacing: 0.14em;
-  opacity: 0.72;
+  text-overflow: ellipsis;
+}
+
+.stat-grid span {
+  margin-top: 3px;
+  color: #8a9aa8;
+  font-size: 0.58rem;
+  font-weight: 750;
   text-transform: uppercase;
 }
 
-.map-caption strong {
-  display: block;
-  margin-top: 3px;
-  font-size: 0.94rem;
+.privacy-card {
+  display: flex;
+  gap: 12px;
+  background: #f7fcfc;
 }
 
-.tips-list,
-.related-list {
-  display: grid;
-  gap: 10px;
+.side-icon {
+  width: 38px;
+  height: 38px;
+  display: inline-flex;
+  flex: 0 0 38px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  background: #e2f3f2;
+  color: var(--accent);
 }
 
-.tip-item {
-  display: grid;
-  grid-template-columns: 18px minmax(0, 1fr);
-  gap: 9px;
-}
-
-.tip-item span {
+.side-icon svg {
   width: 18px;
   height: 18px;
-  border-radius: 6px;
-  background: var(--accent-soft);
 }
 
-.tip-item p,
-.related-item span {
+.privacy-card p {
+  margin: 7px 0 0;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  line-height: 1.55;
+}
+
+.tips-list {
+  display: grid;
+  gap: 11px;
+  margin: 15px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tips-list li {
+  display: grid;
+  grid-template-columns: 17px minmax(0, 1fr);
+  gap: 8px;
+  color: #647b8e;
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+
+.tips-list svg {
+  width: 16px;
+  height: 16px;
+  margin-top: 1px;
+  color: #2d9288;
+}
+
+.state-card {
+  min-height: 300px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 15px;
+  padding: 36px 22px;
+  text-align: center;
+}
+
+.state-icon {
+  width: 54px;
+  height: 54px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 17px;
+  background: #eaf6f6;
+  color: #0e7c86;
+}
+
+.state-icon svg {
+  width: 25px;
+  height: 25px;
+}
+
+.state-card h2 {
   margin: 0;
-  color: var(--muted);
-  font-size: 0.78rem;
-  line-height: 1.45;
+  color: var(--text);
+  font-size: 1.05rem;
+  font-weight: 850;
 }
 
-.related-item {
+.state-card p {
+  max-width: 480px;
+  margin: 6px 0 0;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  line-height: 1.6;
+}
+
+.state-card a,
+.state-card button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   border: 0;
-  border-radius: 14px;
-  background: #f8fafc;
-  padding: 12px;
-  text-align: left;
+  border-radius: 11px;
+  background: var(--accent);
+  padding: 10px 14px;
+  color: #fff;
+  text-decoration: none;
+  font-size: 0.78rem;
+  font-weight: 800;
   cursor: pointer;
 }
 
-.related-item strong {
-  display: block;
-  color: var(--text);
-  font-size: 0.82rem;
+.state-card a:hover,
+.state-card button:hover {
+  background: var(--accent-dark);
 }
 
-@media (max-width: 1120px) {
+.state-card a svg,
+.state-card button svg {
+  width: 16px;
+  height: 16px;
+}
+
+.loading-mark {
+  width: 36px;
+  height: 36px;
+  border: 3px solid #d9e8e9;
+  border-top-color: var(--accent);
+  border-radius: 999px;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 1080px) {
   .detail-grid {
     grid-template-columns: 1fr;
   }
 
   .detail-sidebar {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    position: static;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 
-@media (max-width: 720px) {
-  .detail-page {
-    padding: 16px 14px 32px;
+@media (max-width: 760px) {
+  .workspace {
+    padding: 18px 14px 96px;
   }
 
   .detail-sidebar {
     grid-template-columns: 1fr;
   }
 
-  .detail-context {
-    display: none;
+  .post-card {
+    padding: 18px 16px;
   }
 
-  .post-meta,
   .post-actions {
-    align-items: flex-start;
-    flex-direction: column;
+    align-items: stretch;
   }
 
-  .action-note {
-    margin-left: 0;
+  .expiry-note {
+    width: 100%;
+    margin: 5px 0 0;
+  }
+}
+
+@media (max-width: 480px) {
+  .post-topline {
+    align-items: flex-start;
+  }
+
+  .post-actions button {
+    flex: 1;
+    justify-content: center;
+  }
+
+  .post-actions button small {
+    display: none;
   }
 }
 </style>
