@@ -51,6 +51,7 @@ export interface ApiPost {
   post_id: number
   title: string
   content: string
+  image_url?: string | null
   visibility_radius: number
   status: string
   expires_at: string
@@ -197,7 +198,6 @@ export interface CreateBlockPayload {
 }
 
 export interface CreatePostPayload {
-  user_id: number
   title: string
   content: string
   latitude: number
@@ -256,11 +256,30 @@ export const postApi = {
     return request<ApiPost>(`/posts/${postId}`)
   },
 
-  create(payload: CreatePostPayload): Promise<ApiPost> {
-    return request<ApiPost>('/posts', {
+  async create(payload: CreatePostPayload, image?: File | null): Promise<ApiPost> {
+    const formData = new FormData()
+    formData.append('title', payload.title)
+    formData.append('content', payload.content)
+    formData.append('latitude', String(payload.latitude))
+    formData.append('longitude', String(payload.longitude))
+    formData.append('visibility_radius', String(payload.visibility_radius))
+    formData.append('expires_at', payload.expires_at)
+    if (image) formData.append('image', image)
+
+    const token = localStorage.getItem('token')
+    const response = await fetch(`${API_URL}/posts`, {
       method: 'POST',
-      body: JSON.stringify(payload),
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: formData,
     })
+
+    const body = await response.json().catch(() => ({}))
+    if (!response.ok) {
+      const message = Array.isArray(body?.message) ? body.message.join(', ') : body?.message
+      throw new Error(message || `Post creation failed: HTTP ${response.status}`)
+    }
+
+    return body as ApiPost
   },
 }
 
