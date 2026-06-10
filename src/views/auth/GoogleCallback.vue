@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { useAuthStore } from '@/stores/auth'
+import { getPostAuthPath, useAuthStore } from '@/stores/auth'
 import { authApi } from '@/services/api'
 
 const router = useRouter()
@@ -22,8 +22,7 @@ onMounted(async () => {
     const user = await authApi.me()
     auth.setAuth(token, user)
 
-    // Remove the token from the visible browser URL.
-    await router.replace('/')
+    await router.replace(getPostAuthPath(user))
   } catch {
     auth.logout()
     error.value = 'Google login failed'

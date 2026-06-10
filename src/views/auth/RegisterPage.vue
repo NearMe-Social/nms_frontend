@@ -183,7 +183,7 @@ async function handleRegister() {
             birthday: birthdayDate.value,
             gender: gender.value,
         })
-        router.push({ path: '/verify-otp', query: { email: contact.value } })
+        router.push({ path: '/verify-otp', query: { email: res.email } })
     } catch (err: unknown) {
         errorMsg.value = err instanceof Error ? err.message : 'Registration failed. Please try again.'
     } finally {

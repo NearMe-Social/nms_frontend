@@ -1,1 +1,1 @@
-export { useAuthStore } from './auth'
+export { getPostAuthPath, useAuthStore } from './auth'

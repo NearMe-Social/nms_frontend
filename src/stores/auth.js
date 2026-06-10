@@ -1,1 +1,1 @@
-export { useAuthStore } from './auth.ts'
+export { getPostAuthPath, useAuthStore } from './auth.ts'

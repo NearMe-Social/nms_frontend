@@ -73,7 +73,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { useAuthStore } from '@/stores/auth'
+import { getPostAuthPath, useAuthStore } from '@/stores/auth'
 import { authApi } from '@/services/api'
 import { Mail } from 'lucide-vue-next'
 
@@ -99,21 +99,18 @@ onMounted(async () => {
   // Focus first input
   setTimeout(() => inputRefs.value[0]?.focus(), 100)
 
-  // Start cooldown immediately (whether send succeeds or fails)
-  startCooldown()
+  if (!email.value) {
+    await router.replace('/register')
+    return
+  }
 
-  if (email.value) {
-    try {
-      console.log('[OTP] Attempting to send OTP to:', email.value)
-      await authApi.sendOtp(email.value)
-      console.log('[OTP] OTP sent successfully')
-      errorMsg.value = ''
-      hasError.value = false
-    } catch (err: unknown) {
-      const errorText = err instanceof Error ? err.message : 'Failed to send OTP. Please try again.'
-      console.error('[OTP ERROR]', errorText)
-      errorMsg.value = errorText
-    }
+  try {
+    await authApi.sendOtp(email.value)
+    startCooldown()
+    errorMsg.value = ''
+    hasError.value = false
+  } catch (err: unknown) {
+    errorMsg.value = err instanceof Error ? err.message : 'Failed to send OTP. Please try again.'
   }
 })
 
@@ -181,7 +178,7 @@ async function handleVerify() {
   try {
     const res = await authApi.verifyOtp(email.value, otpValue.value)
     auth.setAuth(res.token, res.user)
-    router.replace('/')
+    router.replace(getPostAuthPath(res.user))
   } catch (err: unknown) {
     hasError.value = true
     errorMsg.value = err instanceof Error ? err.message : 'Invalid OTP. Please try again.'
@@ -197,14 +194,13 @@ async function handleResend() {
   if (resendCooldown.value > 0) return
   try {
     await authApi.sendOtp(email.value)
+    startCooldown()
     errorMsg.value = ''
     hasError.value = false
     otpDigits.value = ['', '', '', '', '', '']
     inputRefs.value[0]?.focus()
   } catch (err: unknown) {
     errorMsg.value = err instanceof Error ? err.message : 'Failed to resend OTP.'
-  } finally {
-    startCooldown()
   }
 }
 </script>

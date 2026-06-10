@@ -12,24 +12,13 @@
                     <p class="profile-subtitle">Set up your identity to connect with the local community.</p>
 
                     <div class="avatar-section">
-                        <button type="button" class="avatar-placeholder" @click="triggerFileInput" title="Click to upload profile picture">
-                            <img v-if="imagePreview" :src="imagePreview" alt="Profile picture preview" class="avatar-image" />
+                        <div class="avatar-placeholder">
+                            <img v-if="auth.user?.profile_image" :src="auth.user.profile_image" alt="Profile picture" class="avatar-image" />
                             <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                                 <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
                                 <circle cx="12" cy="7" r="4"></circle>
                             </svg>
-                            <div class="avatar-overlay">
-                                <span class="upload-icon">+</span>
-                            </div>
-                        </button>
-                        <input
-                            ref="fileInput"
-                            type="file"
-                            accept="image/*"
-                            style="display: none"
-                            @change="handleImageUpload"
-                            aria-hidden="true"
-                        />
+                        </div>
                     </div>
 
                     <form @submit.prevent="handleSubmit">
@@ -72,50 +61,6 @@
             </section>
         </main>
 
-        <!-- Crop Dialog -->
-        <div v-if="showCropDialog" class="crop-dialog-overlay" @click.self="cancelCrop">
-            <div class="crop-dialog">
-                <div class="crop-dialog-header">
-                    <h3>Crop your profile picture</h3>
-                    <button type="button" class="close-btn" @click="cancelCrop" aria-label="Close">×</button>
-                </div>
-
-                <div class="crop-container">
-                    <div class="crop-canvas-wrapper">
-                        <canvas
-                            ref="cropCanvas"
-                            class="crop-canvas"
-                            @mousedown="startPan"
-                            @touchstart="startPan"
-                        ></canvas>
-                        <div class="crop-overlay">
-                            <div class="crop-area"></div>
-                        </div>
-                    </div>
-
-                    <div class="crop-controls">
-                        <div class="control-group">
-                            <label>Zoom</label>
-                            <input
-                                type="range"
-                                min="0.5"
-                                max="3"
-                                step="0.1"
-                                v-model.number="cropZoom"
-                                @input="updateCropPreview"
-                                class="zoom-slider"
-                            />
-                            <span class="zoom-value">{{ (cropZoom * 100).toFixed(0) }}%</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="crop-dialog-footer">
-                    <button type="button" class="cancel-btn" @click="cancelCrop">Cancel</button>
-                    <button type="button" class="confirm-btn" @click="confirmCrop">Apply Crop</button>
-                </div>
-            </div>
-        </div>
     </div>
 </template>
 
@@ -123,27 +68,14 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { userApi } from '@/services/api'
 
 const router = useRouter()
 const auth = useAuthStore()
 
-const username = ref('')
+const username = ref(auth.user?.username ?? '')
 const usernameError = ref('')
 const isLoading = ref(false)
-const fileInput = ref<HTMLInputElement | null>(null)
-const imagePreview = ref<string | null>(null)
-const profileImage = ref<File | null>(null)
-
-// Crop dialog state
-const showCropDialog = ref(false)
-const cropCanvas = ref<HTMLCanvasElement | null>(null)
-const cropImage = ref<HTMLImageElement | null>(null)
-const cropZoom = ref(1)
-const cropOffsetX = ref(0)
-const cropOffsetY = ref(0)
-const isPanning = ref(false)
-const panStartX = ref(0)
-const panStartY = ref(0)
 
 function validateUsername() {
     usernameError.value = ''
@@ -178,11 +110,11 @@ async function handleSubmit() {
     
     isLoading.value = true
     try {
-        // TODO: Call API to set profile username
-        // await authApi.setProfileUsername(username.value)
-        
-        // For now, just redirect to home
-        router.push('/')
+        const updatedUser = await userApi.completeProfile({
+            username: username.value.trim(),
+        })
+        if (auth.token) auth.setAuth(auth.token, updatedUser)
+        await router.push('/permission-request')
     } catch (err: unknown) {
         usernameError.value = err instanceof Error ? err.message : 'Failed to set profile. Please try again.'
     } finally {
@@ -190,42 +122,16 @@ async function handleSubmit() {
     }
 }
 
-function handleSkip() {
-    router.push('/')
-}
-
-function triggerFileInput() {
-    fileInput.value?.click()
-}
-
-function handleImageUpload(event: Event) {
-    const target = event.target as HTMLInputElement
-    const files = target.files
-    
-    if (files && files.length > 0) {
-        const file = files[0]
-        
-        // Validate file type
-        if (!file.type.startsWith('image/')) {
-            alert('Please select a valid image file')
-            return
-        }
-        
-        // Validate file size (max 5MB)
-        const maxSize = 5 * 1024 * 1024
-        if (file.size > maxSize) {
-            alert('Image size must be less than 5MB')
-            return
-        }
-        
-        profileImage.value = file
-        
-        // Create preview
-        const reader = new FileReader()
-        reader.onload = (e) => {
-            imagePreview.value = e.target?.result as string
-        }
-        reader.readAsDataURL(file)
+async function handleSkip() {
+    isLoading.value = true
+    try {
+        const updatedUser = await userApi.completeProfile({})
+        if (auth.token) auth.setAuth(auth.token, updatedUser)
+        await router.push('/permission-request')
+    } catch (err: unknown) {
+        usernameError.value = err instanceof Error ? err.message : 'Failed to continue. Please try again.'
+    } finally {
+        isLoading.value = false
     }
 }
 </script>

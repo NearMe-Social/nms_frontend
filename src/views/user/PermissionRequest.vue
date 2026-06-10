@@ -142,6 +142,10 @@
             Try Again
           </button>
         </div>
+
+        <p v-if="completionError" class="error-details">
+          {{ completionError }}
+        </p>
       </section>
 
       <!-- Skip Option -->
@@ -153,20 +157,39 @@
 </template>
 
 <script setup lang="ts">
+import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useGeolocation } from '@/composables/useGeolocation'
 import { MapPin } from 'lucide-vue-next'
 import Navbar from '@/components/Navbar.vue'
+import { userApi } from '@/services/api'
+import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
-const { status, errorMessage, request } = useGeolocation()
+const auth = useAuthStore()
+const { status, coords, errorMessage, request } = useGeolocation()
+const completionError = ref('')
 
 async function requestPermission() {
+  completionError.value = ''
   await request()
 }
 
-function continueToApp() {
-  router.push('/')
+async function continueToApp() {
+  completionError.value = ''
+
+  try {
+    if (coords.value) {
+      await userApi.updateLocation(coords.value.lat, coords.value.lng)
+    }
+
+    const updatedUser = await userApi.completeOnboarding()
+    if (auth.token) auth.setAuth(auth.token, updatedUser)
+    await router.replace('/')
+  } catch (err: unknown) {
+    completionError.value =
+      err instanceof Error ? err.message : 'Failed to finish onboarding. Please try again.'
+  }
 }
 </script>
 
