@@ -79,9 +79,11 @@ export const useNearbyStore = defineStore('nearby', () => {
     }
   }
 
-  function startPolling(lat: number, lng: number, radius = 200, shareLocation = true) {
+  function startPolling(refresh: () => Promise<void>) {
     stopPolling()
-    refreshTimer = setInterval(() => fetchNearby(lat, lng, radius, shareLocation), 30_000)
+    refreshTimer = setInterval(() => {
+      void refresh()
+    }, 30_000)
   }
 
   function stopPolling() {

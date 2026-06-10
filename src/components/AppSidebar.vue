@@ -70,12 +70,27 @@ function isActive(path: string) {
 <style scoped>
 .app-sidebar {
   width: 208px;
+  height: calc(100vh - 64px);
+  height: calc(100dvh - 64px);
   flex: 0 0 208px;
   flex-direction: column;
+  align-self: flex-start;
   gap: 16px;
+  position: sticky;
+  top: 64px;
+  box-sizing: border-box;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 18px 12px;
   border-right: 1px solid #e3ebf2;
   background: #f8fbff;
+  color: #1f4054;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+  font-style: normal;
+  letter-spacing: normal;
+  scrollbar-width: thin;
+  scrollbar-color: #cbd9e2 transparent;
 }
 
 .community-card {
@@ -94,9 +109,13 @@ function isActive(path: string) {
 
 .community-card span,
 .safety-note span {
+  display: block;
+  margin-top: 3px;
   color: #74899b;
   font-size: 0.74rem;
+  font-weight: 500;
   line-height: 1.45;
+  letter-spacing: 0;
 }
 
 .nav-list {
@@ -144,10 +163,15 @@ function isActive(path: string) {
 .safety-note {
   margin-top: auto;
   display: flex;
+  align-items: flex-start;
   gap: 10px;
   border-radius: 14px;
   border: 1px solid #e4edf3;
   background: #fff;
   padding: 10px;
+}
+
+.safety-note .nav-icon {
+  margin-top: 1px;
 }
 </style>

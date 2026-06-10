@@ -5,6 +5,7 @@ import Navbar from '@/components/Navbar.vue'
 import AppSidebar from '@/components/AppSidebar.vue'
 import MobileBottomNav from '@/components/MobileBottomNav.vue'
 import PostOptionsMenu from '@/components/PostOptionsMenu.vue'
+import PostImageViewer from '@/components/PostImageViewer.vue'
 import { postApi, type ApiPost } from '@/services/api'
 import { useAuthStore } from '@/stores/auth'
 import {
@@ -230,9 +231,12 @@ onMounted(loadPosts)
 
         <section v-else class="post-grid">
           <article v-for="post in filteredPosts" :key="post.id" class="post-card">
-            <RouterLink v-if="post.image" :to="`/posts/${post.id}`" class="image-link">
-              <img :src="post.image" :alt="post.title" />
-            </RouterLink>
+            <PostImageViewer
+              v-if="post.image"
+              :src="post.image"
+              :alt="post.title"
+              variant="compact"
+            />
 
             <div class="post-content">
               <div class="post-topline">
@@ -528,27 +532,6 @@ h1 {
   border-color: #c8dcdf;
   box-shadow: 0 14px 30px rgba(20, 45, 70, 0.08);
   transform: translateY(-2px);
-}
-
-.image-link {
-  height: clamp(220px, 32vw, 360px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-  background: #f1f5f7;
-}
-
-.image-link img {
-  width: 100%;
-  height: 100%;
-  display: block;
-  object-fit: contain;
-  transition: transform 0.35s ease;
-}
-
-.post-card:hover .image-link img {
-  transform: scale(1.025);
 }
 
 .post-content {

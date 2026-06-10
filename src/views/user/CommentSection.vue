@@ -25,7 +25,9 @@
     <div
       v-for="(c, ci) in sortedComments"
       :key="c.id"
+      :id="`comment-${c.id}`"
       class="comment-card"
+      :class="{ highlighted: c.id === highlightCommentId }"
       :style="{ animationDelay: ci * 0.06 + 's' }"
     >
       <div class="comment-header">
@@ -118,7 +120,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, nextTick, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import CommentOptionsMenu from '@/components/CommentOptionsMenu.vue'
@@ -154,11 +156,13 @@ const props = withDefaults(
     sortBy?: string
     submitting?: boolean
     errorMessage?: string
+    highlightCommentId?: number | null
   }>(),
   {
     sortBy: 'top',
     submitting: false,
     errorMessage: '',
+    highlightCommentId: null,
   },
 )
 
@@ -188,6 +192,19 @@ const sortedComments = computed(() => {
   }
   return list.sort((a, b) => a.id - b.id)
 })
+
+watch(
+  [() => props.highlightCommentId, () => props.comments],
+  async ([commentId]) => {
+    if (!commentId) return
+    await nextTick()
+    document.getElementById(`comment-${commentId}`)?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'center',
+    })
+  },
+  { immediate: true },
+)
 
 function updateSortBy(event: Event) {
   emit('update:sort-by', (event.target as HTMLSelectElement).value)
@@ -279,6 +296,12 @@ defineExpose({
   margin-bottom: 12px;
   box-shadow: 0 6px 18px rgba(20, 45, 70, 0.035);
   animation: fadeUp 0.3s ease both;
+}
+
+.comment-card.highlighted {
+  border-color: #5bbdb3;
+  background: #f0fbf9;
+  box-shadow: 0 0 0 3px rgba(15, 138, 124, 0.12);
 }
 
 .comments-empty {

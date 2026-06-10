@@ -180,7 +180,7 @@ function drawNearbyMarkers() {
   })
 }
 
-async function refreshNearby() {
+async function refreshNearby(restartPolling = true) {
   const position = geo.coords.value
   if (!position) return
 
@@ -194,7 +194,13 @@ async function refreshNearby() {
   }
 
   drawNearbyMarkers()
-  nearbyStore.startPolling(position.lat, position.lng, radius.value, shareLocation)
+  if (restartPolling) {
+    nearbyStore.startPolling(refreshLocationAndNearby)
+  }
+}
+
+async function refreshLocationAndNearby() {
+  await refreshNearby(false)
 }
 
 async function init() {
@@ -213,17 +219,6 @@ watch(radius, async () => {
   }
   await refreshNearby()
 })
-
-watch(
-  () => geo.coords.value,
-  async (newCoords) => {
-    if (!newCoords) return
-    if (!map.value) {
-      createMap(newCoords)
-    }
-    await refreshNearby()
-  },
-)
 
 watch(privacyMode, async () => {
   if (!geo.coords.value) return
