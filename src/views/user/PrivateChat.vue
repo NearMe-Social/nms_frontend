@@ -126,6 +126,22 @@
                 <img :src="activeConversation.avatar" :alt="activeConversation.name" />
                 <span :class="activeConversation.online ? 'online' : 'offline'" />
               </div>
+          <section ref="threadRef" class="thread">
+            <div class="date-pill">Today</div>
+
+            <article
+              v-for="message in messages"
+              :key="message.id"
+              class="message-row"
+              :class="message.sender === 'me' ? 'mine' : 'theirs'"
+            >
+              <UserAvatar
+                v-if="message.sender === 'them'"
+                :src="activeConversation.avatar"
+                :username="activeConversation.name"
+                :alt="activeConversation.name"
+                class="message-avatar"
+              />
 
               <div class="contact-copy">
                 <h2>{{ activeConversation.name }}</h2>
@@ -142,6 +158,19 @@
                 <button type="button" class="icon-btn" aria-label="Conversation info">
                   <Info class="icon" />
                 </button>
+            </article>
+
+            <div v-if="typingConversationId === activeConversation.id" class="typing-row">
+              <UserAvatar
+                :src="activeConversation.avatar"
+                :username="activeConversation.name"
+                :alt="activeConversation.name"
+                class="message-avatar"
+              />
+              <div class="typing-bubble" aria-live="polite">
+                <span />
+                <span />
+                <span />
               </div>
             </header>
 
@@ -268,12 +297,8 @@ import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import AppSidebar from '@/components/AppSidebar.vue'
 import Navbar from '@/components/Navbar.vue'
-import {
-  conversationApi,
-  messageApi,
-  type ApiConversation,
-  type ApiMessage,
-} from '@/services/api'
+import UserAvatar from '@/components/UserAvatar.vue'
+import { conversationApi, messageApi, type ApiConversation, type ApiMessage } from '@/services/api'
 import { useAuthStore } from '@/stores/auth'
 import { useChatSocketStore } from '@/stores/chatSocket'
 import {
@@ -316,7 +341,7 @@ interface Conversation {
   id: number
   participantId: number | null
   name: string
-  avatar: string
+  avatar: string | null
   online: boolean
   presence: string
   preview: string
@@ -382,7 +407,8 @@ const groupedMessages = computed(() => {
 
 const activeConversation = computed(
   (): Conversation | null =>
-    conversations.value.find((conversation) => conversation.id === activeConversationId.value) ?? null,
+    conversations.value.find((conversation) => conversation.id === activeConversationId.value) ??
+    null,
 )
 
 const filteredConversations = computed(() => {
@@ -563,12 +589,14 @@ function toConversation(conversation: ApiConversation): Conversation {
     id: conversation.conversation_id,
     participantId: user?.user_id ?? otherParticipant?.user_id ?? null,
     name,
-    avatar: user?.profile_image || `https://i.pravatar.cc/200?u=${encodeURIComponent(name)}`,
+    avatar: user?.profile_image || null,
     online: false,
     presence: 'Offline',
     preview: latestMessage?.content || 'No messages yet',
-    time: formatDateForPreview(lastMessageDate),
-    unread: conversation.unread_count || 0,
+    time: latestMessage
+      ? formatTime(new Date(latestMessage.created_at))
+      : formatTime(new Date(conversation.updated_at)),
+      unread: conversation.unread_count || 0,
   }
 }
 
@@ -1082,6 +1110,12 @@ h2 {
   border-radius: 18px;
   object-fit: cover;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+.chat-avatar {
+  display: block;
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  font-size: 1.2rem;
 }
 
 .avatar-wrap span,
@@ -1234,6 +1268,44 @@ h2 {
   gap: 12px;
   margin-bottom: 20px;
   animation: messageAppear 0.2s ease-out;
+}
+
+.typing-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.typing-row .message-avatar {
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  border-radius: 12px;
+  font-size: 0.95rem;
+}
+
+.typing-bubble {
+  display: inline-flex;
+  gap: 5px;
+  align-items: center;
+  border-radius: 18px;
+  border-bottom-left-radius: 6px;
+  background: #fff;
+  padding: 13px 15px;
+  box-shadow: 0 8px 20px rgba(15, 45, 70, 0.05);
+}
+
+.typing-bubble span {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  animation: typing-pulse 1s infinite ease-in-out;
+  background: #7890a2;
+}
+
+.typing-bubble span:nth-child(2) {
+  animation-delay: 0.12s;
 }
 
 @keyframes messageAppear {

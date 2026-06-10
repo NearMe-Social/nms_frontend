@@ -51,11 +51,13 @@ export interface ApiPost {
   post_id: number
   title: string
   content: string
+  image_url?: string | null
   visibility_radius: number
   status: string
   expires_at: string
   created_at: string
   updated_at: string
+  image_url?: string | null
   user?: PostUser | null
   comments?: unknown[]
   reactions?: unknown[]
@@ -197,7 +199,6 @@ export interface CreateBlockPayload {
 }
 
 export interface CreatePostPayload {
-  user_id: number
   title: string
   content: string
   latitude: number
@@ -243,7 +244,7 @@ export const authApi = {
     })
   },
   me(): Promise<AuthResponse['user']> {
-    return request<AuthResponse['user']>('/auth/me');
+    return request<AuthResponse['user']>('/auth/me')
   },
 }
 
@@ -256,11 +257,30 @@ export const postApi = {
     return request<ApiPost>(`/posts/${postId}`)
   },
 
-  create(payload: CreatePostPayload): Promise<ApiPost> {
-    return request<ApiPost>('/posts', {
+  async create(payload: CreatePostPayload, image?: File | null): Promise<ApiPost> {
+    const formData = new FormData()
+    formData.append('title', payload.title)
+    formData.append('content', payload.content)
+    formData.append('latitude', String(payload.latitude))
+    formData.append('longitude', String(payload.longitude))
+    formData.append('visibility_radius', String(payload.visibility_radius))
+    formData.append('expires_at', payload.expires_at)
+    if (image) formData.append('image', image)
+
+    const token = localStorage.getItem('token')
+    const response = await fetch(`${API_URL}/posts`, {
       method: 'POST',
-      body: JSON.stringify(payload),
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: formData,
     })
+
+    const body = await response.json().catch(() => ({}))
+    if (!response.ok) {
+      const message = Array.isArray(body?.message) ? body.message.join(', ') : body?.message
+      throw new Error(message || `Post creation failed: HTTP ${response.status}`)
+    }
+
+    return body as ApiPost
   },
 }
 
@@ -461,15 +481,23 @@ export const userApi = {
     })
   },
 
-  uploadProfileImage(file: File): Promise<{ url: string }> {
+  async uploadProfileImage(file: File): Promise<{ url: string; user: UserProfile }> {
     const formData = new FormData()
     formData.append('file', file)
-    return fetch(`${API_URL}/user/profile-image`, {
+    const response = await fetch(`${API_URL}/users/me/profile-image`, {
       method: 'POST',
       headers: localStorage.getItem('token')
         ? { Authorization: `Bearer ${localStorage.getItem('token')}` }
         : {},
       body: formData,
-    }).then((res) => res.json())
+    })
+
+    const body = await response.json().catch(() => ({}))
+    if (!response.ok) {
+      const message = Array.isArray(body?.message) ? body.message.join(', ') : body?.message
+      throw new Error(message || `Profile image upload failed: HTTP ${response.status}`)
+    }
+
+    return body
   },
 }

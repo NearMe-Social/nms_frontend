@@ -45,12 +45,11 @@
               class="result-item"
               @click="closeSearch"
             >
-              <img
-                :src="
-                  user.profile_image ||
-                  `https://i.pravatar.cc/80?u=${encodeURIComponent(user.username)}`
-                "
+              <UserAvatar
+                :src="user.profile_image"
+                :username="user.username"
                 :alt="`${user.username} profile`"
+                class="result-avatar"
               />
               <span>
                 <strong>{{ user.username }}</strong>
@@ -108,7 +107,12 @@
         <Settings class="icon" />
       </RouterLink>
       <RouterLink to="/profile" class="profile-link" title="Profile">
-        <img :src="profileImage" :alt="`${username} profile`" />
+        <UserAvatar
+          :src="profileImage"
+          :username="username"
+          :alt="`${username} profile`"
+          class="nav-avatar"
+        />
       </RouterLink>
       <button class="icon-link logout-button" type="button" title="Log out" @click="handleLogout">
         <LogOut class="icon" />
@@ -118,11 +122,14 @@
 </template>
 
 <script setup lang="ts">
+defineOptions({ name: 'AppNavbar' })
+
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { Bell, FileText, LoaderCircle, LogOut, Search, Settings, X } from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/auth'
 import { searchApi, type ApiPost, type ApiSearchUser } from '@/services/api'
+import UserAvatar from '@/components/UserAvatar.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -146,9 +153,7 @@ const showSearchResults = computed(
 )
 const profileImage = computed(() => {
   const profile = auth.user?.profile as { profile_image?: string } | undefined
-  return (
-    profile?.profile_image || `https://i.pravatar.cc/150?u=${encodeURIComponent(username.value)}`
-  )
+  return auth.user?.profile_image || profile?.profile_image || null
 })
 
 watch(searchQuery, (value) => {
@@ -365,16 +370,12 @@ onBeforeUnmount(() => {
   background: #f0f7f8;
 }
 
-.result-item img,
+.result-avatar,
 .result-icon {
   width: 36px;
   height: 36px;
   flex: 0 0 auto;
   border-radius: 999px;
-}
-
-.result-item img {
-  object-fit: cover;
 }
 
 .result-icon {
@@ -499,11 +500,10 @@ onBeforeUnmount(() => {
   background: #ef4444;
 }
 
-.profile-link img {
+.nav-avatar {
   width: 32px;
   height: 32px;
   border-radius: 999px;
-  object-fit: cover;
   box-shadow: 0 0 0 2px #2dd4bf;
 }
 
