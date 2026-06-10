@@ -80,7 +80,12 @@
                   @click="selectConversation(conversation.id)"
                 >
                   <div class="avatar-wrap">
-                    <img :src="conversation.avatar" :alt="conversation.name" />
+                    <UserAvatar
+                      :src="conversation.avatar"
+                      :username="conversation.name"
+                      :alt="conversation.name"
+                      class="chat-avatar"
+                    />
                     <span :class="conversation.online ? 'online' : 'offline'" />
                   </div>
                   <div class="conversation-copy">
@@ -99,7 +104,7 @@
           </section>
         </Transition>
 
-\        <Transition name="fade-slide">
+        <Transition name="fade-slide">
           <section v-if="activeConversation" class="active-chat">
             <header class="chat-header">
               <button
@@ -123,25 +128,14 @@
               </button>
 
               <div class="contact-avatar">
-                <img :src="activeConversation.avatar" :alt="activeConversation.name" />
+                <UserAvatar
+                  :src="activeConversation.avatar"
+                  :username="activeConversation.name"
+                  :alt="activeConversation.name"
+                  class="chat-avatar"
+                />
                 <span :class="activeConversation.online ? 'online' : 'offline'" />
               </div>
-          <section ref="threadRef" class="thread">
-            <div class="date-pill">Today</div>
-
-            <article
-              v-for="message in messages"
-              :key="message.id"
-              class="message-row"
-              :class="message.sender === 'me' ? 'mine' : 'theirs'"
-            >
-              <UserAvatar
-                v-if="message.sender === 'them'"
-                :src="activeConversation.avatar"
-                :username="activeConversation.name"
-                :alt="activeConversation.name"
-                class="message-avatar"
-              />
 
               <div class="contact-copy">
                 <h2>{{ activeConversation.name }}</h2>
@@ -158,19 +152,6 @@
                 <button type="button" class="icon-btn" aria-label="Conversation info">
                   <Info class="icon" />
                 </button>
-            </article>
-
-            <div v-if="typingConversationId === activeConversation.id" class="typing-row">
-              <UserAvatar
-                :src="activeConversation.avatar"
-                :username="activeConversation.name"
-                :alt="activeConversation.name"
-                class="message-avatar"
-              />
-              <div class="typing-bubble" aria-live="polite">
-                <span />
-                <span />
-                <span />
               </div>
             </header>
 
@@ -183,7 +164,17 @@
             </div>
 
             <section ref="threadRef" class="thread">
-              <template v-for="(group, groupIndex) in groupedMessages" :key="group.date">
+              <div v-if="loadingMessages" class="thread-state">
+                <span class="loading-dot" />
+                Loading messages...
+              </div>
+
+              <div v-else-if="messages.length === 0" class="thread-state">
+                <MessagesSquare class="icon" />
+                <span>No messages yet. Say hello.</span>
+              </div>
+
+              <template v-else v-for="group in groupedMessages" :key="group.date">
                 <div class="date-pill">{{ group.label }}</div>
 
                 <article
@@ -192,27 +183,16 @@
                   class="message-row"
                   :class="message.sender === 'me' ? 'mine' : 'theirs'"
                 >
-                  <img
+                  <UserAvatar
                     v-if="message.sender === 'them'"
                     :src="activeConversation.avatar"
+                    :username="activeConversation.name"
                     :alt="activeConversation.name"
+                    class="message-avatar"
                   />
 
                   <div class="message-stack">
                     <div class="bubble">
-                      <template v-if="message.attachment">
-                        <div class="attachment-preview">
-                          <template v-if="message.attachment.type === 'image'">
-                            <img :src="message.attachment.url" alt="Attachment" class="attachment-img" />
-                          </template>
-                          <template v-else>
-                            <div class="file-attachment">
-                              <Paperclip class="icon" />
-                              <span>{{ message.attachment.name }}</span>
-                            </div>
-                          </template>
-                        </div>
-                      </template>
                       <p>{{ message.text }}</p>
                     </div>
                     <span class="message-meta">
@@ -227,7 +207,12 @@
               </template>
 
               <div v-if="typingConversationId === activeConversation.id" class="typing-row">
-                <img :src="activeConversation.avatar" :alt="activeConversation.name" />
+                <UserAvatar
+                  :src="activeConversation.avatar"
+                  :username="activeConversation.name"
+                  :alt="activeConversation.name"
+                  class="message-avatar"
+                />
                 <div class="typing-bubble" aria-live="polite">
                   <span />
                   <span />
@@ -237,23 +222,13 @@
             </section>
 
             <footer class="composer">
-              <button type="button" class="composer-tool" aria-label="Attach file" @click="triggerFileUpload">
-                <Paperclip class="icon" />
-              </button>
-              <input
-                ref="fileInputRef"
-                type="file"
-                accept="image/*,application/pdf,.doc,.docx,.txt"
-                class="hidden"
-                @change="handleFileUpload"
-              />
               <textarea
                 ref="composerRef"
                 v-model="draft"
                 rows="1"
                 placeholder="Type your message..."
                 aria-label="Message input"
-                @input="autoResizeTextarea"
+                @input="handleTypingInput"
                 @keydown="handleComposerKeydown"
               />
               <button
@@ -278,17 +253,6 @@
         </Transition>
       </main>
     </div>
-
-    <Teleport to="body">
-      <Transition name="modal">
-        <div v-if="attachmentPreview" class="modal-overlay" @click="attachmentPreview = null">
-          <div class="modal-content" @click.stop>
-            <img :src="attachmentPreview" alt="Preview" />
-            <button class="modal-close" @click="attachmentPreview = null">×</button>
-          </div>
-        </div>
-      </Transition>
-    </Teleport>
   </div>
 </template>
 
@@ -309,7 +273,6 @@ import {
   MessagesSquare,
   PanelLeftClose,
   PanelLeftOpen,
-  Paperclip,
   Phone,
   Search,
   SearchX,
@@ -320,20 +283,12 @@ import {
 
 type ChatSender = 'me' | 'them'
 
-interface Attachment {
-  type: 'image' | 'file'
-  url?: string
-  name?: string
-  file?: File
-}
-
 interface ChatMessage {
   id: number
   sender: ChatSender
   text: string
   time: string
   readAt: string | null
-  attachment?: Attachment
   createdAt: Date
 }
 
@@ -358,14 +313,12 @@ const isListCollapsed = ref(false)
 const searchTerm = ref('')
 const threadRef = ref<HTMLElement | null>(null)
 const composerRef = ref<HTMLTextAreaElement | null>(null)
-const fileInputRef = ref<HTMLInputElement | null>(null)
 const draft = ref('')
 const messages = ref<ChatMessage[]>([])
 const loadingConversations = ref(false)
 const loadingMessages = ref(false)
 const error = ref('')
 const typingConversationId = ref<number | null>(null)
-const attachmentPreview = ref<string | null>(null)
 const showConversationList = ref(true)
 const isMobileOrTablet = ref(false)
 
@@ -472,67 +425,34 @@ function formatDateForPreview(date: Date) {
 async function sendMessage() {
   const text = draft.value.trim()
   const conversationId = activeConversationId.value
-  if ((!text && !pendingAttachment.value) || !conversationId) return
-
-  const attachment = pendingAttachment.value
-  pendingAttachment.value = null
+  if (!text || !conversationId) return
 
   draft.value = ''
   autoResizeTextarea()
 
-  const messageData: any = { conversationId, content: text }
-  if (attachment) {
-    messageData.attachment = {
-      type: attachment.type,
-      name: attachment.name,
-      url: attachment.url,
-    }
-  }
-
   if (chatSocket.connected) {
-    chatSocket.emit('sendMessage', messageData, (response: { success?: boolean; message?: ApiMessage; error?: string }) => {
-      if (response?.error) {
-        error.value = response.error
-        return
-      }
-      if (response?.message) upsertMessage(response.message)
-    })
+    chatSocket.emit(
+      'sendMessage',
+      { conversationId, content: text },
+      (response: { success?: boolean; message?: ApiMessage; error?: string }) => {
+        if (response?.error) {
+          error.value = response.error
+          draft.value = text
+          return
+        }
+        if (response?.message) upsertMessage(response.message)
+      },
+    )
     return
   }
 
   try {
-    const created = await messageApi.create(conversationId, text, attachment?.file)
+    const created = await messageApi.create(conversationId, text)
     upsertMessage(created)
   } catch (err: unknown) {
     error.value = err instanceof Error ? err.message : 'Failed to send message.'
     draft.value = text
   }
-}
-
-const pendingAttachment = ref<Attachment | null>(null)
-
-function triggerFileUpload() {
-  fileInputRef.value?.click()
-}
-
-function handleFileUpload(event: Event) {
-  const input = event.target as HTMLInputElement
-  const file = input.files?.[0]
-  if (!file) return
-
-  const isImage = file.type.startsWith('image/')
-  const reader = new FileReader()
-
-  reader.onload = (e) => {
-    pendingAttachment.value = {
-      type: isImage ? 'image' : 'file',
-      url: e.target?.result as string,
-      name: file.name,
-      file,
-    }
-  }
-  reader.readAsDataURL(file)
-  input.value = ''
 }
 
 function handleComposerKeydown(event: KeyboardEvent) {
@@ -583,8 +503,6 @@ function toConversation(conversation: ApiConversation): Conversation {
   )[0]
 
   const name = user?.username || 'Neighbor'
-  const lastMessageDate = latestMessage ? new Date(latestMessage.created_at) : new Date(conversation.updated_at)
-
   return {
     id: conversation.conversation_id,
     participantId: user?.user_id ?? otherParticipant?.user_id ?? null,
@@ -594,9 +512,9 @@ function toConversation(conversation: ApiConversation): Conversation {
     presence: 'Offline',
     preview: latestMessage?.content || 'No messages yet',
     time: latestMessage
-      ? formatTime(new Date(latestMessage.created_at))
-      : formatTime(new Date(conversation.updated_at)),
-      unread: conversation.unread_count || 0,
+      ? formatDateForPreview(new Date(latestMessage.created_at))
+      : formatDateForPreview(new Date(conversation.updated_at)),
+    unread: conversation.unread_count ?? 0,
   }
 }
 
@@ -795,7 +713,6 @@ onUnmounted(() => {
 
 watch(activeConversationId, () => {
   draft.value = ''
-  pendingAttachment.value = null
 })
 
 watch(
@@ -1103,19 +1020,13 @@ h2 {
   position: relative;
 }
 
-.avatar-wrap img,
-.contact-avatar img {
+.chat-avatar {
+  display: block;
   width: 52px;
   height: 52px;
   border-radius: 18px;
-  object-fit: cover;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-.chat-avatar {
-  display: block;
-  width: 46px;
-  height: 46px;
-  border-radius: 14px;
   font-size: 1.2rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
 
 .avatar-wrap span,
@@ -1250,6 +1161,31 @@ h2 {
   background: #f9fdfe;
 }
 
+.thread-state {
+  display: flex;
+  min-height: 100%;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: #7c9ab0;
+  font-size: 0.86rem;
+}
+
+.loading-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  background: #0f766e;
+  animation: loading-pulse 1s ease-in-out infinite;
+}
+
+@keyframes loading-pulse {
+  50% {
+    opacity: 0.35;
+    transform: scale(0.8);
+  }
+}
+
 .date-pill {
   width: fit-content;
   margin: 0 auto 20px;
@@ -1327,11 +1263,11 @@ h2 {
   justify-content: flex-end;
 }
 
-.message-row > img {
+.message-avatar {
   width: 36px;
   height: 36px;
   border-radius: 14px;
-  object-fit: cover;
+  font-size: 0.95rem;
   flex-shrink: 0;
 }
 
@@ -1366,32 +1302,6 @@ h2 {
   word-break: break-word;
 }
 
-.attachment-preview {
-  margin-bottom: 8px;
-}
-
-.attachment-img {
-  max-width: 200px;
-  max-height: 150px;
-  border-radius: 12px;
-  cursor: pointer;
-  transition: transform 0.2s;
-}
-
-.attachment-img:hover {
-  transform: scale(1.02);
-}
-
-.file-attachment {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  background: rgba(0, 0, 0, 0.05);
-  border-radius: 12px;
-  font-size: 0.8rem;
-}
-
 .message-meta {
   display: flex;
   gap: 6px;
@@ -1418,12 +1328,6 @@ h2 {
   align-items: center;
   gap: 12px;
   margin-bottom: 20px;
-}
-
-.typing-row img {
-  width: 36px;
-  height: 36px;
-  border-radius: 14px;
 }
 
 .typing-bubble {
@@ -1524,42 +1428,6 @@ h2 {
   color: #8aaec2;
 }
 
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.8);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
-
-.modal-content {
-  position: relative;
-  max-width: 90vw;
-  max-height: 90vh;
-}
-
-.modal-content img {
-  max-width: 100%;
-  max-height: 90vh;
-  border-radius: 16px;
-}
-
-.modal-close {
-  position: absolute;
-  top: -40px;
-  right: 0;
-  background: none;
-  border: none;
-  color: white;
-  font-size: 32px;
-  cursor: pointer;
-}
-
 .slide-enter-active,
 .slide-leave-active {
   transition: transform 0.3s ease, opacity 0.3s ease;
@@ -1580,16 +1448,6 @@ h2 {
 .fade-slide-leave-to {
   opacity: 0;
   transform: translateX(10px);
-}
-
-.modal-enter-active,
-.modal-leave-active {
-  transition: opacity 0.2s ease;
-}
-
-.modal-enter-from,
-.modal-leave-to {
-  opacity: 0;
 }
 
 .hidden {
@@ -1655,8 +1513,7 @@ h2 {
     padding: 10px 12px;
   }
 
-  .avatar-wrap img,
-  .contact-avatar img {
+  .chat-avatar {
     width: 48px;
     height: 48px;
   }
