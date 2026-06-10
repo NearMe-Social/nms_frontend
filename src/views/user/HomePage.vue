@@ -123,9 +123,11 @@
             <div class="flex items-start justify-between">
               <div class="flex items-center gap-3 min-w-0">
                 <RouterLink :to="profileRoute(post.user?.user_id)" class="shrink-0" @click.stop>
-                  <img
-                    :src="post.user?.profile_image || `https://i.pravatar.cc/150?u=${post.user?.username || post.post_id}`"
-                    class="w-10 h-10 md:w-11 md:h-11 rounded-full object-cover ring-2 ring-transparent group-hover:ring-teal-300 transition-all duration-300 group-hover:scale-105"
+                  <UserAvatar
+                    :src="post.user?.profile_image"
+                    :username="post.user?.username || 'Neighbor'"
+                    :alt="`${post.user?.username || 'Neighbor'} profile`"
+                    class="w-10 h-10 md:w-11 md:h-11 rounded-full"
                   />
                 </RouterLink>
                 <div class="min-w-0">
@@ -189,7 +191,13 @@
               </p>
             </div>
 
-            <!-- Post footer -->
+            <img
+              v-if="post.image_url"
+              :src="post.image_url"
+              :alt="post.title"
+              class="max-h-[480px] w-full rounded-2xl object-cover ring-1 ring-slate-200/70"
+            />
+
             <div class="flex items-center justify-between pt-3 border-t border-gray-100">
               <div class="flex gap-1">
                 <button
@@ -286,6 +294,7 @@ import Navbar from '@/components/Navbar.vue'
 import AppSidebar from '@/components/AppSidebar.vue'
 import MobileBottomNav from '@/components/MobileBottomNav.vue'
 import PostOptionsMenu from '@/components/PostOptionsMenu.vue'
+import UserAvatar from '@/components/UserAvatar.vue'
 import { postApi, type ApiPost } from '@/services/api'
 import {
   MapPin, MessageCircle, Plus, Heart,

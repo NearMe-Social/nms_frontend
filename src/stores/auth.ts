@@ -10,6 +10,9 @@ export interface AuthUser {
   profile_completed?: boolean
   onboarding_completed?: boolean
   profile_image?: string | null
+  first_name?: string
+  last_name?: string
+  bio?: string | null
   profile?: unknown
 }
 
@@ -22,9 +25,7 @@ export function getPostAuthPath(user: AuthUser | null): string {
 
 export const useAuthStore = defineStore('auth', () => {
   const token = ref<string | null>(localStorage.getItem('token') || null)
-  const user = ref<AuthUser | null>(
-    JSON.parse(localStorage.getItem('auth_user') || 'null'),
-  )
+  const user = ref<AuthUser | null>(JSON.parse(localStorage.getItem('auth_user') || 'null'))
 
   const isLoggedIn = computed(() => !!token.value)
 
@@ -54,9 +55,21 @@ export const useAuthStore = defineStore('auth', () => {
     localStorage.removeItem('nms_token')
   }
 
-  function updateProfile(profileData: unknown) {
+  function updateProfile(profileData: object) {
     if (user.value) {
-      user.value.profile = profileData
+      const profileFields = profileData as Partial<AuthUser>
+      const existingProfile =
+        user.value.profile && typeof user.value.profile === 'object' ? user.value.profile : {}
+
+      user.value = {
+        ...user.value,
+        ...profileFields,
+        userId: profileFields.userId ?? profileFields.user_id ?? user.value.userId,
+        profile: {
+          ...existingProfile,
+          ...profileData,
+        },
+      }
       localStorage.setItem('auth_user', JSON.stringify(user.value))
     }
   }

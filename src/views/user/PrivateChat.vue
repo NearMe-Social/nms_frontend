@@ -39,7 +39,12 @@
                 @click="selectConversation(conversation.id)"
               >
                 <div class="avatar-wrap">
-                  <img :src="conversation.avatar" :alt="conversation.name" />
+                  <UserAvatar
+                    :src="conversation.avatar"
+                    :username="conversation.name"
+                    :alt="conversation.name"
+                    class="chat-avatar"
+                  />
                   <span :class="conversation.online ? 'online' : 'offline'" />
                 </div>
                 <div class="conversation-copy">
@@ -49,7 +54,9 @@
                   </div>
                   <p>{{ conversation.preview }}</p>
                 </div>
-                <span v-if="conversation.unread" class="unread-count">{{ conversation.unread }}</span>
+                <span v-if="conversation.unread" class="unread-count">{{
+                  conversation.unread
+                }}</span>
               </button>
             </div>
           </div>
@@ -68,7 +75,12 @@
             </button>
 
             <div class="contact-avatar">
-              <img :src="activeConversation.avatar" :alt="activeConversation.name" />
+              <UserAvatar
+                :src="activeConversation.avatar"
+                :username="activeConversation.name"
+                :alt="activeConversation.name"
+                class="chat-avatar"
+              />
               <span :class="activeConversation.online ? 'online' : 'offline'" />
             </div>
 
@@ -107,10 +119,12 @@
               class="message-row"
               :class="message.sender === 'me' ? 'mine' : 'theirs'"
             >
-              <img
+              <UserAvatar
                 v-if="message.sender === 'them'"
                 :src="activeConversation.avatar"
+                :username="activeConversation.name"
                 :alt="activeConversation.name"
+                class="message-avatar"
               />
 
               <div class="message-stack">
@@ -128,7 +142,12 @@
             </article>
 
             <div v-if="typingConversationId === activeConversation.id" class="typing-row">
-              <img :src="activeConversation.avatar" :alt="activeConversation.name" />
+              <UserAvatar
+                :src="activeConversation.avatar"
+                :username="activeConversation.name"
+                :alt="activeConversation.name"
+                class="message-avatar"
+              />
               <div class="typing-bubble" aria-live="polite">
                 <span />
                 <span />
@@ -177,12 +196,8 @@ import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import AppSidebar from '@/components/AppSidebar.vue'
 import Navbar from '@/components/Navbar.vue'
-import {
-  conversationApi,
-  messageApi,
-  type ApiConversation,
-  type ApiMessage,
-} from '@/services/api'
+import UserAvatar from '@/components/UserAvatar.vue'
+import { conversationApi, messageApi, type ApiConversation, type ApiMessage } from '@/services/api'
 import { useAuthStore } from '@/stores/auth'
 import { useChatSocketStore } from '@/stores/chatSocket'
 import {
@@ -212,7 +227,7 @@ type Conversation = {
   id: number
   participantId: number | null
   name: string
-  avatar: string
+  avatar: string | null
   online: boolean
   presence: string
   preview: string
@@ -239,7 +254,8 @@ let socketListenerStops: Array<() => void> = []
 
 const activeConversation = computed(
   (): Conversation | null =>
-    conversations.value.find((conversation) => conversation.id === activeConversationId.value) ?? null,
+    conversations.value.find((conversation) => conversation.id === activeConversationId.value) ??
+    null,
 )
 const filteredConversations = computed(() => {
   const needle = searchTerm.value.trim().toLowerCase()
@@ -345,11 +361,13 @@ function toConversation(conversation: ApiConversation): Conversation {
     id: conversation.conversation_id,
     participantId: user?.user_id ?? otherParticipant?.user_id ?? null,
     name,
-    avatar: user?.profile_image || `https://i.pravatar.cc/200?u=${encodeURIComponent(name)}`,
+    avatar: user?.profile_image || null,
     online: false,
     presence: 'Offline',
     preview: latestMessage?.content || 'No messages yet',
-    time: latestMessage ? formatTime(new Date(latestMessage.created_at)) : formatTime(new Date(conversation.updated_at)),
+    time: latestMessage
+      ? formatTime(new Date(latestMessage.created_at))
+      : formatTime(new Date(conversation.updated_at)),
   }
 }
 
@@ -737,13 +755,12 @@ h2 {
   position: relative;
 }
 
-.avatar-wrap img,
-.contact-avatar img {
+.chat-avatar {
   display: block;
   width: 46px;
   height: 46px;
   border-radius: 14px;
-  object-fit: cover;
+  font-size: 1.2rem;
 }
 
 .avatar-wrap span,
@@ -887,12 +904,12 @@ h2 {
   margin-bottom: 16px;
 }
 
-.typing-row img {
+.typing-row .message-avatar {
   width: 34px;
   height: 34px;
   flex: 0 0 auto;
   border-radius: 12px;
-  object-fit: cover;
+  font-size: 0.95rem;
 }
 
 .typing-bubble {
@@ -930,12 +947,12 @@ h2 {
   justify-content: flex-end;
 }
 
-.message-row > img {
+.message-row > .message-avatar {
   width: 34px;
   height: 34px;
   flex: 0 0 auto;
   border-radius: 12px;
-  object-fit: cover;
+  font-size: 0.95rem;
 }
 
 .message-stack {

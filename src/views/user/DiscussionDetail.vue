@@ -33,15 +33,24 @@
               <h1 class="post-title">{{ post.title }}</h1>
 
               <div class="author-row">
-                <button class="author-avatar author-link" type="button" @click="goToProfile(post.user?.user_id)">
+                <button
+                  class="author-avatar author-link"
+                  type="button"
+                  @click="goToProfile(post.user?.user_id)"
+                >
                   {{ initials(post.user?.username || 'Neighbor') }}
                 </button>
                 <div class="author-copy">
-                  <button class="author-name author-name-button" type="button" @click="goToProfile(post.user?.user_id)">
+                  <button
+                    class="author-name author-name-button"
+                    type="button"
+                    @click="goToProfile(post.user?.user_id)"
+                  >
                     {{ post.user?.username || 'Neighbor' }}
                   </button>
                   <div class="author-sub">
-                    {{ post.visibility_radius }}m visibility · <span class="verified-badge">Verified Resident</span>
+                    {{ post.visibility_radius }}m visibility ·
+                    <span class="verified-badge">Verified Resident</span>
                   </div>
                 </div>
                 <UserOptionsMenu :user-id="post.user?.user_id" />
@@ -51,8 +60,20 @@
                 <p v-for="(para, i) in postParagraphs" :key="i">{{ para }}</p>
               </div>
 
+              <img
+                v-if="post.image_url"
+                :src="post.image_url"
+                :alt="post.title"
+                class="post-image"
+              />
+
               <div class="post-actions">
-                <button class="action-btn" :class="{ upvoted: post.upvoted }" type="button" @click="toggleUpvote">
+                <button
+                  class="action-btn"
+                  :class="{ upvoted: post.upvoted }"
+                  type="button"
+                  @click="toggleUpvote"
+                >
                   {{ reactionsCount }} Upvotes
                 </button>
                 <button class="action-btn" type="button" @click="focusReply">
@@ -101,7 +122,9 @@
               <div class="map-pin"></div>
               <div class="map-caption">
                 <span>Location Impact</span>
-                <strong>{{ post?.distance_label || `${post?.visibility_radius ?? 0}m visibility` }}</strong>
+                <strong>{{
+                  post?.distance_label || `${post?.visibility_radius ?? 0}m visibility`
+                }}</strong>
               </div>
             </section>
 
@@ -172,8 +195,12 @@ const commentSubmitting = ref(false)
 const commentError = ref('')
 const commentSectionRef = ref<InstanceType<typeof CommentSection> | null>(null)
 const commentCount = computed(() => comments.value.length)
-const reactionsCount = computed(() => post.value?.reactions?.length ?? post.value?.reactions_count ?? 0)
-const pulsePct = computed(() => Math.min(100, Math.max(12, (commentCount.value + reactionsCount.value) * 12)))
+const reactionsCount = computed(
+  () => post.value?.reactions?.length ?? post.value?.reactions_count ?? 0,
+)
+const pulsePct = computed(() =>
+  Math.min(100, Math.max(12, (commentCount.value + reactionsCount.value) * 12)),
+)
 const postParagraphs = computed(() =>
   (post.value?.content || '')
     .split(/\n+/)
@@ -310,12 +337,14 @@ function isActiveComment(comment: ApiComment) {
 }
 
 function initials(value: string) {
-  return value
-    .split(/[\s._-]+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part.charAt(0).toUpperCase())
-    .join('') || 'N'
+  return (
+    value
+      .split(/[\s._-]+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part.charAt(0).toUpperCase())
+      .join('') || 'N'
+  )
 }
 
 function avatarGradient(value: string) {
@@ -515,6 +544,16 @@ watch(() => route.params.postId, loadPostDetail)
   line-height: 1.75;
 }
 
+.post-image {
+  width: 100%;
+  max-height: 560px;
+  display: block;
+  margin-top: 18px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  object-fit: cover;
+}
+
 .post-actions {
   flex-wrap: wrap;
   gap: 10px;
@@ -644,7 +683,9 @@ watch(() => route.params.postId, loadPostDetail)
   height: 11px;
   border-radius: 999px;
   background: #083344;
-  box-shadow: 0 0 0 18px rgba(186, 230, 253, 0.35), 0 0 0 44px rgba(186, 230, 253, 0.22);
+  box-shadow:
+    0 0 0 18px rgba(186, 230, 253, 0.35),
+    0 0 0 44px rgba(186, 230, 253, 0.22);
 }
 
 .map-caption {
