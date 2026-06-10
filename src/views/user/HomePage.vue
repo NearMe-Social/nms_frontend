@@ -149,6 +149,13 @@
               <p class="mt-2 text-sm text-gray-700 leading-relaxed">{{ post.content }}</p>
             </div>
 
+            <img
+              v-if="post.image_url"
+              :src="post.image_url"
+              :alt="post.title"
+              class="max-h-[480px] w-full rounded-2xl object-cover ring-1 ring-slate-200/70"
+            />
+
             <div class="flex items-center justify-between pt-2 border-t border-gray-100">
               <div class="flex gap-1">
                 <button

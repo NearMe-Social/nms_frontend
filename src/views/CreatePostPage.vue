@@ -38,6 +38,7 @@ const submitting = ref(false)
 const imageInput = ref<HTMLInputElement | null>(null)
 const selectedImageUrl = ref('')
 const selectedImageName = ref('')
+const selectedImageFile = ref<File | null>(null)
 let activeObjectUrl: string | null = null
 const router = useRouter()
 const auth = useAuthStore()
@@ -79,6 +80,7 @@ function clearSelectedImage() {
 
   selectedImageUrl.value = ''
   selectedImageName.value = ''
+  selectedImageFile.value = null
 
   if (imageInput.value) {
     imageInput.value.value = ''
@@ -94,10 +96,24 @@ function handleImageChange(event: Event) {
     return
   }
 
+  if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+    clearSelectedImage()
+    submitError.value = 'Choose a JPEG, PNG, or WebP image.'
+    return
+  }
+
+  if (file.size > 5 * 1024 * 1024) {
+    clearSelectedImage()
+    submitError.value = 'Post image must be smaller than 5 MB.'
+    return
+  }
+
   clearSelectedImage()
+  submitError.value = ''
   activeObjectUrl = URL.createObjectURL(file)
   selectedImageUrl.value = activeObjectUrl
   selectedImageName.value = file.name
+  selectedImageFile.value = file
 }
 
 function durationToMs(duration: (typeof durationOptions)[number]) {
@@ -132,12 +148,6 @@ async function getPostLocation() {
 
 async function submitPost() {
   if (!isReadyToSubmit.value) return
-  const userId = auth.user?.userId ?? auth.user?.user_id
-
-  if (!userId) {
-    submitError.value = 'Please log in again before posting.'
-    return
-  }
 
   submitting.value = true
   submitError.value = ''
@@ -150,15 +160,17 @@ async function submitPost() {
       return
     }
 
-    await postApi.create({
-      user_id: userId,
-      title: title.value.trim(),
-      content: content.value.trim(),
-      latitude: position.lat,
-      longitude: position.lng,
-      visibility_radius: visibilityRadius.value,
-      expires_at: new Date(Date.now() + durationToMs(selectedDuration.value)).toISOString(),
-    })
+    await postApi.create(
+      {
+        title: title.value.trim(),
+        content: content.value.trim(),
+        latitude: position.lat,
+        longitude: position.lng,
+        visibility_radius: visibilityRadius.value,
+        expires_at: new Date(Date.now() + durationToMs(selectedDuration.value)).toISOString(),
+      },
+      selectedImageFile.value,
+    )
 
     submitting.value = false
     resetDraft()
@@ -264,7 +276,7 @@ onBeforeUnmount(() => {
               <input
                 ref="imageInput"
                 type="file"
-                accept="image/*"
+                accept="image/jpeg,image/png,image/webp"
                 class="visually-hidden"
                 @change="handleImageChange"
               />
