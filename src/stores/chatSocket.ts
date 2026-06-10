@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { computed, ref, shallowRef } from 'vue'
 import { io, type Socket } from 'socket.io-client'
-import type { ApiMessage } from '@/services/api'
+import { API_URL, type ApiMessage } from '@/services/api'
 
 export const useChatSocketStore = defineStore('chatSocket', () => {
   const socket = shallowRef<Socket | null>(null)
@@ -33,7 +33,7 @@ export const useChatSocketStore = defineStore('chatSocket', () => {
 
     if (socket.value) return
 
-    socket.value = io(`${import.meta.env.VITE_API_URL}/chat`, {
+    socket.value = io(`${API_URL.replace(/\/+$/, '')}/chat`, {
       auth: { token },
       transports: ['websocket', 'polling'],
     })
