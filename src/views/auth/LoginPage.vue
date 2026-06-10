@@ -72,7 +72,7 @@
 import { ref } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import { authApi } from '@/services/api'
+import { API_URL, authApi } from '@/services/api'
 
 import googleIcon from '@/assets/icons/Google.png'
 import facebookIcon from '@/assets/icons/Facebook.png'
@@ -111,7 +111,9 @@ async function handleLogin() {
 }
 
 function handleSocialLogin(provider: string) {
-    console.log('social login', provider)
+    if (provider === 'google') {
+        window.location.assign(`${API_URL}/auth/google`)
+    }
 }
 </script>
 

@@ -1,12 +1,21 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
-import { Flag, Lock, MapPin, MessageCircle, ShieldCheck, SlidersHorizontal, UserRound } from 'lucide-vue-next'
+import {
+  Flag,
+  Lock,
+  MapPin,
+  MessageCircle,
+  ShieldCheck,
+  SlidersHorizontal,
+  UserRound,
+} from 'lucide-vue-next'
 import { useNearbyStore, type NearbyUser } from '@/stores/nearbyStore'
 import { useGeolocation } from '@/composables/useGeolocation'
 import { useAuthStore } from '@/stores/auth'
 import GeoErrorState from '@/components/GeoErrorState.vue'
 import AppSidebar from '@/components/AppSidebar.vue'
+import MobileBottomNav from '@/components/MobileBottomNav.vue'
 import Navbar from '@/components/Navbar.vue'
 import * as L from 'leaflet'
 
@@ -22,7 +31,9 @@ const nearbyMarkers = ref<L.CircleMarker[]>([])
 
 const radius = ref(100)
 const sortMode = ref<'latest' | 'active'>('latest')
-const privacyMode = ref<'Neighbors Only' | 'Approximate Distance Only' | 'Hidden From Search'>('Neighbors Only')
+const privacyMode = ref<'Neighbors Only' | 'Approximate Distance Only' | 'Hidden From Search'>(
+  'Neighbors Only',
+)
 
 const radiusOptions = [50, 100, 200]
 
@@ -228,145 +239,145 @@ onUnmounted(() => nearbyStore.stopPolling())
       <AppSidebar class="hidden md:flex" />
 
       <main class="workspace">
-
-      <section class="page-heading">
-        <div>
-          <h1>Nearby Users</h1>
-          <p>{{ formattedTime }}</p>
-        </div>
-        <span class="detected-pill">{{ detectedLabel }}</span>
-      </section>
-
-      <section class="identity-card">
-        <div class="identity-left">
-          <img
-            :src="profileImage"
-            :alt="`${displayName} profile photo`"
-            class="mini-avatar image-avatar"
-          />
+        <section class="page-heading">
           <div>
-            <strong>{{ displayName }}</strong>
-            <span>Posting as @{{ username }}</span>
+            <h1>Nearby Users</h1>
+            <p>{{ formattedTime }}</p>
           </div>
-        </div>
+          <span class="detected-pill">{{ detectedLabel }}</span>
+        </section>
 
-        <div class="privacy-control">
-          <Lock />
-          <select v-model="privacyMode" aria-label="Privacy mode">
-            <option>Neighbors Only</option>
-            <option>Approximate Distance Only</option>
-            <option>Hidden From Search</option>
-          </select>
-        </div>
-      </section>
-
-      <section class="control-row" aria-label="Nearby controls">
-        <div class="segmented">
-          <button
-            v-for="option in radiusOptions"
-            :key="option"
-            type="button"
-            :class="{ selected: radius === option }"
-            @click="radius = option"
-          >
-            {{ option }}m
-          </button>
-        </div>
-
-        <div class="segmented compact">
-          <button
-            type="button"
-            :class="{ selected: sortMode === 'latest' }"
-            @click="sortMode = 'latest'"
-          >
-            Latest
-          </button>
-          <button
-            type="button"
-            :class="{ selected: sortMode === 'active' }"
-            @click="sortMode = 'active'"
-          >
-            Active
-          </button>
-        </div>
-      </section>
-
-      <GeoErrorState
-        v-if="
-          geo.status.value === 'denied' ||
-          geo.status.value === 'unavailable' ||
-          geo.status.value === 'error'
-        "
-        :status="geo.status.value"
-        :message="geo.errorMessage.value"
-        @retry="init"
-      />
-
-      <section v-else class="map-panel" aria-label="Approximate nearby map">
-        <div ref="mapElement" id="nearby-map" class="map-canvas"></div>
-      </section>
-
-      <section class="status-grid">
-        <article class="status-card">
-          <SlidersHorizontal />
-          <div>
-            <strong>Visibility Radius</strong>
-            <span>Posts and users are filtered to {{ radius }}m.</span>
-          </div>
-        </article>
-        <article class="status-card">
-          <ShieldCheck />
-          <div>
-            <strong>Location Privacy</strong>
-            <span>Exact location is hidden; only approximate distance is shown.</span>
-          </div>
-        </article>
-        <article class="status-card">
-          <Flag />
-          <div>
-            <strong>Moderation</strong>
-            <span>Report and block controls are available for unsafe behavior.</span>
-          </div>
-        </article>
-        <article class="status-card">
-          <MessageCircle />
-          <div>
-            <strong>Notifications</strong>
-            <span>Replies and nearby posts can trigger alerts.</span>
-          </div>
-        </article>
-      </section>
-
-      <section class="nearby-list">
-        <div class="list-header">
-          <h2>Nearby People</h2>
-          <span v-if="nearbyStore.loading">Refreshing...</span>
-        </div>
-
-        <p v-if="nearbyStore.error" class="empty-state error-state">
-          {{ nearbyStore.error }}
-        </p>
-
-        <div v-else-if="filteredUsers.length > 0" class="people-list">
-          <article v-for="user in filteredUsers" :key="user.id" class="person-row">
-            <div class="person-avatar">{{ user.username.slice(0, 2).toUpperCase() }}</div>
+        <section class="identity-card">
+          <div class="identity-left">
+            <img
+              :src="profileImage"
+              :alt="`${displayName} profile photo`"
+              class="mini-avatar image-avatar"
+            />
             <div>
-              <strong>{{ user.username }}</strong>
-              <span>{{ userDistance(user) }}</span>
+              <strong>{{ displayName }}</strong>
+              <span>Posting as @{{ username }}</span>
             </div>
-            <div class="person-actions">
-              <RouterLink :to="{ path: '/chat', query: { userId: user.id } }">Message</RouterLink>
-              <button type="button">Report</button>
+          </div>
+
+          <div class="privacy-control">
+            <Lock />
+            <select v-model="privacyMode" aria-label="Privacy mode">
+              <option>Neighbors Only</option>
+              <option>Approximate Distance Only</option>
+              <option>Hidden From Search</option>
+            </select>
+          </div>
+        </section>
+
+        <section class="control-row" aria-label="Nearby controls">
+          <div class="segmented">
+            <button
+              v-for="option in radiusOptions"
+              :key="option"
+              type="button"
+              :class="{ selected: radius === option }"
+              @click="radius = option"
+            >
+              {{ option }}m
+            </button>
+          </div>
+
+          <div class="segmented compact">
+            <button
+              type="button"
+              :class="{ selected: sortMode === 'latest' }"
+              @click="sortMode = 'latest'"
+            >
+              Latest
+            </button>
+            <button
+              type="button"
+              :class="{ selected: sortMode === 'active' }"
+              @click="sortMode = 'active'"
+            >
+              Active
+            </button>
+          </div>
+        </section>
+
+        <GeoErrorState
+          v-if="
+            geo.status.value === 'denied' ||
+            geo.status.value === 'unavailable' ||
+            geo.status.value === 'error'
+          "
+          :status="geo.status.value"
+          :message="geo.errorMessage.value"
+          @retry="init"
+        />
+
+        <section v-else class="map-panel" aria-label="Approximate nearby map">
+          <div ref="mapElement" id="nearby-map" class="map-canvas"></div>
+        </section>
+
+        <section class="status-grid">
+          <article class="status-card">
+            <SlidersHorizontal />
+            <div>
+              <strong>Visibility Radius</strong>
+              <span>Posts and users are filtered to {{ radius }}m.</span>
             </div>
           </article>
-        </div>
+          <article class="status-card">
+            <ShieldCheck />
+            <div>
+              <strong>Location Privacy</strong>
+              <span>Exact location is hidden; only approximate distance is shown.</span>
+            </div>
+          </article>
+          <article class="status-card">
+            <Flag />
+            <div>
+              <strong>Moderation</strong>
+              <span>Report and block controls are available for unsafe behavior.</span>
+            </div>
+          </article>
+          <article class="status-card">
+            <MessageCircle />
+            <div>
+              <strong>Notifications</strong>
+              <span>Replies and nearby posts can trigger alerts.</span>
+            </div>
+          </article>
+        </section>
 
-        <p v-else class="empty-state">
-          No nearby users inside {{ radius }}m yet. The map keeps your exact location private.
-        </p>
-      </section>
+        <section class="nearby-list">
+          <div class="list-header">
+            <h2>Nearby People</h2>
+            <span v-if="nearbyStore.loading">Refreshing...</span>
+          </div>
+
+          <p v-if="nearbyStore.error" class="empty-state error-state">
+            {{ nearbyStore.error }}
+          </p>
+
+          <div v-else-if="filteredUsers.length > 0" class="people-list">
+            <article v-for="user in filteredUsers" :key="user.id" class="person-row">
+              <div class="person-avatar">{{ user.username.slice(0, 2).toUpperCase() }}</div>
+              <div>
+                <strong>{{ user.username }}</strong>
+                <span>{{ userDistance(user) }}</span>
+              </div>
+              <div class="person-actions">
+                <RouterLink :to="{ path: '/chat', query: { userId: user.id } }">Message</RouterLink>
+                <button type="button">Report</button>
+              </div>
+            </article>
+          </div>
+
+          <p v-else class="empty-state">
+            No nearby users inside {{ radius }}m yet. The map keeps your exact location private.
+          </p>
+        </section>
       </main>
     </div>
+    <MobileBottomNav />
   </div>
 </template>
 
@@ -541,6 +552,9 @@ onUnmounted(() => nearbyStore.stopPolling())
 }
 
 .map-panel {
+  position: relative;
+  z-index: 0;
+  isolation: isolate;
   display: flex;
   justify-content: center;
   margin: 10px auto 26px;
@@ -551,6 +565,7 @@ onUnmounted(() => nearbyStore.stopPolling())
 
 .map-canvas {
   position: relative;
+  z-index: 0;
   width: 100%;
   max-width: 760px;
   min-height: 360px;
@@ -563,6 +578,7 @@ onUnmounted(() => nearbyStore.stopPolling())
 .leaflet-container {
   width: 100%;
   height: 100%;
+  z-index: 0;
 }
 
 .map-grid {
@@ -802,6 +818,10 @@ onUnmounted(() => nearbyStore.stopPolling())
 }
 
 @media (max-width: 640px) {
+  .nearby-page {
+    padding-bottom: calc(72px + env(safe-area-inset-bottom));
+  }
+
   .topbar,
   .identity-card,
   .control-row,

@@ -20,25 +20,34 @@ import ReportPostPage from '@/views/ReportPostPage.vue'
 import ReportUserPage from '@/views/ReportUserPage.vue'
 import ReportCommentPage from '@/views/ReportCommentPage.vue'
 import AdminReportsPage from '@/views/admin/AdminReportsPage.vue'
-import AdminDashboardPage from '@/views/admin/AdminDashboardPage.vue'
 import AdminLayout from '@/views/admin/AdminLayout.vue'
+import AdminDashboard from '@/views/admin/AdminDashboard.vue'
 import AdminReportDetail from '@/views/admin/AdminReportDetail.vue'
 import AdminUsersPage from '@/views/admin/AdminUsersPage.vue'
 import AdminModerationPage from '@/views/admin/AdminModerationPage.vue'
 import OtpPage from '@/views/auth/OtpPage.vue'
 
-
-
 const routes = [
+  // Authentication routes
+  // /login - Hit auth login endpoint
   {
     path: '/login',
     name: 'Login',
     component: Login,
   },
+  // /register - User registration
   {
     path: '/register',
     name: 'Register',
     component: Register,
+  },
+  // End of authentication routes
+
+  // User and application routes
+  {
+    path: '/auth/google/callback',
+    name: 'GoogleCallback',
+    component: () => import('@/views/auth/GoogleCallback.vue'),
   },
   {
     path: '/select-profile',
@@ -148,6 +157,7 @@ const routes = [
     component: NearbyView,
     meta: { requiresAuth: true },
   },
+  // Admin routes
   {
     path: '/verify-otp',
     name: 'OtpPage',
@@ -158,6 +168,11 @@ const routes = [
     component: AdminLayout,
     meta: { requiresAuth: true, requiresAdmin: true },
     children: [
+      {
+        path: '',
+        name: 'AdminDashboard',
+        component: AdminDashboard,
+      },
       {
         path: 'reports',
         name: 'AdminReports',
@@ -182,12 +197,7 @@ const routes = [
   },
   {
     path: '/admin/dashboard',
-    name: 'AdminDashboard',
-    component: AdminDashboardPage,
-    meta: {
-      requiresAuth: true,
-      requiresAdmin: true,
-    },
+    redirect: '/admin',
   },
 ]
 
@@ -206,6 +216,7 @@ router.beforeEach((to, from, next) => {
   }
 
   // Check login first
+  // http://localhost:5173/login?redirect=/admin or any admin path redirects here
   if (to.meta.requiresAuth && !auth.isLoggedIn) {
     next({
       name: 'Login',
@@ -221,12 +232,13 @@ router.beforeEach((to, from, next) => {
     const userRole = auth.user?.role
 
     if (userRole !== 'ADMIN') {
-     next({ name: 'HomePage' })
+      next({ name: 'HomePage' })
       return
     }
   }
 
   next()
 })
+// End of beforeEach navigation guard
 
 export default router
