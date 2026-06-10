@@ -57,6 +57,7 @@ export interface ApiPost {
   expires_at: string
   created_at: string
   updated_at: string
+  image_url?: string | null
   user?: PostUser | null
   comments?: unknown[]
   reactions?: unknown[]
