@@ -117,37 +117,7 @@
       </aside>
     </div>
 
-    <div
-      class="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 flex items-center justify-around px-4 py-3 z-50 shadow-lg"
-    >
-      <RouterLink to="/" class="flex flex-col items-center gap-1 text-gray-400">
-        <MapPin class="w-5 h-5" />
-        <span class="text-xs">Feed</span>
-      </RouterLink>
-      <RouterLink to="/chat" class="flex flex-col items-center gap-1 text-gray-400">
-        <MessageCircle class="w-5 h-5" />
-        <span class="text-xs">Chat</span>
-      </RouterLink>
-      <RouterLink
-        to="/create-post"
-        class="flex flex-col items-center gap-1 text-gray-400 no-underline"
-      >
-        <div
-          class="w-10 h-10 bg-teal-600 rounded-full flex items-center justify-center -mt-5 shadow-lg"
-        >
-          <Plus class="w-5 h-5 text-white" />
-        </div>
-        <span class="text-xs mt-1">Post</span>
-      </RouterLink>
-      <RouterLink to="/notifications" class="flex flex-col items-center gap-1 text-teal-600">
-        <Bell class="w-5 h-5" />
-        <span class="text-xs font-semibold">Alerts</span>
-      </RouterLink>
-      <RouterLink to="/profile" class="flex flex-col items-center gap-1 text-gray-400">
-        <User class="w-5 h-5" />
-        <span class="text-xs">Profile</span>
-      </RouterLink>
-    </div>
+    <MobileBottomNav />
   </div>
 </template>
 
@@ -156,8 +126,9 @@ import { onMounted, computed } from 'vue'
 import { RouterLink } from 'vue-router'
 import Navbar from '@/components/Navbar.vue'
 import AppSidebar from '@/components/AppSidebar.vue'
+import MobileBottomNav from '@/components/MobileBottomNav.vue'
 import { useNotificationStore } from '@/stores/notificationStore'
-import { Bell, MessageCircle, AlertCircle, MapPin, Plus, User, ShieldAlert } from 'lucide-vue-next'
+import { Bell, AlertCircle, ShieldAlert } from 'lucide-vue-next'
 
 const store = useNotificationStore()
 const notifications = store.notifications

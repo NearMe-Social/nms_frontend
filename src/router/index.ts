@@ -20,15 +20,12 @@ import ReportPostPage from '@/views/ReportPostPage.vue'
 import ReportUserPage from '@/views/ReportUserPage.vue'
 import ReportCommentPage from '@/views/ReportCommentPage.vue'
 import AdminReportsPage from '@/views/admin/AdminReportsPage.vue'
-import AdminDashboardPage from '@/views/admin/AdminDashboardPage.vue'
 import AdminLayout from '@/views/admin/AdminLayout.vue'
 import AdminDashboard from '@/views/admin/AdminDashboard.vue'
 import AdminReportDetail from '@/views/admin/AdminReportDetail.vue'
 import AdminUsersPage from '@/views/admin/AdminUsersPage.vue'
 import AdminModerationPage from '@/views/admin/AdminModerationPage.vue'
 import OtpPage from '@/views/auth/OtpPage.vue'
-
-
 
 const routes = [
   // Authentication routes
@@ -200,12 +197,7 @@ const routes = [
   },
   {
     path: '/admin/dashboard',
-    name: 'AdminDashboard',
-    component: AdminDashboardPage,
-    meta: {
-      requiresAuth: true,
-      requiresAdmin: true,
-    },
+    redirect: '/admin',
   },
 ]
 
@@ -240,7 +232,7 @@ router.beforeEach((to, from, next) => {
     const userRole = auth.user?.role
 
     if (userRole !== 'ADMIN') {
-     next({ name: 'HomePage' })
+      next({ name: 'HomePage' })
       return
     }
   }

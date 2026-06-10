@@ -1,8 +1,8 @@
 <template>
   <div class="min-h-screen bg-gray-50 flex flex-col">
-
-    
-    <nav class="sticky top-0 z-50 bg-white border-b border-gray-200 h-14 flex items-center px-6 gap-4">
+    <nav
+      class="sticky top-0 z-50 bg-white border-b border-gray-200 h-14 flex items-center px-6 gap-4"
+    >
       <div class="flex items-center gap-2 w-44 shrink-0">
         <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shrink-0">
           <span class="text-white font-black text-sm">N</span>
@@ -25,13 +25,19 @@
       </div>
 
       <div class="flex items-center gap-2 ml-auto">
-        <button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition">
+        <button
+          class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition"
+        >
           <Bell class="w-4 h-4 text-gray-500" />
         </button>
-        <button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition">
+        <button
+          class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition"
+        >
           <HelpCircle class="w-4 h-4 text-gray-500" />
         </button>
-        <button class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition">
+        <button
+          class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition"
+        >
           <Grid class="w-4 h-4 text-gray-500" />
         </button>
         <img
@@ -42,8 +48,6 @@
     </nav>
 
     <div class="flex flex-1">
-
-
       <aside class="w-44 shrink-0 bg-white border-r border-gray-200 flex flex-col py-4 px-3 gap-1">
         <RouterLink
           v-for="item in navItems"
@@ -53,7 +57,7 @@
             'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200',
             isActive(item.to)
               ? 'bg-blue-50 text-blue-700 font-semibold'
-              : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700'
+              : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700',
           ]"
         >
           <component :is="item.icon" class="w-4 h-4 shrink-0" />
@@ -73,11 +77,9 @@
         </div>
       </aside>
 
-   
       <main class="flex-1 overflow-auto">
         <RouterView />
       </main>
-
     </div>
   </div>
 </template>
@@ -85,8 +87,14 @@
 <script setup>
 import { RouterLink, RouterView, useRoute } from 'vue-router'
 import {
-  Search, Bell, HelpCircle, Grid,
-  LayoutDashboard, Flag, Users, Shield, Settings
+  Search,
+  Bell,
+  HelpCircle,
+  Grid,
+  LayoutDashboard,
+  Flag,
+  Users,
+  Shield,
 } from 'lucide-vue-next'
 
 const route = useRoute()
@@ -96,7 +104,6 @@ const navItems = [
   { to: '/admin/reports', label: 'Reports', icon: Flag },
   { to: '/admin/users', label: 'Users', icon: Users },
   { to: '/admin/moderation', label: 'Moderation', icon: Shield },
-  { to: '/admin/settings', label: 'Settings', icon: Settings },
 ]
 
 function isActive(path) {

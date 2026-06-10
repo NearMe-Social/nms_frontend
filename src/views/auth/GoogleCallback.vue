@@ -1,26 +1,39 @@
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
+import { authApi } from '@/services/api'
 
 const router = useRouter()
+const auth = useAuthStore()
+const error = ref('')
 
-onMounted(() => {
-  const params = new URLSearchParams(window.location.search)
+onMounted(async () => {
+  const token = new URLSearchParams(window.location.search).get('token')
 
-  const token = params.get('token')
+  if (!token) {
+    await router.replace('/login')
+    return
+  }
 
-  if (token) {
-    localStorage.setItem('token', token)
+  try {
+    auth.setToken(token)
 
-    router.push('/')
-  } else {
-    router.push('/login')
+    const user = await authApi.me()
+    auth.setAuth(token, user)
+
+    // Remove the token from the visible browser URL.
+    await router.replace('/')
+  } catch {
+    auth.logout()
+    error.value = 'Google login failed'
+    setTimeout(() => router.replace('/login'), 1500)
   }
 })
 </script>
 
 <template>
   <div>
-    Logging in with Google...
+    {{ error || 'Logging in with Google...' }}
   </div>
 </template>

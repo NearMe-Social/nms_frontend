@@ -227,7 +227,7 @@ onBeforeUnmount(() => {
 .top-nav {
   position: sticky;
   top: 0;
-  z-index: 50;
+  z-index: 1100;
   height: 64px;
   display: flex;
   align-items: center;

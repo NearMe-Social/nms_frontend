@@ -3,29 +3,30 @@
     <!-- Header with Title and Action Buttons -->
     <div class="dashboard-header">
       <div class="header-content">
-        <div class="breadcrumb">
-          <span>Admin</span>
-          <ChevronRight class="breadcrumb-icon" />
-          <span class="bc-active">Dashboard</span>
-        </div>
         <h1 class="page-title">Dashboard</h1>
         <p class="page-subtitle">Overview of platform activity and content moderation metrics</p>
       </div>
 
       <div class="header-actions">
-        <button class="btn-action primary" @click="handleGenerateReport">
-          <Download class="btn-icon" />
-          Generate Report
-        </button>
-        <button class="btn-action secondary" @click="handleNewAlert">
-          <AlertCircle class="btn-icon" />
-          New Alert
-        </button>
+        <RouterLink to="/admin/reports" class="btn-action primary">
+          <Flag class="btn-icon" />
+          Review Reports
+        </RouterLink>
+        <RouterLink to="/admin/users" class="btn-action secondary">
+          <Users class="btn-icon" />
+          Manage Users
+        </RouterLink>
       </div>
     </div>
 
+    <p v-if="loading" class="dashboard-message">Loading dashboard data...</p>
+    <div v-else-if="error" class="dashboard-message error-message">
+      <span>{{ error }}</span>
+      <button type="button" @click="loadDashboard">Retry</button>
+    </div>
+
     <!-- Summary Cards Section -->
-    <div class="summary-section">
+    <div v-else class="summary-section">
       <div class="summary-grid">
         <!-- Total Users Card -->
         <div class="summary-card users-card">
@@ -35,11 +36,7 @@
           </div>
           <div class="card-content">
             <div class="card-value">{{ stats.totalUsers }}</div>
-            <div class="card-change" :class="stats.usersTrend > 0 ? 'positive' : 'negative'">
-              <TrendingUp v-if="stats.usersTrend > 0" class="trend-icon" />
-              <TrendingDown v-else class="trend-icon" />
-              {{ Math.abs(stats.usersTrend) }}% from last month
-            </div>
+            <div class="card-change">{{ stats.activeUsers }} active accounts</div>
           </div>
         </div>
 
@@ -51,77 +48,72 @@
           </div>
           <div class="card-content">
             <div class="card-value">{{ stats.activePosts }}</div>
-            <div class="card-change" :class="stats.postsTrend > 0 ? 'positive' : 'negative'">
-              <TrendingUp v-if="stats.postsTrend > 0" class="trend-icon" />
-              <TrendingDown v-else class="trend-icon" />
-              {{ Math.abs(stats.postsTrend) }}% from last month
-            </div>
+            <div class="card-change">Currently visible in the feed</div>
           </div>
         </div>
 
         <!-- Reported Content Card -->
         <div class="summary-card reports-card">
           <div class="card-header">
-            <h3 class="card-title">Reported Content</h3>
+            <h3 class="card-title">Pending Reports</h3>
             <Flag class="card-icon reports-icon" />
           </div>
           <div class="card-content">
-            <div class="card-value">{{ stats.reportedContent }}</div>
-            <div class="card-change" :class="stats.reportsTrend > 0 ? 'negative' : 'positive'">
-              <TrendingUp v-if="stats.reportsTrend > 0" class="trend-icon" />
-              <TrendingDown v-else class="trend-icon" />
-              {{ Math.abs(stats.reportsTrend) }}% from last month
-            </div>
+            <div class="card-value">{{ stats.pendingReports }}</div>
+            <div class="card-change negative">{{ stats.totalReports }} total reports</div>
           </div>
         </div>
 
         <!-- Blocked Users Card -->
         <div class="summary-card blocked-card">
           <div class="card-header">
-            <h3 class="card-title">Blocked Users</h3>
+            <h3 class="card-title">Suspended Users</h3>
             <Ban class="card-icon blocked-icon" />
           </div>
           <div class="card-content">
-            <div class="card-value">{{ stats.blockedUsers }}</div>
-            <div class="card-change" :class="stats.blockedTrend > 0 ? 'negative' : 'positive'">
-              <TrendingUp v-if="stats.blockedTrend > 0" class="trend-icon" />
-              <TrendingDown v-else class="trend-icon" />
-              {{ Math.abs(stats.blockedTrend) }}% from last month
-            </div>
+            <div class="card-value">{{ stats.suspendedUsers }}</div>
+            <div class="card-change negative">Inactive accounts</div>
           </div>
         </div>
       </div>
     </div>
 
     <!-- Additional Info Section -->
-    <div class="info-section">
+    <div v-if="!loading && !error" class="info-section">
       <div class="info-grid">
         <div class="info-card">
           <h3 class="info-title">Quick Actions</h3>
           <ul class="info-list">
-            <li><a href="#" class="info-link">View All Reports</a></li>
-            <li><a href="#" class="info-link">Manage Users</a></li>
-            <li><a href="#" class="info-link">Review Moderation Queue</a></li>
-            <li><a href="#" class="info-link">System Settings</a></li>
+            <li><RouterLink to="/admin/reports" class="info-link">View All Reports</RouterLink></li>
+            <li><RouterLink to="/admin/users" class="info-link">Manage Users</RouterLink></li>
+            <li>
+              <RouterLink to="/admin/moderation" class="info-link">
+                Review Moderation Queue
+              </RouterLink>
+            </li>
           </ul>
         </div>
 
         <div class="info-card">
-          <h3 class="info-title">Platform Status</h3>
-          <div class="status-list">
-            <div class="status-item">
-              <span class="status-label">API Health</span>
-              <span class="status-badge online">Operational</span>
-            </div>
-            <div class="status-item">
-              <span class="status-label">Database</span>
-              <span class="status-badge online">Connected</span>
-            </div>
-            <div class="status-item">
-              <span class="status-label">WebSocket</span>
-              <span class="status-badge online">Active</span>
-            </div>
-          </div>
+          <h3 class="info-title">Recent Reports</h3>
+          <p v-if="recentReports.length === 0" class="empty-activity">
+            No reports have been submitted.
+          </p>
+          <RouterLink
+            v-for="report in recentReports"
+            :key="report.reportId"
+            :to="`/admin/reports/${report.reportId}`"
+            class="activity-item"
+          >
+            <span>
+              <strong>{{ report.targetType }} #{{ report.targetId }}</strong>
+              <small>{{ report.reason }}</small>
+            </span>
+            <span class="activity-meta">
+              {{ report.status }}
+              <small>{{ formatDate(report.createdAt) }}</small>
+            </span>
+          </RouterLink>
         </div>
       </div>
     </div>
@@ -129,50 +121,79 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
+import { RouterLink } from 'vue-router'
+import { Ban, FileText, Flag, Users } from 'lucide-vue-next'
 import {
-  Users,
-  FileText,
-  Flag,
-  Ban,
-  ChevronRight,
-  Download,
-  AlertCircle,
-  TrendingUp,
-  TrendingDown,
-} from 'lucide-vue-next'
+  adminReportsApi,
+  adminUsersApi,
+  postApi,
+  type ApiAdminReport,
+  type ApiAdminUser,
+  type ApiPost,
+} from '@/services/api'
 
-// Dashboard statistics
-const stats = ref({
-  totalUsers: '12,458',
-  usersTrend: 8.2,
-  activePosts: '3,847',
-  postsTrend: 5.4,
-  reportedContent: '234',
-  reportsTrend: -12.5,
-  blockedUsers: '87',
-  blockedTrend: 2.1,
-})
+const users = ref<ApiAdminUser[]>([])
+const reports = ref<ApiAdminReport[]>([])
+const posts = ref<ApiPost[]>([])
+const loading = ref(true)
+const error = ref('')
 
-// Action handlers
-function handleGenerateReport() {
-  console.log('Generate Report clicked')
-  // TODO: Implement report generation
-  alert('Report generation will be available soon')
+const stats = computed(() => ({
+  totalUsers: users.value.length,
+  activeUsers: users.value.filter((user) => user.isActive).length,
+  activePosts: posts.value.filter(
+    (post) => post.status === 'ACTIVE' && new Date(post.expires_at).getTime() > Date.now(),
+  ).length,
+  pendingReports: reports.value.filter((report) => report.status === 'PENDING').length,
+  totalReports: reports.value.length,
+  suspendedUsers: users.value.filter((user) => !user.isActive).length,
+}))
+
+const recentReports = computed(() =>
+  [...reports.value]
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .slice(0, 5),
+)
+
+async function loadDashboard() {
+  loading.value = true
+  error.value = ''
+
+  try {
+    const [userData, reportData, postData] = await Promise.all([
+      adminUsersApi.list(),
+      adminReportsApi.list(),
+      postApi.list('latest'),
+    ])
+
+    users.value = userData
+    reports.value = reportData
+    posts.value = postData
+  } catch (loadError: unknown) {
+    error.value = loadError instanceof Error ? loadError.message : 'Failed to load dashboard data.'
+  } finally {
+    loading.value = false
+  }
 }
 
-function handleNewAlert() {
-  console.log('New Alert clicked')
-  // TODO: Implement new alert creation
-  alert('New alert functionality will be available soon')
+function formatDate(value: string) {
+  return new Intl.DateTimeFormat(undefined, {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(new Date(value))
 }
+
+onMounted(loadDashboard)
 </script>
 
 <style scoped>
 .dashboard-page {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 1.25rem;
   padding: 1.5rem;
 }
 
@@ -180,45 +201,25 @@ function handleNewAlert() {
 .dashboard-header {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
-  gap: 2rem;
-  margin-bottom: 1rem;
+  align-items: center;
+  gap: 1rem;
 }
 
 .header-content {
   flex: 1;
 }
 
-.breadcrumb {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.875rem;
-  color: #6b7280;
-  margin-bottom: 0.5rem;
-}
-
-.breadcrumb-icon {
-  width: 1rem;
-  height: 1rem;
-  color: #d1d5db;
-}
-
-.bc-active {
-  color: #2563eb;
-  font-weight: 600;
-}
-
 .page-title {
-  font-size: 1.875rem;
+  margin: 0;
+  font-size: 1.25rem;
   font-weight: 700;
   color: #1f2937;
-  margin-bottom: 0.5rem;
 }
 
 .page-subtitle {
-  font-size: 0.9375rem;
-  color: #6b7280;
+  margin: 0.125rem 0 0;
+  font-size: 0.875rem;
+  color: #9ca3af;
 }
 
 .header-actions {
@@ -231,12 +232,13 @@ function handleNewAlert() {
   align-items: center;
   gap: 0.5rem;
   padding: 0.5rem 1rem;
-  border-radius: 0.5rem;
+  border-radius: 0.75rem;
   font-size: 0.875rem;
-  font-weight: 500;
+  font-weight: 600;
   border: none;
   cursor: pointer;
   transition: all 0.2s;
+  text-decoration: none;
 }
 
 .btn-action.primary {
@@ -271,15 +273,15 @@ function handleNewAlert() {
 
 .summary-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 1rem;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.75rem;
 }
 
 .summary-card {
   background: white;
   border: 1px solid #e5e7eb;
-  border-radius: 0.75rem;
-  padding: 1.5rem;
+  border-radius: 1rem;
+  padding: 1rem 1.25rem;
   transition: all 0.2s;
 }
 
@@ -292,11 +294,11 @@ function handleNewAlert() {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 1rem;
+  margin-bottom: 0.6rem;
 }
 
 .card-title {
-  font-size: 0.875rem;
+  font-size: 0.78rem;
   font-weight: 600;
   color: #6b7280;
   text-transform: uppercase;
@@ -304,8 +306,8 @@ function handleNewAlert() {
 }
 
 .card-icon {
-  width: 1.5rem;
-  height: 1.5rem;
+  width: 1.25rem;
+  height: 1.25rem;
   color: #d1d5db;
 }
 
@@ -332,7 +334,7 @@ function handleNewAlert() {
 }
 
 .card-value {
-  font-size: 1.875rem;
+  font-size: 1.25rem;
   font-weight: 700;
   color: #1f2937;
 }
@@ -355,12 +357,39 @@ function handleNewAlert() {
   height: 0.875rem;
 }
 
-/* Info Section */
-.info-section {
-  padding: 1.5rem;
-  background: white;
+.dashboard-message {
   border: 1px solid #e5e7eb;
   border-radius: 0.75rem;
+  background: #fff;
+  padding: 1rem;
+  color: #6b7280;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.error-message {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #b91c1c;
+}
+
+.error-message button {
+  border: 0;
+  border-radius: 0.5rem;
+  background: #fee2e2;
+  padding: 0.45rem 0.8rem;
+  color: #b91c1c;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* Info Section */
+.info-section {
+  padding: 1.25rem;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 1rem;
 }
 
 .info-grid {
@@ -376,7 +405,7 @@ function handleNewAlert() {
 }
 
 .info-title {
-  font-size: 1rem;
+  font-size: 0.9rem;
   font-weight: 600;
   color: #1f2937;
 }
@@ -406,6 +435,53 @@ function handleNewAlert() {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
+}
+
+.activity-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border-radius: 0.65rem;
+  padding: 0.7rem 0.75rem;
+  color: #374151;
+  text-decoration: none;
+}
+
+.activity-item:hover {
+  background: #f3f4f6;
+}
+
+.activity-item > span {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.activity-item strong,
+.activity-item small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.activity-item strong {
+  font-size: 0.82rem;
+}
+
+.activity-item small,
+.empty-activity {
+  color: #6b7280;
+  font-size: 0.75rem;
+}
+
+.activity-meta {
+  flex: 0 0 auto;
+  align-items: flex-end;
+  color: #2563eb;
+  font-size: 0.7rem;
+  font-weight: 800;
 }
 
 .status-item {
@@ -469,9 +545,11 @@ function handleNewAlert() {
     grid-template-columns: 1fr;
     gap: 1rem;
   }
+}
 
-  .page-title {
-    font-size: 1.5rem;
+@media (min-width: 769px) and (max-width: 1200px) {
+  .summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 </style>
