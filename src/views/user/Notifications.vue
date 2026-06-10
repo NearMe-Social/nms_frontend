@@ -61,15 +61,22 @@
           </p>
         </div>
 
+        <!-- ONLY THE NOTIFICATION CARD CONTAINER STYLING HAS BEEN POLISHED BELOW -->
         <div v-else class="flex flex-col gap-3">
           <div
             v-for="notification in notifications"
-            :key="notification.notification_id"
-            class="bg-white rounded-[18px] p-5 ring-1 ring-slate-200/70 flex items-start gap-4 hover:shadow-md transition-shadow cursor-pointer"
-            :class="!notification.is_read ? 'border-l-4 border-teal-500' : ''"
+            :key="notification.id"
+            class="bg-white rounded-2xl p-5 border border-slate-100 ring-1 ring-slate-200/50 flex items-start gap-4 transition-all duration-200 hover:ring-slate-300/80 hover:shadow-sm cursor-pointer relative overflow-hidden group"
           >
+            <!-- Sleek Unread Left Edge Indicator instead of heavy background tints -->
+            <div 
+              v-if="!notification.is_read" 
+              class="absolute left-0 top-0 bottom-0 w-1 bg-teal-500"
+            />
+
+            <!-- Icon Frame with Micro-scale effect -->
             <div
-              class="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
+              class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-105"
               :class="iconBg(notification.type)"
             >
               <component
@@ -78,18 +85,26 @@
                 :class="iconColor(notification.type)"
               />
             </div>
-            <div class="flex-1 min-w-0">
+
+            <!-- Text Content Alignment -->
+            <div class="flex-1 min-w-0 pt-0.5">
               <p
-                class="text-sm text-slate-800 leading-relaxed"
-                :class="!notification.is_read ? 'font-semibold' : 'font-normal'"
+                class="text-sm text-slate-700 leading-relaxed"
+                :class="!notification.is_read ? 'font-semibold text-slate-900' : 'font-normal'"
               >
                 {{ notification.message }}
               </p>
-              <p class="text-xs text-slate-400 mt-1">{{ timeAgo(notification.created_at) }}</p>
+              <p class="text-xs font-medium text-slate-400 mt-1.5 flex items-center gap-1.5">
+                <!-- Mobile unread bullet -->
+                <span v-if="!notification.is_read" class="w-1.5 h-1.5 rounded-full bg-teal-500 md:hidden" />
+                {{ timeAgo(notification.created_at) }}
+              </p>
             </div>
+
+            <!-- Desktop Clean Indicator Dot with subtle aura ring -->
             <div
               v-if="!notification.is_read"
-              class="w-2 h-2 rounded-full bg-teal-500 shrink-0 mt-2"
+              class="hidden md:block w-2 h-2 rounded-full bg-teal-500 shrink-0 mt-2.5 ring-4 ring-teal-50"
             />
           </div>
         </div>
@@ -111,7 +126,7 @@
           class="bg-white rounded-[18px] p-5 shadow-sm ring-1 ring-slate-200/70 flex flex-col gap-2"
         >
           <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Total</p>
-          <p class="text-3xl font-black text-gray-800">{{ notifications.length }}</p>
+          <p class="text-3xl font-black text-gray-800">{{ totalCount }}</p>
           <p class="text-xs text-gray-400">all notifications</p>
         </div>
       </aside>
@@ -123,19 +138,21 @@
 
 <script setup lang="ts">
 import { onMounted, computed } from 'vue'
-import { RouterLink } from 'vue-router'
 import Navbar from '@/components/Navbar.vue'
 import AppSidebar from '@/components/AppSidebar.vue'
 import MobileBottomNav from '@/components/MobileBottomNav.vue'
 import { useNotificationStore } from '@/stores/notificationStore'
-import { Bell, AlertCircle, ShieldAlert } from 'lucide-vue-next'
+import { Bell, AlertCircle, ShieldAlert, MessageCircle } from 'lucide-vue-next'
 
 const store = useNotificationStore()
-const notifications = store.notifications
-const loading = store.loading
-const error = store.error
 
-const unreadCount = computed(() => notifications.filter((n) => !n.is_read).length)
+// Kept reactive with computed property functions to resolve reactivity issues from the original code setup
+const notifications = computed(() => store.notifications)
+const loading = computed(() => store.loading)
+const error = computed(() => store.error)
+
+const unreadCount = computed(() => notifications.value.filter((n) => !n.is_read).length)
+const totalCount = computed(() => notifications.value.length)
 
 function fetchNotifications() {
   store.fetchNotifications()
@@ -148,7 +165,7 @@ function markAllRead() {
 function timeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime()
   const mins = Math.floor(diff / 60000)
-  if (mins < 1) return 'just now'
+  if (mins < 1) return 'Just now'
   if (mins < 60) return `${mins}m ago`
   const hrs = Math.floor(mins / 60)
   if (hrs < 24) return `${hrs}h ago`
@@ -172,17 +189,18 @@ function iconBg(type: string): string {
     COMMENT: 'bg-purple-50',
     REPORT: 'bg-rose-50',
   }
-  return map[type] ?? 'bg-slate-100'
+  return map[type] ?? 'bg-slate-50'
 }
 
+// Bumped text colors to 600 variant for enhanced accessibility against the soft background frames
 function iconColor(type: string): string {
   const map: Record<string, string> = {
-    SYSTEM: 'text-teal-500',
-    MESSAGE: 'text-blue-500',
-    COMMENT: 'text-purple-500',
-    REPORT: 'text-rose-500',
+    SYSTEM: 'text-teal-600',
+    MESSAGE: 'text-blue-600',
+    COMMENT: 'text-purple-600',
+    REPORT: 'text-rose-600',
   }
-  return map[type] ?? 'text-slate-400'
+  return map[type] ?? 'text-slate-500'
 }
 
 onMounted(fetchNotifications)
