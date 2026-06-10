@@ -3,17 +3,14 @@
   <div class="flex min-w-0">
     <AppSidebar class="hidden md:flex" />
     <div class="edit-profile-page">
-      <!-- Header -->
       <div class="page-header">
         <h1 class="page-title">Edit Profile</h1>
         <p class="page-subtitle">Personalize your presence in the editorial community.</p>
       </div>
 
       <div class="edit-profile-container">
-        <!-- Main Form -->
         <form @submit.prevent="handleSaveChanges" class="profile-form">
           <div class="form-layout">
-            <!-- Left Sidebar - Profile Photo -->
             <aside class="form-sidebar">
               <div class="profile-photo-card">
                 <div class="photo-section">
@@ -39,9 +36,7 @@
               </div>
             </aside>
 
-            <!-- Right Content Area -->
             <div class="form-content">
-              <!-- Public Identity Section -->
               <div class="form-section">
                 <div class="section-header">
                   <UserIcon :size="18" />
@@ -50,42 +45,52 @@
 
                 <div class="form-row">
                   <div class="form-group">
-                    <label for="firstName" class="form-label">Full Name</label>
+                    <label for="firstName" class="form-label">First Name</label>
                     <input
                       id="firstName"
                       v-model="formData.first_name"
                       type="text"
                       class="form-input"
-                      placeholder="Julian Alexander"
+                      placeholder="First Name"
                     />
                   </div>
                   <div class="form-group">
-                    <label for="username" class="form-label">Username</label>
+                    <label for="lastName" class="form-label">Last Name</label>
                     <input
-                      id="username"
-                      v-model="formData.username"
+                      id="lastName"
+                      v-model="formData.last_name"
                       type="text"
                       class="form-input"
-                      placeholder="@juliant"
-                      disabled
+                      placeholder="Last Name"
                     />
                   </div>
                 </div>
 
-                <div class="form-group">
+                <div class="form-group" style="margin-top: 16px;">
+                  <label for="username" class="form-label">Username</label>
+                  <input
+                    id="username"
+                    v-model="formData.username"
+                    type="text"
+                    class="form-input"
+                    placeholder="@username"
+                    disabled
+                  />
+                </div>
+
+                <div class="form-group" style="margin-top: 16px;">
                   <label for="bio" class="form-label">Professional Bio</label>
                   <textarea
                     id="bio"
                     v-model="formData.bio"
                     class="form-textarea"
-                    placeholder="Independent design critic and urban theorist. Exploring the intersection of digital and physical spaces."
+                    placeholder="Tell people about yourself..."
                     rows="3"
                   ></textarea>
                   <div class="char-count">{{ formData.bio?.length || 0 }} / 500 characters</div>
                 </div>
               </div>
 
-              <!-- Presence Section -->
               <div class="form-section">
                 <div class="section-header">
                   <MapPinIcon :size="18" />
@@ -100,7 +105,7 @@
                       v-model="formData.location"
                       type="text"
                       class="form-input"
-                      placeholder="Portland, Oregon"
+                      placeholder="City, Country"
                     />
                   </div>
 
@@ -111,13 +116,12 @@
                       v-model="formData.website"
                       type="url"
                       class="form-input"
-                      placeholder="https://yourdesign.com"
+                      placeholder="https://yourwebsite.com"
                     />
                   </div>
                 </div>
               </div>
 
-              <!-- Social Ties Section -->
               <div class="form-section">
                 <div class="section-header">
                   <LinkIcon :size="18" />
@@ -127,16 +131,19 @@
                 <div class="social-grid">
                   <div class="social-item">
                     <div class="social-platform">
-                      <TwitterIcon :size="18" />
-                      <span>X (Twitter)</span>
+                      <div class="platform-name">
+                        <TelegramIcon :size="18" />
+                        <span>Telegram</span>
+                      </div>
+                      <span class="optional-tag">(optional)</span>
                     </div>
                     <input
-                      v-model="formData.twitter_handle"
+                      v-model="formData.telegram_handle"
                       type="text"
                       class="form-input form-input-sm"
-                      placeholder="@handle"
+                      placeholder="@username"
                     />
-                    <div v-if="formData.twitter_handle" class="social-status connected">
+                    <div v-if="formData.telegram_handle" class="social-status connected">
                       <CheckIcon :size="12" />
                       Connected
                     </div>
@@ -145,8 +152,11 @@
 
                   <div class="social-item">
                     <div class="social-platform">
-                      <InstagramIcon :size="18" />
-                      <span>Instagram</span>
+                      <div class="platform-name">
+                        <InstagramIcon :size="18" />
+                        <span>Instagram</span>
+                      </div>
+                      <span class="optional-tag">(optional)</span>
                     </div>
                     <input
                       v-model="formData.instagram_handle"
@@ -163,8 +173,11 @@
 
                   <div class="social-item">
                     <div class="social-platform">
-                      <LinkedinIcon :size="18" />
-                      <span>LinkedIn</span>
+                      <div class="platform-name">
+                        <LinkedinIcon :size="18" />
+                        <span>LinkedIn</span>
+                      </div>
+                      <span class="optional-tag">(optional)</span>
                     </div>
                     <input
                       v-model="formData.linkedin_url"
@@ -181,7 +194,6 @@
                 </div>
               </div>
 
-              <!-- Editorial Focus Section -->
               <div class="form-section">
                 <div class="section-header">
                   <TagIcon :size="18" />
@@ -204,7 +216,7 @@
                       type="text"
                       class="form-input tags-input"
                       placeholder="Add topic (press Enter)"
-                      @keydown.enter="addTag"
+                      @keydown.enter.prevent="addTag"
                     />
                   </div>
                   <div class="tags-hint">Press Enter to add tags. Max 8 topics.</div>
@@ -213,7 +225,6 @@
             </div>
           </div>
 
-          <!-- Action Buttons -->
           <div class="form-actions">
             <button type="button" class="btn-cancel" @click="handleCancel">Cancel</button>
             <button type="submit" class="btn-save" :disabled="isSaving">
@@ -228,7 +239,6 @@
             </button>
           </div>
 
-          <!-- Status Messages -->
           <div v-if="successMessage" class="alert alert-success">
             <CheckIcon :size="16" />
             {{ successMessage }}
@@ -239,7 +249,6 @@
           </div>
         </form>
 
-        <!-- Footer Note -->
         <div class="form-footer">
           <p class="footer-note">
             Your profile changes will be immediately visible across The Commons. Some data may be
@@ -269,7 +278,7 @@ import {
   Check as CheckIcon,
   AlertCircle as AlertCircleIcon,
   Loader2 as LoaderIcon,
-  Twitter as TwitterIcon,
+  Send as TelegramIcon,
   Instagram as InstagramIcon,
   Linkedin as LinkedinIcon,
 } from 'lucide-vue-next'
@@ -286,7 +295,7 @@ const formData = ref({
   bio: '',
   location: '',
   website: '',
-  twitter_handle: '',
+  telegram_handle: '',
   instagram_handle: '',
   linkedin_url: '',
   tags: [] as string[],
@@ -316,7 +325,7 @@ onMounted(async () => {
       bio: profile.bio || '',
       location: profile.location || '',
       website: profile.website || '',
-      twitter_handle: profile.twitter_handle || '',
+      telegram_handle: (profile as any).telegram_handle || profile.twitter_handle || '',
       instagram_handle: profile.instagram_handle || '',
       linkedin_url: profile.linkedin_url || '',
       tags: profile.tags || [],
@@ -327,23 +336,15 @@ onMounted(async () => {
     if (profile.profile_image) {
       photoPreview.value = profile.profile_image
     }
-  } catch (error) {
-    // Load with default data on error (backend not available yet)
-    const defaultProfile = {
-      first_name: 'Julian',
-      last_name: 'Alexander',
-      username: 'juliant',
-      email: 'julian@example.com',
-      bio: 'Independent design critic and urban theorist. Exploring the intersection of digital and physical spaces.',
-      location: 'Portland, Oregon',
-      website: 'https://yourdesign.com',
-      twitter_handle: 'juliandesign',
-      instagram_handle: 'julianvision',
-      linkedin_url: 'linkedin.com/in/julian',
-      tags: ['urban-design', 'architecture', 'digital-culture'],
-      profile_image: '',
+
+    // MOCK DATA: Load extra fields from local storage if they exist
+    const savedMockData = localStorage.getItem('temp_profile_mock')
+    if (savedMockData) {
+      const parsedMock = JSON.parse(savedMockData)
+      formData.value = { ...formData.value, ...parsedMock }
     }
-    formData.value = defaultProfile
+
+  } catch (error) {
     console.error('Error loading profile:', error)
   } finally {
     isLoading.value = false
@@ -408,7 +409,8 @@ const handleSaveChanges = async () => {
     errorMessage.value = ''
     successMessage.value = ''
 
-    const updatePayload: UpdateProfilePayload = {
+    // 1. Save the supported fields to the real backend
+    const updatePayload: any = {
       username: formData.value.username,
       bio: formData.value.bio,
     }
@@ -417,15 +419,24 @@ const handleSaveChanges = async () => {
       updatePayload.profile_image = formData.value.profile_image
     }
 
-    // Update profile via API
     const updatedProfile = await userApi.updateProfile(updatePayload)
-
-    // Sync with auth store
     authStore.updateProfile(updatedProfile)
+
+    // 2. MOCK DATA: Save the unsupported fields to LocalStorage for now
+    const mockExtraData = {
+      first_name: formData.value.first_name,
+      last_name: formData.value.last_name,
+      location: formData.value.location,
+      website: formData.value.website,
+      telegram_handle: formData.value.telegram_handle,
+      instagram_handle: formData.value.instagram_handle,
+      linkedin_url: formData.value.linkedin_url,
+      tags: formData.value.tags,
+    }
+    localStorage.setItem('temp_profile_mock', JSON.stringify(mockExtraData))
 
     successMessage.value = 'Profile updated successfully!'
 
-    // Redirect to profile page after 2 seconds
     setTimeout(() => {
       router.push('/profile')
     }, 2000)
@@ -720,12 +731,27 @@ const handleCancel = () => {
 .social-platform {
   display: flex;
   align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.platform-name {
+  display: flex;
+  align-items: center;
   gap: 6px;
   font-size: 12px;
   font-weight: 850;
   color: #4f687d;
   text-transform: uppercase;
   letter-spacing: 0.08em;
+}
+
+.optional-tag {
+  font-size: 10px;
+  font-weight: 600;
+  color: #94a3b8;
+  text-transform: lowercase;
+  letter-spacing: 0;
 }
 
 .form-input-sm {
