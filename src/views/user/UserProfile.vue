@@ -33,14 +33,32 @@
               <p class="bio">{{ bio }}</p>
 
               <div class="meta-row">
-                <span>
+                <span v-if="locationDisplay">
                   <MapPin class="icon" />
-                  Oak Ridge Commons
+                  {{ locationDisplay }}
+                </span>
+                <span v-if="websiteUrl">
+                  <Globe class="icon" />
+                  <a :href="websiteUrl" target="_blank" rel="noopener noreferrer" class="web-link">{{ websiteUrl }}</a>
                 </span>
                 <span>
                   <ShieldCheck class="icon" />
                   Approximate radius only
                 </span>
+              </div>
+
+              <div v-if="socialLinks.length > 0" class="social-links-row">
+                <a
+                  v-for="social in socialLinks"
+                  :key="social.url"
+                  :href="social.url"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="social-link"
+                >
+                  <component :is="social.icon" class="icon-sm" />
+                  {{ social.label }}
+                </a>
               </div>
             </div>
 
@@ -86,8 +104,8 @@
 
             <p class="panel-text">{{ bio }}</p>
 
-            <div class="tag-row">
-              <span v-for="tag in tags" :key="tag">{{ tag }}</span>
+            <div class="tag-row" v-if="customTags.length > 0">
+              <span v-for="tag in customTags" :key="tag">#{{ tag }}</span>
             </div>
           </section>
 
@@ -129,6 +147,10 @@ import {
   Plus,
   ShieldCheck,
   Users,
+  Globe,
+  Send,
+  Instagram,
+  Linkedin
 } from 'lucide-vue-next'
 import Navbar from '@/components/Navbar.vue'
 import AppSidebar from '@/components/AppSidebar.vue'
@@ -153,14 +175,20 @@ const profileUserId = computed(
   () => profile.value?.userId ?? profile.value?.user_id ?? routeUserId.value,
 )
 const username = computed(() => profile.value?.username ?? auth.user?.username ?? 'neighbor')
-const displayName = computed(
-  () =>
+
+const displayName = computed(() => {
+  if (profile.value?.first_name || profile.value?.last_name) {
+    return `${profile.value?.first_name || ''} ${profile.value?.last_name || ''}`.trim()
+  }
+  return (
     username.value
       .split(/[._-]/)
       .filter(Boolean)
       .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-      .join(' ') || 'Nearme Neighbor',
-)
+      .join(' ') || 'Nearme Neighbor'
+  )
+})
+
 const profileImage = computed(() => profile.value?.profile_image || null)
 
 const bio = computed(
@@ -169,7 +197,53 @@ const bio = computed(
     'Sharing useful local updates, nearby questions, and quick notices for neighbors in the commons.',
 )
 
-const tags = ['Local updates', 'Safety aware', 'Community helper']
+const customTags = computed(() => {
+  return profile.value?.tags && profile.value.tags.length > 0
+    ? profile.value.tags
+    : ['Local updates', 'Safety aware', 'Community helper']
+})
+
+const locationDisplay = computed(() => profile.value?.location || null)
+
+const websiteUrl = computed(() => profile.value?.website || null)
+
+const socialLinks = computed(() => {
+  const links = []
+
+  if ((profile.value as any)?.telegram_handle) {
+    links.push({
+      icon: Send,
+      url: `https://t.me/${(profile.value as any).telegram_handle.replace('@', '')}`,
+      label: (profile.value as any).telegram_handle
+    })
+  } else if (profile.value?.twitter_handle) {
+    links.push({
+      icon: Send,
+      url: `https://t.me/${profile.value.twitter_handle.replace('@', '')}`,
+      label: profile.value.twitter_handle
+    })
+  }
+
+  if (profile.value?.instagram_handle) {
+    links.push({
+      icon: Instagram,
+      url: `https://instagram.com/${profile.value.instagram_handle.replace('@', '')}`,
+      label: profile.value.instagram_handle
+    })
+  }
+  if (profile.value?.linkedin_url) {
+    let url = profile.value.linkedin_url
+    if (!url.startsWith('http')) {
+      url = `https://${url}`
+    }
+    links.push({
+      icon: Linkedin,
+      url: url,
+      label: 'LinkedIn'
+    })
+  }
+  return links
+})
 
 const stats = [
   { label: 'Posts', value: 'Live', icon: ClipboardList },
@@ -200,6 +274,16 @@ async function loadProfile() {
     profile.value = isPublicProfile.value
       ? await userApi.getById(routeUserId.value)
       : await userApi.getProfile()
+
+    // MOCK DATA: Apply our local storage fields if viewing our own profile
+    if (isOwnProfile.value) {
+      const savedMockData = localStorage.getItem('temp_profile_mock')
+      if (savedMockData) {
+        const parsedMock = JSON.parse(savedMockData)
+        profile.value = { ...profile.value, ...parsedMock }
+      }
+    }
+
   } catch (err: unknown) {
     error.value = err instanceof Error ? err.message : 'Failed to load profile.'
     profile.value = null
@@ -542,6 +626,38 @@ h2 {
   display: block;
   color: #263f52;
   font-size: 0.9rem;
+}
+
+.web-link {
+  color: #0f8a7c;
+  text-decoration: none;
+}
+.web-link:hover {
+  text-decoration: underline;
+}
+
+.social-links-row {
+  display: flex;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.social-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.8rem;
+  color: #4f687d;
+  text-decoration: none;
+  font-weight: 600;
+}
+.social-link:hover {
+  color: #0f8a7c;
+}
+
+.icon-sm {
+  width: 14px;
+  height: 14px;
 }
 
 @media (max-width: 900px) {
