@@ -65,8 +65,13 @@
         <div v-else class="flex flex-col gap-3">
           <div
             v-for="notification in notifications"
-            :key="notification.id"
+            :key="notification.notification_id"
             class="bg-white rounded-2xl p-5 border border-slate-100 ring-1 ring-slate-200/50 flex items-start gap-4 transition-all duration-200 hover:ring-slate-300/80 hover:shadow-sm cursor-pointer relative overflow-hidden group"
+            :class="{ 'cursor-default': !notification.target_path }"
+            :role="notification.target_path ? 'link' : undefined"
+            :tabindex="notification.target_path ? 0 : undefined"
+            @click="openNotification(notification)"
+            @keydown.enter="openNotification(notification)"
           >
             <!-- Sleek Unread Left Edge Indicator instead of heavy background tints -->
             <div 
@@ -138,13 +143,20 @@
 
 <script setup lang="ts">
 import { onMounted, computed } from 'vue'
+import { useRouter } from 'vue-router'
 import Navbar from '@/components/Navbar.vue'
 import AppSidebar from '@/components/AppSidebar.vue'
 import MobileBottomNav from '@/components/MobileBottomNav.vue'
-import { useNotificationStore } from '@/stores/notificationStore'
+import {
+  useNotificationStore,
+  type NotificationData,
+} from '@/stores/notificationStore'
 import { Bell, AlertCircle, ShieldAlert, MessageCircle } from 'lucide-vue-next'
 
+defineOptions({ name: 'UserNotificationsPage' })
+
 const store = useNotificationStore()
+const router = useRouter()
 
 // Kept reactive with computed property functions to resolve reactivity issues from the original code setup
 const notifications = computed(() => store.notifications)
@@ -160,6 +172,13 @@ function fetchNotifications() {
 
 function markAllRead() {
   store.markAllRead()
+}
+
+async function openNotification(notification: NotificationData) {
+  await store.markAsRead(notification.notification_id)
+  if (notification.target_path) {
+    await router.push(notification.target_path)
+  }
 }
 
 function timeAgo(dateStr: string): string {

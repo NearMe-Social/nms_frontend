@@ -115,19 +115,34 @@
                 <p class="eyebrow">Activity</p>
                 <h2>Recent posts</h2>
               </div>
-              <RouterLink to="/discussions">View all</RouterLink>
+              <RouterLink v-if="isOwnProfile" to="/discussions">View all</RouterLink>
             </div>
 
-            <div class="activity-list">
-              <article v-for="post in recentPosts" :key="post.title" class="activity-item">
+            <p v-if="activityLoading" class="activity-state">Loading recent posts...</p>
+            <p v-else-if="activityError" class="activity-state">{{ activityError }}</p>
+            <p v-else-if="recentPosts.length === 0" class="activity-state">
+              No visible posts yet.
+            </p>
+
+            <div v-else class="activity-list">
+              <RouterLink
+                v-for="post in recentPosts"
+                :key="post.post_id"
+                :to="`/posts/${post.post_id}`"
+                class="activity-item"
+              >
                 <div class="activity-icon">
                   <MessageSquare class="icon" />
                 </div>
-                <div>
+                <div class="activity-copy">
                   <strong>{{ post.title }}</strong>
-                  <span>{{ post.meta }}</span>
+                  <p>{{ brief(post.content) }}</p>
+                  <span>
+                    {{ timeAgo(post.created_at) }} ·
+                    {{ post.comments?.length ?? post.comments_count ?? 0 }} responses
+                  </span>
                 </div>
-              </article>
+              </RouterLink>
             </div>
           </section>
         </div>
@@ -156,14 +171,19 @@ import Navbar from '@/components/Navbar.vue'
 import AppSidebar from '@/components/AppSidebar.vue'
 import UserOptionsMenu from '@/components/UserOptionsMenu.vue'
 import UserAvatar from '@/components/UserAvatar.vue'
-import { userApi, type UserProfile } from '@/services/api'
+import { postApi, userApi, type ApiPost, type UserProfile } from '@/services/api'
 import { useAuthStore } from '@/stores/auth'
+import { useGeolocation } from '@/composables/useGeolocation'
 
 const auth = useAuthStore()
 const route = useRoute()
+const geo = useGeolocation()
 const profile = ref<UserProfile | null>(null)
+const profilePosts = ref<ApiPost[]>([])
 const loading = ref(false)
 const error = ref('')
+const activityLoading = ref(false)
+const activityError = ref('')
 
 const routeUserId = computed(() => Number(route.params.userId))
 const authUserId = computed(() => auth.user?.userId ?? auth.user?.user_id ?? null)
@@ -210,11 +230,11 @@ const websiteUrl = computed(() => profile.value?.website || null)
 const socialLinks = computed(() => {
   const links = []
 
-  if ((profile.value as any)?.telegram_handle) {
+  if (profile.value?.telegram_handle) {
     links.push({
       icon: Send,
-      url: `https://t.me/${(profile.value as any).telegram_handle.replace('@', '')}`,
-      label: (profile.value as any).telegram_handle
+      url: `https://t.me/${profile.value.telegram_handle.replace('@', '')}`,
+      label: profile.value.telegram_handle
     })
   } else if (profile.value?.twitter_handle) {
     links.push({
@@ -245,26 +265,71 @@ const socialLinks = computed(() => {
   return links
 })
 
-const stats = [
-  { label: 'Posts', value: 'Live', icon: ClipboardList },
-  { label: 'Neighbors', value: 'Nearby', icon: Users },
-  { label: 'Helpful actions', value: 'Active', icon: Heart },
-]
+const recentPosts = computed(() => profilePosts.value.slice(0, 3))
+const stats = computed(() => [
+  { label: 'Posts', value: profilePosts.value.length, icon: ClipboardList },
+  {
+    label: 'Responses',
+    value: profilePosts.value.reduce(
+      (sum, post) => sum + (post.comments?.length ?? post.comments_count ?? 0),
+      0,
+    ),
+    icon: Users,
+  },
+  {
+    label: 'Reactions',
+    value: profilePosts.value.reduce(
+      (sum, post) => sum + (post.reactions?.length ?? post.reactions_count ?? 0),
+      0,
+    ),
+    icon: Heart,
+  },
+])
 
-const recentPosts = [
-  {
-    title: 'Neighborhood updates',
-    meta: 'Your posts now load from the backend in My Posts.',
-  },
-  {
-    title: 'Nearby visibility',
-    meta: 'Location is protected with approximate distance only.',
-  },
-  {
-    title: 'Private chat ready',
-    meta: 'Message neighbors from the shared navigation.',
-  },
-]
+function brief(content: string) {
+  const normalized = content.replace(/\s+/g, ' ').trim()
+  return normalized.length > 130 ? `${normalized.slice(0, 127)}...` : normalized
+}
+
+function timeAgo(value: string) {
+  const minutes = Math.max(0, Math.floor((Date.now() - new Date(value).getTime()) / 60000))
+  if (minutes < 1) return 'Just now'
+  if (minutes < 60) return `${minutes}m ago`
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `${hours}h ago`
+  return `${Math.floor(hours / 24)}d ago`
+}
+
+async function loadProfilePosts() {
+  const userId = Number(profileUserId.value)
+  if (!Number.isInteger(userId) || userId <= 0) {
+    profilePosts.value = []
+    return
+  }
+
+  activityLoading.value = true
+  activityError.value = ''
+  try {
+    if (isOwnProfile.value) {
+      profilePosts.value = await postApi.mine()
+      return
+    }
+
+    const position = await geo.request()
+    if (!position) {
+      profilePosts.value = []
+      activityError.value = 'Location is needed to show posts visible near you.'
+      return
+    }
+    profilePosts.value = await postApi.byUser(userId, position)
+  } catch (err: unknown) {
+    profilePosts.value = []
+    activityError.value =
+      err instanceof Error ? err.message : 'Failed to load recent posts.'
+  } finally {
+    activityLoading.value = false
+  }
+}
 
 async function loadProfile() {
   loading.value = true
@@ -290,6 +355,8 @@ async function loadProfile() {
   } finally {
     loading.value = false
   }
+
+  await loadProfilePosts()
 }
 
 onMounted(loadProfile)
@@ -609,6 +676,14 @@ h2 {
   border-radius: 14px;
   background: #f8fbff;
   padding: 12px;
+  color: inherit;
+  text-decoration: none;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.activity-item:hover {
+  background: #eff8f8;
+  transform: translateY(-1px);
 }
 
 .activity-icon {
@@ -626,6 +701,31 @@ h2 {
   display: block;
   color: #263f52;
   font-size: 0.9rem;
+}
+
+.activity-copy {
+  min-width: 0;
+}
+
+.activity-copy p {
+  display: -webkit-box;
+  overflow: hidden;
+  margin: 4px 0 5px;
+  color: #5d7285;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.activity-state {
+  margin: 16px 0 0;
+  border-radius: 13px;
+  background: #f8fbff;
+  padding: 16px;
+  color: #7890a2;
+  font-size: 0.8rem;
+  font-weight: 700;
 }
 
 .web-link {

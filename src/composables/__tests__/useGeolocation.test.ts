@@ -76,7 +76,7 @@ describe('useGeolocation', () => {
       JSON.stringify({
         lat: position.coords.latitude,
         lng: position.coords.longitude,
-        capturedAt: Date.now() - 61_000,
+        capturedAt: Date.now() - 121_000,
       }),
     )
     vi.stubGlobal('navigator', {
@@ -91,5 +91,56 @@ describe('useGeolocation', () => {
 
     await expect(geo.request()).resolves.toBeNull()
     expect(geo.status.value).toBe('denied')
+  })
+
+  it('starts one shared passive watcher after the first successful reading', async () => {
+    const getCurrentPosition = vi.fn((success: PositionCallback) => success(position))
+    const watchPosition = vi.fn(() => {
+      return 42
+    })
+    vi.stubGlobal('navigator', {
+      geolocation: { getCurrentPosition, watchPosition },
+    })
+
+    const { useGeolocation } = await import('../useGeolocation')
+    const nearbyGeo = useGeolocation()
+    const homeGeo = useGeolocation()
+
+    await expect(nearbyGeo.request()).resolves.toEqual({
+      lat: position.coords.latitude,
+      lng: position.coords.longitude,
+    })
+    await homeGeo.request()
+    expect(getCurrentPosition).toHaveBeenCalledTimes(1)
+    expect(watchPosition).toHaveBeenCalledTimes(1)
+  })
+
+  it('updates shared coordinates when the passive watcher receives a new position', async () => {
+    const secondPosition = {
+      coords: {
+        latitude: 11.56,
+        longitude: 104.93,
+      },
+    } as GeolocationPosition
+    let watchSuccess: PositionCallback | null = null
+    const getCurrentPosition = vi.fn((success: PositionCallback) => success(position))
+    const watchPosition = vi.fn((success: PositionCallback) => {
+      watchSuccess = success
+      return 42
+    })
+    vi.stubGlobal('navigator', {
+      geolocation: { getCurrentPosition, watchPosition },
+    })
+
+    const { useGeolocation } = await import('../useGeolocation')
+    const geo = useGeolocation()
+
+    await geo.request()
+    watchSuccess?.(secondPosition)
+
+    expect(geo.coords.value).toEqual({
+      lat: secondPosition.coords.latitude,
+      lng: secondPosition.coords.longitude,
+    })
   })
 })

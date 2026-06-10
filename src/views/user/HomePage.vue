@@ -249,14 +249,6 @@
                 {{ post.title }}
               </h2>
 
-              <div v-if="post.image_url" class="mt-3 overflow-hidden rounded-xl bg-gray-100">
-                <img
-                  :src="post.image_url"
-                  alt="Post image"
-                  class="post-display-image"
-                />
-              </div>
-
               <p
                 class="mt-1.5 text-sm text-gray-600 leading-relaxed line-clamp-3 font-medium"
               >
@@ -264,11 +256,11 @@
               </p>
             </div>
 
-            <img
+            <PostImageViewer
               v-if="post.image_url"
               :src="post.image_url"
               :alt="post.title"
-              class="max-h-[480px] w-full rounded-2xl object-cover ring-1 ring-slate-200/70"
+              variant="feed"
             />
 
             <div class="flex items-center justify-between pt-3 border-t border-gray-100">
@@ -368,6 +360,7 @@ import AppSidebar from '@/components/AppSidebar.vue'
 import MobileBottomNav from '@/components/MobileBottomNav.vue'
 import PostOptionsMenu from '@/components/PostOptionsMenu.vue'
 import UserAvatar from '@/components/UserAvatar.vue'
+import PostImageViewer from '@/components/PostImageViewer.vue'
 import { postApi, userApi, type ApiPost } from '@/services/api'
 import { useGeolocation } from '@/composables/useGeolocation'
 import {
@@ -534,15 +527,5 @@ onBeforeUnmount(() => {
   color: #0f766e;
   font-size: 0.68rem;
   font-weight: 900;
-}
-.post-display-image {
-  width: 100%;
-  max-height: 400px; 
-  object-fit: cover; 
-  display: block;
-  transition: transform 0.3s ease;
-}
-.post-display-image:hover {
-  transform: scale(1.02);
 }
 </style>

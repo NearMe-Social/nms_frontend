@@ -180,8 +180,12 @@
                 <article
                   v-for="message in group.messages"
                   :key="message.id"
+                  :id="`message-${message.id}`"
                   class="message-row"
-                  :class="message.sender === 'me' ? 'mine' : 'theirs'"
+                  :class="[
+                    message.sender === 'me' ? 'mine' : 'theirs',
+                    { highlighted: message.id === targetMessageId },
+                  ]"
                 >
                   <UserAvatar
                     v-if="message.sender === 'them'"
@@ -376,6 +380,10 @@ const showConversationPanel = computed(
 const showActiveChat = computed(
   () => !isMobileOrTablet.value || !showConversationList.value,
 )
+const targetMessageId = computed(() => {
+  const messageId = Number(route.query.messageId)
+  return Number.isInteger(messageId) && messageId > 0 ? messageId : null
+})
 
 const filteredConversations = computed(() => {
   const needle = searchTerm.value.trim().toLowerCase()
@@ -424,9 +432,19 @@ async function selectConversation(id: number) {
   await loadMessages(id)
   joinConversation(id)
   void nextTick(() => {
-    scrollToBottom()
+    if (!scrollToTargetMessage()) {
+      scrollToBottom()
+    }
     autoResizeTextarea()
   })
+}
+
+function scrollToTargetMessage() {
+  if (!targetMessageId.value) return false
+  const target = document.getElementById(`message-${targetMessageId.value}`)
+  if (!target) return false
+  target.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  return true
 }
 
 function formatTime(date: Date) {
@@ -559,9 +577,16 @@ async function loadConversations() {
     const data = await conversationApi.list()
     conversations.value = data.map(toConversation)
 
+    const targetConversationId = Number(route.query.conversationId)
     const targetUserId = Number(route.query.userId)
 
-    if (Number.isInteger(targetUserId) && targetUserId > 0) {
+    if (
+      Number.isInteger(targetConversationId) &&
+      targetConversationId > 0 &&
+      conversations.value.some((conversation) => conversation.id === targetConversationId)
+    ) {
+      await selectConversation(targetConversationId)
+    } else if (Number.isInteger(targetUserId) && targetUserId > 0) {
       await openConversationWith(targetUserId)
     } else if (
       conversations.value.length > 0 &&
@@ -1263,6 +1288,10 @@ h2 {
   gap: 12px;
   margin-bottom: 20px;
   animation: messageAppear 0.2s ease-out;
+}
+
+.message-row.highlighted .bubble {
+  box-shadow: 0 0 0 3px rgba(15, 138, 124, 0.2);
 }
 
 .typing-row {
