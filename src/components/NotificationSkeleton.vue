@@ -13,10 +13,10 @@
   display: flex;
   align-items: flex-start;
   gap: 12px;
-  background: #ffffff;
-  border: 1px solid #e8e8e8;
-  border-radius: 12px;
-  padding: 14px 16px;
+  background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+  box-shadow: 0 6px 18px rgba(16,24,40,0.04);
+  border-radius: 14px;
+  padding: 16px 18px;
 }
 
 @keyframes shimmer {
@@ -36,9 +36,9 @@
 }
 
 .skel-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
   flex-shrink: 0;
 }
 

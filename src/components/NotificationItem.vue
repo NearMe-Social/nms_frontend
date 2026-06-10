@@ -48,32 +48,30 @@ const icons: Record<string, string> = {
   display: flex;
   align-items: flex-start;
   gap: 12px;
-  background: #ffffff;
-  border: 1px solid #e8e8e8;
-  border-radius: 12px;
-  padding: 14px 16px;
-  transition:
-    background 0.2s,
-    box-shadow 0.2s;
+  background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+  border: 1px solid rgba(16,24,40,0.06);
+  border-radius: 14px;
+  padding: 16px 18px;
+  transition: transform 180ms ease, box-shadow 180ms ease, background 180ms ease;
   position: relative;
   cursor: pointer;
 }
 .notification-item:hover {
-  background: #fafafa;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(16,24,40,0.08);
 }
 .notification-item.unread {
-  background: #fffdf5;
-  border-left: 3px solid #8b6914;
+  background: linear-gradient(90deg, #fffef9 0%, #ffffff 100%);
+  border-left: 4px solid #14b8a6;
 }
 
 .notif-icon {
   font-size: 22px;
   flex-shrink: 0;
-  width: 40px;
-  height: 40px;
-  background: #f5f0e8;
-  border-radius: 50%;
+  width: 48px;
+  height: 48px;
+  background: linear-gradient(135deg, rgba(20,184,166,0.12), rgba(96,165,250,0.06));
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -91,7 +89,7 @@ const icons: Record<string, string> = {
 }
 .notif-time {
   font-size: 12px;
-  color: #999;
+  color: #6b7280;
 }
 
 .unread-dot {
@@ -101,5 +99,24 @@ const icons: Record<string, string> = {
   background: #8b6914;
   flex-shrink: 0;
   margin-top: 4px;
+}
+
+/* subtle pulsing for unread indicator */
+.notification-item.unread .unread-dot {
+  background: #14b8a6;
+  box-shadow: 0 0 0 0 rgba(20,184,166,0.2);
+  animation: pulse 1800ms infinite;
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(20,184,166,0.18);
+  }
+  70% {
+    box-shadow: 0 0 0 8px rgba(20,184,166,0.02);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(20,184,166,0);
+  }
 }
 </style>
