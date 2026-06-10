@@ -254,8 +254,32 @@ export const postApi = {
     return request<ApiPost[]>(`/posts?sort=${sort}`)
   },
 
-  get(postId: number): Promise<ApiPost> {
-    return request<ApiPost>(`/posts/${postId}`)
+  mine(): Promise<ApiPost[]> {
+    return request<ApiPost[]>('/posts/mine')
+  },
+
+  nearby(
+    lat: number,
+    lng: number,
+    sort: 'latest' | 'active' = 'latest',
+  ): Promise<ApiPost[]> {
+    const params = new URLSearchParams({
+      lat: String(lat),
+      lng: String(lng),
+      radius: '50000',
+      sort,
+    })
+    return request<ApiPost[]>(`/posts/nearby?${params.toString()}`)
+  },
+
+  get(postId: number, coords?: { lat: number; lng: number } | null): Promise<ApiPost> {
+    const params = coords
+      ? `?${new URLSearchParams({
+          lat: String(coords.lat),
+          lng: String(coords.lng),
+        }).toString()}`
+      : ''
+    return request<ApiPost>(`/posts/${postId}${params}`)
   },
 
   async create(payload: CreatePostPayload, image?: File | null): Promise<ApiPost> {
@@ -286,12 +310,18 @@ export const postApi = {
 }
 
 export const searchApi = {
-  async search(query: string): Promise<{ users: ApiSearchUser[]; posts: ApiPost[] }> {
+  async search(
+    query: string,
+    coords?: { lat: number; lng: number } | null,
+  ): Promise<{ users: ApiSearchUser[]; posts: ApiPost[] }> {
     const encodedQuery = encodeURIComponent(query.trim())
-    const [users, posts] = await Promise.all([
-      request<ApiSearchUser[]>(`/users/search?q=${encodedQuery}`),
-      request<ApiPost[]>(`/posts/search?q=${encodedQuery}`),
-    ])
+    const usersPromise = request<ApiSearchUser[]>(`/users/search?q=${encodedQuery}`)
+    const postsPromise = coords
+      ? request<ApiPost[]>(
+          `/posts/search?q=${encodedQuery}&lat=${encodeURIComponent(coords.lat)}&lng=${encodeURIComponent(coords.lng)}`,
+        )
+      : Promise.resolve([])
+    const [users, posts] = await Promise.all([usersPromise, postsPromise])
 
     return { users, posts }
   },

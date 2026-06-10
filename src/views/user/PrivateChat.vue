@@ -5,16 +5,16 @@
     <div class="chat-shell">
       <AppSidebar class="hidden md:flex" />
 
-      <main class="workspace" :class="{ 'list-collapsed': isListCollapsed }">
+      <main class="workspace" :class="{ 'list-collapsed': isListCollapsed && !isMobileOrTablet }">
         <Transition name="slide">
           <section
-            v-if="!isMobileOrTablet || !activeConversationId || showConversationList"
+            v-if="showConversationPanel"
             class="conversation-list"
-            :class="{ 'mobile-list': isMobileOrTablet }"
+            :class="{ collapsed: isListCollapsed && !isMobileOrTablet }"
             :aria-expanded="!isListCollapsed"
           >
-            <div class="list-header">
-              <div>
+            <div class="list-header" :class="{ collapsed: isListCollapsed && !isMobileOrTablet }">
+              <div v-if="!isListCollapsed || isMobileOrTablet">
                 <p class="eyebrow">Private Chat</p>
                 <h1>Messages</h1>
               </div>
@@ -105,7 +105,7 @@
         </Transition>
 
         <Transition name="fade-slide">
-          <section v-if="activeConversation" class="active-chat">
+          <section v-if="showActiveChat && activeConversation" class="active-chat">
             <header class="chat-header">
               <button
                 v-if="isMobileOrTablet && activeConversationId && !showConversationList"
@@ -243,7 +243,7 @@
             </footer>
           </section>
 
-          <section v-else class="active-chat empty-chat">
+          <section v-else-if="!isMobileOrTablet" class="active-chat empty-chat">
             <div class="empty-state">
               <MessagesSquare class="empty-icon" />
               <h2>No conversation selected</h2>
@@ -253,6 +253,8 @@
         </Transition>
       </main>
     </div>
+
+    <MobileBottomNav />
   </div>
 </template>
 
@@ -260,6 +262,7 @@
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import AppSidebar from '@/components/AppSidebar.vue'
+import MobileBottomNav from '@/components/MobileBottomNav.vue'
 import Navbar from '@/components/Navbar.vue'
 import UserAvatar from '@/components/UserAvatar.vue'
 import { conversationApi, messageApi, type ApiConversation, type ApiMessage } from '@/services/api'
@@ -324,6 +327,7 @@ const isMobileOrTablet = ref(false)
 
 let typingTimeout: ReturnType<typeof setTimeout> | null = null
 let socketListenerStops: Array<() => void> = []
+let messageRequestId = 0
 
 // Group messages by date
 const groupedMessages = computed(() => {
@@ -363,6 +367,15 @@ const activeConversation = computed(
     conversations.value.find((conversation) => conversation.id === activeConversationId.value) ??
     null,
 )
+const showConversationPanel = computed(
+  () =>
+    !isMobileOrTablet.value ||
+    showConversationList.value ||
+    activeConversationId.value === null,
+)
+const showActiveChat = computed(
+  () => !isMobileOrTablet.value || !showConversationList.value,
+)
 
 const filteredConversations = computed(() => {
   const needle = searchTerm.value.trim().toLowerCase()
@@ -378,8 +391,15 @@ const messageCount = computed(() => messages.value.length)
 const canSend = computed(() => !!activeConversation.value && draft.value.trim().length > 0)
 
 function checkScreenSize() {
-  isMobileOrTablet.value = window.innerWidth <= 900
-  if (!isMobileOrTablet.value) {
+  const mobile = window.innerWidth <= 900
+  isMobileOrTablet.value = mobile
+
+  if (mobile) {
+    isListCollapsed.value = false
+    if (!activeConversationId.value) {
+      showConversationList.value = true
+    }
+  } else {
     showConversationList.value = true
   }
 }
@@ -393,6 +413,8 @@ async function selectConversation(id: number) {
 
   activeConversationId.value = id
   showConversationList.value = !isMobileOrTablet.value
+  messages.value = []
+  typingConversationId.value = null
 
   const conversation = conversations.value.find(c => c.id === id)
   if (conversation?.unread) {
@@ -541,7 +563,11 @@ async function loadConversations() {
 
     if (Number.isInteger(targetUserId) && targetUserId > 0) {
       await openConversationWith(targetUserId)
-    } else if (conversations.value.length > 0 && !activeConversationId.value) {
+    } else if (
+      conversations.value.length > 0 &&
+      !activeConversationId.value &&
+      !isMobileOrTablet.value
+    ) {
       await selectConversation(conversations.value[0]!.id)
     }
   } catch (err: unknown) {
@@ -566,18 +592,43 @@ async function openConversationWith(userId: number) {
 }
 
 async function loadMessages(conversationId: number) {
+  const requestId = ++messageRequestId
   loadingMessages.value = true
+
   try {
     const page = await messageApi.list(conversationId, 0, 50)
+    if (
+      requestId !== messageRequestId ||
+      conversationId !== activeConversationId.value
+    ) {
+      return
+    }
+
     messages.value = page.data.map(toChatMessage)
     await messageApi.markSeen(conversationId)
+    if (
+      requestId !== messageRequestId ||
+      conversationId !== activeConversationId.value
+    ) {
+      return
+    }
+
     chatSocket.markConversationRead(conversationId)
     emitSeen(conversationId)
   } catch (err: unknown) {
+    if (
+      requestId !== messageRequestId ||
+      conversationId !== activeConversationId.value
+    ) {
+      return
+    }
+
     error.value = err instanceof Error ? err.message : 'Failed to load messages.'
     messages.value = []
   } finally {
-    loadingMessages.value = false
+    if (requestId === messageRequestId) {
+      loadingMessages.value = false
+    }
   }
 }
 
@@ -738,7 +789,7 @@ watch(
 
 .chat-page {
   min-height: 100vh;
-  background: linear-gradient(135deg, #f5f9ff 0%, #eef3fc 100%);
+  background: #f4f7fb;
   color: #1a3a4f;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
@@ -746,38 +797,42 @@ watch(
 .chat-shell {
   display: flex;
   min-width: 0;
-  height: 100%;
+  min-height: calc(100vh - 64px);
 }
 
 .workspace {
+  position: relative;
   display: grid;
-  grid-template-columns: minmax(320px, 400px) minmax(0, 1fr);
-  gap: 20px;
+  grid-template-columns: minmax(300px, 360px) minmax(0, 1fr);
+  gap: 16px;
   width: 100%;
-  height: calc(100vh - 70px);
-  padding: 20px clamp(16px, 3vw, 32px);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  min-width: 0;
+  height: calc(100dvh - 64px);
+  padding: 18px clamp(14px, 2vw, 24px);
+  transition: grid-template-columns 0.25s ease;
 }
 
 .workspace.list-collapsed {
-  grid-template-columns: 80px minmax(0, 1fr);
+  grid-template-columns: 64px minmax(0, 1fr);
 }
 
 .conversation-list,
 .active-chat {
   min-height: 0;
   overflow: hidden;
-  border-radius: 28px;
-  background: rgba(255, 255, 255, 0.98);
-  backdrop-filter: blur(0px);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.02);
-  transition: all 0.2s ease;
+  border: 1px solid #e1eaf0;
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(20, 45, 70, 0.045);
 }
 
 .conversation-list {
   display: flex;
   flex-direction: column;
-  border: 1px solid rgba(180, 210, 230, 0.4);
+}
+
+.conversation-list.collapsed {
+  overflow: visible;
 }
 
 .list-header,
@@ -792,6 +847,13 @@ watch(
   justify-content: space-between;
   padding: 20px 20px 16px;
   border-bottom: 1px solid #eef3f8;
+}
+
+.list-header.collapsed {
+  height: 100%;
+  justify-content: center;
+  padding: 14px 0;
+  border-bottom: 0;
 }
 
 .eyebrow {
@@ -822,7 +884,6 @@ h2 {
 
 .collapse-btn,
 .icon-btn,
-.composer-tool,
 .send-btn {
   display: inline-flex;
   align-items: center;
@@ -834,8 +895,7 @@ h2 {
 }
 
 .collapse-btn,
-.icon-btn,
-.composer-tool {
+.icon-btn {
   width: 40px;
   height: 40px;
   background: #f0f6fa;
@@ -843,8 +903,7 @@ h2 {
 }
 
 .collapse-btn:hover,
-.icon-btn:hover,
-.composer-tool:hover {
+.icon-btn:hover {
   background: #e4f5f4;
   color: #0f766e;
   transform: scale(1.02);
@@ -1450,34 +1509,31 @@ h2 {
   transform: translateX(10px);
 }
 
-.hidden {
-  display: none;
-}
-
 @media (max-width: 900px) {
   .workspace,
   .workspace.list-collapsed {
-    grid-template-columns: 1fr;
-    gap: 0;
+    display: block;
+    height: calc(100dvh - 64px);
+    overflow: hidden;
     padding: 12px;
   }
 
-  .conversation-list {
-    max-height: calc(100vh - 70px);
+  .conversation-list,
+  .active-chat {
+    position: absolute;
+    inset: 12px;
+    width: auto;
+    height: auto;
+    min-height: 0;
+    border-radius: 18px;
   }
 
-  .conversation-list.mobile-list {
-    position: fixed;
-    top: 70px;
-    left: 12px;
-    right: 12px;
-    bottom: 12px;
-    z-index: 100;
-    max-height: calc(100vh - 82px);
+  .collapse-btn {
+    display: none;
   }
 
   .active-chat {
-    min-height: calc(100vh - 70px);
+    min-height: 0;
   }
 
   .back-btn {
@@ -1500,9 +1556,22 @@ h2 {
   }
 }
 
+@media (max-width: 767px) {
+  .workspace,
+  .workspace.list-collapsed {
+    height: calc(100dvh - 64px - 68px);
+    padding-bottom: 8px;
+  }
+}
+
 @media (max-width: 640px) {
   .workspace {
     padding: 8px;
+  }
+
+  .conversation-list,
+  .active-chat {
+    inset: 8px;
   }
 
   .chat-actions {
@@ -1530,6 +1599,20 @@ h2 {
   .empty-icon {
     width: 60px;
     height: 60px;
+  }
+
+  .privacy-strip > span:last-child {
+    display: none;
+  }
+
+  .chat-header {
+    gap: 10px;
+  }
+
+  .contact-copy h2 {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 }
 
