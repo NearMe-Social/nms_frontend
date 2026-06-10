@@ -1,13 +1,23 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 
-interface AuthUser {
+export interface AuthUser {
   userId?: number
   user_id?: number
   username: string
   email: string
   role: string
+  profile_completed?: boolean
+  onboarding_completed?: boolean
+  profile_image?: string | null
   profile?: unknown
+}
+
+export function getPostAuthPath(user: AuthUser | null): string {
+  if (user?.role === 'ADMIN') return '/admin/reports'
+  if (user?.profile_completed !== true) return '/select-profile'
+  if (user?.onboarding_completed !== true) return '/permission-request'
+  return '/'
 }
 
 export const useAuthStore = defineStore('auth', () => {
