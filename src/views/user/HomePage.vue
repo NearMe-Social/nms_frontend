@@ -168,10 +168,23 @@
 
             <!-- Post content -->
             <div>
-              <h2 class="text-base font-black text-gray-900 group-hover:text-teal-700 transition-colors duration-200 leading-snug">
+              <h2
+                class="text-base font-black text-gray-900 group-hover:text-teal-700 transition-colors duration-200 leading-snug"
+              >
                 {{ post.title }}
               </h2>
-              <p class="mt-1.5 text-sm text-gray-600 leading-relaxed line-clamp-3 font-medium">
+
+              <div v-if="post.image_url" class="mt-3 overflow-hidden rounded-xl bg-gray-100">
+                <img
+                  :src="post.image_url"
+                  alt="Post image"
+                  class="post-display-image"
+                />
+              </div>
+
+              <p
+                class="mt-1.5 text-sm text-gray-600 leading-relaxed line-clamp-3 font-medium"
+              >
                 {{ post.content }}
               </p>
             </div>
@@ -329,16 +342,20 @@ function timeAgo(value: string) {
 }
 
 function timeLeft(value: string) {
-  const diffMs = new Date(value).getTime() - Date.now()
-  if (diffMs <= 0) return 'Expired'
   
-  const days = Math.floor(diffMs / (1000 * 60 * 60 * 24))
-  const hours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
+  const targetDate = new Date(value).getTime();
+  if (isNaN(targetDate)) return 'Expired';
   
- 
-  if (days > 30) return '30d+ left' 
-  if (days > 0) return `${days}d left`
-  return `${hours}h left`
+  const diffMs = targetDate - Date.now();
+  if (diffMs <= 0) return 'Expired';
+  
+  const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  const hours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+  
+  
+  if (days > 30) return '30d+ left'; 
+  if (days > 0) return `${days}d left`;
+  return `${hours}h left`;
 }
 
 onMounted(loadPosts)
@@ -385,5 +402,15 @@ onMounted(loadPosts)
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+.post-display-image {
+  width: 100%;
+  max-height: 400px; 
+  object-fit: cover; 
+  display: block;
+  transition: transform 0.3s ease;
+}
+.post-display-image:hover {
+  transform: scale(1.02);
 }
 </style>
