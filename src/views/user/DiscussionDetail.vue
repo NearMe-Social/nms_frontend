@@ -95,11 +95,12 @@
                 </p>
               </div>
 
-              <img
+              <PostImageViewer
                 v-if="post.image_url"
                 :src="post.image_url"
                 :alt="post.title"
                 class="post-image"
+                variant="detail"
               />
 
               <footer class="post-actions">
@@ -127,6 +128,7 @@
               :sort-by="sortBy"
               :submitting="commentSubmitting"
               :error-message="commentError"
+              :highlight-comment-id="highlightCommentId"
               @update:sort-by="sortBy = $event"
               @add-comment="addComment"
               @submit-reply="submitReply"
@@ -201,6 +203,7 @@ import AppSidebar from '@/components/AppSidebar.vue'
 import UserAvatar from '@/components/UserAvatar.vue'
 import UserOptionsMenu from '@/components/UserOptionsMenu.vue'
 import MobileBottomNav from '@/components/MobileBottomNav.vue'
+import PostImageViewer from '@/components/PostImageViewer.vue'
 import { commentApi, postApi, type ApiComment, type ApiPost } from '@/services/api'
 import { useAuthStore } from '@/stores/auth'
 import { useGeolocation } from '@/composables/useGeolocation'
@@ -245,6 +248,10 @@ const error = ref('')
 const commentSubmitting = ref(false)
 const commentError = ref('')
 const commentSectionRef = ref<InstanceType<typeof CommentSection> | null>(null)
+const highlightCommentId = computed(() => {
+  const commentId = Number(route.query.commentId)
+  return Number.isInteger(commentId) && commentId > 0 ? commentId : null
+})
 
 const hasPostId = computed(() => {
   const postId = Number(route.params.postId)
@@ -658,13 +665,7 @@ watch(() => route.params.postId, loadPostDetail)
 }
 
 .post-image {
-  width: 100%;
-  max-height: 560px;
-  display: block;
   margin-top: 20px;
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  object-fit: cover;
 }
 
 .post-actions {

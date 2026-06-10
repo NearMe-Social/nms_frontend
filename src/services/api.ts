@@ -258,6 +258,19 @@ export const postApi = {
     return request<ApiPost[]>('/posts/mine')
   },
 
+  byUser(
+    userId: number,
+    coords?: { lat: number; lng: number } | null,
+    limit = 20,
+  ): Promise<ApiPost[]> {
+    const params = new URLSearchParams({ limit: String(limit) })
+    if (coords) {
+      params.set('lat', String(coords.lat))
+      params.set('lng', String(coords.lng))
+    }
+    return request<ApiPost[]>(`/posts/user/${userId}?${params.toString()}`)
+  },
+
   nearby(
     lat: number,
     lng: number,
@@ -462,6 +475,7 @@ export interface UserProfile {
   location?: string
   website?: string
   twitter_handle?: string
+  telegram_handle?: string
   instagram_handle?: string
   linkedin_url?: string
   tags?: string[]

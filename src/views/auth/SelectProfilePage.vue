@@ -2,7 +2,9 @@
   <div class="select-profile-page">
     <header class="profile-header">
       <h1>Nearme</h1>
-      <button class="skip-btn" @click="handleSkip">Skip</button>
+      <button type="button" class="skip-btn" :disabled="isLoading" @click="handleSkip">
+        {{ isLoading ? 'Please wait...' : 'Skip' }}
+      </button>
     </header>
 
     <main class="profile-main">
@@ -12,12 +14,35 @@
           <p class="profile-subtitle">Set up your identity to connect with the local community.</p>
 
           <div class="avatar-section">
-            <UserAvatar
-              :src="auth.user?.profile_image"
-              :username="auth.user?.username"
-              alt="Profile picture"
-              class="avatar-placeholder avatar-image"
+            <button
+              type="button"
+              class="avatar-picker"
+              :disabled="isLoading"
+              aria-label="Choose a profile picture"
+              @click="openImagePicker"
+            >
+              <UserAvatar
+                :src="avatarPreview"
+                :username="username || auth.user?.username"
+                alt="Profile picture preview"
+                class="avatar-image"
+              />
+              <span class="avatar-overlay" aria-hidden="true">
+                <span class="upload-icon"><Camera :size="20" /></span>
+                <span>Choose photo</span>
+              </span>
+            </button>
+            <input
+              ref="imageInput"
+              class="visually-hidden"
+              type="file"
+              accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+              @change="handleImageSelected"
             />
+            <p class="avatar-help">
+              {{ selectedImage ? selectedImage.name : 'Optional · JPG, PNG, or WebP · Max 5 MB' }}
+            </p>
+            <p v-if="imageError" class="error-text avatar-error">{{ imageError }}</p>
           </div>
 
           <form @submit.prevent="handleSubmit">
@@ -30,6 +55,9 @@
                   placeholder="Select a unique username"
                   v-model="username"
                   required
+                  minlength="3"
+                  maxlength="20"
+                  autocomplete="username"
                   @input="validateUsername"
                 />
                 <span class="input-suffix">@</span>
@@ -55,12 +83,18 @@
                 <span>PRO TIP</span>
               </div>
               <p class="pro-tip-text">
-                Choose a unique handle so neighbors can recognize you easily.
+                Choose a unique handle. You can use letters, numbers, underscores, and dots.
               </p>
             </div>
 
-            <button type="submit" class="start-btn" :disabled="isLoading || !username.trim()">
-              {{ isLoading ? 'Connecting...' : 'Start Connecting' }}
+            <p v-if="formError" class="error-text form-error">{{ formError }}</p>
+
+            <button
+              type="submit"
+              class="start-btn"
+              :disabled="isLoading || !username.trim() || Boolean(usernameError)"
+            >
+              {{ submitLabel }}
             </button>
           </form>
         </div>
@@ -74,39 +108,102 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, onBeforeUnmount, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { Camera } from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/auth'
 import { userApi } from '@/services/api'
 import UserAvatar from '@/components/UserAvatar.vue'
+
+const MAX_PROFILE_IMAGE_SIZE = 5 * 1024 * 1024
+const SUPPORTED_PROFILE_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp'])
+const USERNAME_PATTERN = /^[a-zA-Z0-9_]+(?:\.[a-zA-Z0-9_]+)*$/
 
 const router = useRouter()
 const auth = useAuthStore()
 
 const username = ref(auth.user?.username ?? '')
 const usernameError = ref('')
+const imageError = ref('')
+const formError = ref('')
 const isLoading = ref(false)
+const isUploading = ref(false)
+const imageInput = ref<HTMLInputElement | null>(null)
+const selectedImage = ref<File | null>(null)
+const avatarPreview = ref<string | null>(auth.user?.profile_image ?? null)
+let localPreviewUrl: string | null = null
 
-function validateUsername() {
-  usernameError.value = ''
+const submitLabel = computed(() => {
+  if (isUploading.value) return 'Uploading photo...'
+  if (isLoading.value) return 'Saving profile...'
+  return 'Start Connecting'
+})
 
-  if (username.value.length === 0) {
-    usernameError.value = ''
+function openImagePicker() {
+  imageInput.value?.click()
+}
+
+function releaseLocalPreview() {
+  if (!localPreviewUrl) return
+  URL.revokeObjectURL(localPreviewUrl)
+  localPreviewUrl = null
+}
+
+function resetSelectedImage() {
+  releaseLocalPreview()
+  selectedImage.value = null
+  avatarPreview.value = auth.user?.profile_image ?? null
+}
+
+function handleImageSelected(event: Event) {
+  imageError.value = ''
+  formError.value = ''
+
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  input.value = ''
+
+  if (!file) return
+
+  if (!SUPPORTED_PROFILE_IMAGE_TYPES.has(file.type)) {
+    resetSelectedImage()
+    imageError.value = 'Choose a JPG, PNG, or WebP image.'
     return
   }
 
-  if (username.value.length < 3) {
+  if (file.size > MAX_PROFILE_IMAGE_SIZE) {
+    resetSelectedImage()
+    imageError.value = 'Profile pictures must be 5 MB or smaller.'
+    return
+  }
+
+  releaseLocalPreview()
+  localPreviewUrl = URL.createObjectURL(file)
+  selectedImage.value = file
+  avatarPreview.value = localPreviewUrl
+}
+
+function validateUsername() {
+  usernameError.value = ''
+  formError.value = ''
+  const value = username.value.trim()
+
+  if (value.length === 0) {
+    return
+  }
+
+  if (value.length < 3) {
     usernameError.value = 'Username must be at least 3 characters'
     return
   }
 
-  if (username.value.length > 20) {
+  if (value.length > 20) {
     usernameError.value = 'Username must be at most 20 characters'
     return
   }
 
-  if (!/^[a-zA-Z0-9_]+$/.test(username.value)) {
-    usernameError.value = 'Username can only contain letters, numbers, and underscores'
+  if (!USERNAME_PATTERN.test(value)) {
+    usernameError.value = 'Use letters, numbers, underscores, and single dots between characters'
     return
   }
 }
@@ -114,38 +211,56 @@ function validateUsername() {
 async function handleSubmit() {
   validateUsername()
 
-  if (usernameError.value) {
+  if (usernameError.value || !username.value.trim()) {
     return
   }
 
+  imageError.value = ''
+  formError.value = ''
   isLoading.value = true
   try {
+    if (selectedImage.value) {
+      isUploading.value = true
+      const uploaded = await userApi.uploadProfileImage(selectedImage.value)
+      avatarPreview.value = uploaded.url
+      selectedImage.value = null
+      releaseLocalPreview()
+      if (auth.token) auth.setAuth(auth.token, uploaded.user)
+      isUploading.value = false
+    }
+
     const updatedUser = await userApi.completeProfile({
       username: username.value.trim(),
     })
     if (auth.token) auth.setAuth(auth.token, updatedUser)
+
     await router.push('/permission-request')
   } catch (err: unknown) {
-    usernameError.value =
+    formError.value =
       err instanceof Error ? err.message : 'Failed to set profile. Please try again.'
   } finally {
+    isUploading.value = false
     isLoading.value = false
   }
 }
 
 async function handleSkip() {
+  usernameError.value = ''
+  imageError.value = ''
+  formError.value = ''
   isLoading.value = true
   try {
     const updatedUser = await userApi.completeProfile({})
     if (auth.token) auth.setAuth(auth.token, updatedUser)
     await router.push('/permission-request')
   } catch (err: unknown) {
-    usernameError.value =
-      err instanceof Error ? err.message : 'Failed to continue. Please try again.'
+    formError.value = err instanceof Error ? err.message : 'Failed to continue. Please try again.'
   } finally {
     isLoading.value = false
   }
 }
+
+onBeforeUnmount(releaseLocalPreview)
 </script>
 
 <style scoped>
@@ -187,6 +302,11 @@ async function handleSkip() {
   opacity: 0.8;
 }
 
+.skip-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
 .profile-main {
   flex: 1;
   display: flex;
@@ -225,11 +345,13 @@ async function handleSkip() {
 
 .avatar-section {
   display: flex;
+  flex-direction: column;
+  align-items: center;
   justify-content: center;
   margin-bottom: 32px;
 }
 
-.avatar-placeholder {
+.avatar-picker {
   width: 120px;
   height: 120px;
   border-radius: 50%;
@@ -248,53 +370,84 @@ async function handleSkip() {
   padding: 0;
 }
 
-.avatar-placeholder:hover {
+.avatar-picker:hover:not(:disabled) {
   transform: scale(1.05);
   background: #e8dfd7;
 }
 
-.avatar-placeholder svg {
-  width: 60px;
-  height: 60px;
-  stroke: currentColor;
+.avatar-picker:focus-visible {
+  outline: 3px solid rgba(12, 144, 129, 0.28);
+  outline-offset: 4px;
+}
+
+.avatar-picker:disabled {
+  cursor: not-allowed;
 }
 
 .avatar-image {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  font-size: 2.75rem;
 }
 
 .avatar-overlay {
   position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0);
+  inset: 0;
+  background: rgba(30, 24, 28, 0.48);
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 5px;
+  color: #fff;
+  font-family: 'Poppins', 'Inter', sans-serif;
+  font-size: 0.72rem;
+  font-weight: 600;
   opacity: 0;
-  transition: all 0.2s;
+  transition: opacity 0.2s;
 }
 
-.avatar-placeholder:hover .avatar-overlay {
-  background: rgba(0, 0, 0, 0.2);
+.avatar-picker:hover:not(:disabled) .avatar-overlay,
+.avatar-picker:focus-visible .avatar-overlay {
   opacity: 1;
 }
 
 .upload-icon {
-  width: 40px;
-  height: 40px;
+  width: 34px;
+  height: 34px;
   background: rgba(255, 255, 255, 0.9);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.5rem;
-  font-weight: 300;
   color: #2c1d25;
+}
+
+.avatar-help {
+  max-width: 300px;
+  margin: 12px 0 0;
+  color: #8c7c86;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.avatar-error {
+  margin-top: 8px;
+  text-align: center;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .form-group {
@@ -354,6 +507,11 @@ label {
   color: #c0392b;
   margin-top: 6px;
   margin-bottom: 0;
+}
+
+.form-error {
+  margin: -12px 0 18px;
+  text-align: center;
 }
 
 .pro-tip {
@@ -445,14 +603,13 @@ label {
     font-size: 0.9rem;
   }
 
-  .avatar-placeholder {
+  .avatar-picker {
     width: 100px;
     height: 100px;
   }
 
-  .avatar-placeholder svg {
-    width: 50px;
-    height: 50px;
+  .avatar-image {
+    font-size: 2.25rem;
   }
 }
 </style>
