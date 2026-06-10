@@ -30,7 +30,15 @@ export interface AuthResponse {
     username: string
     email: string
     role: string
+    profile_completed?: boolean
+    onboarding_completed?: boolean
+    profile_image?: string | null
   }
+}
+
+export interface RegistrationResponse {
+  message: string
+  email: string
 }
 
 export interface PostUser {
@@ -214,8 +222,8 @@ export const authApi = {
     password: string
     birthday?: string
     gender?: string
-  }): Promise<AuthResponse> {
-    return request<AuthResponse>('/auth/register', {
+  }): Promise<RegistrationResponse> {
+    return request<RegistrationResponse>('/auth/register', {
       method: 'POST',
       body: JSON.stringify(payload),
     })
@@ -396,6 +404,7 @@ export interface UserProfile {
   user_id?: number
   username: string
   email: string
+  role: string
   first_name: string
   last_name: string
   bio?: string
@@ -405,7 +414,9 @@ export interface UserProfile {
   instagram_handle?: string
   linkedin_url?: string
   tags?: string[]
-  profile_image?: string
+  profile_image?: string | null
+  profile_completed?: boolean
+  onboarding_completed?: boolean
 }
 
 export interface UpdateProfilePayload {
@@ -427,6 +438,26 @@ export const userApi = {
     return request<UserProfile>('/users/me', {
       method: 'PATCH',
       body: JSON.stringify(payload),
+    })
+  },
+
+  completeProfile(payload: { username?: string }): Promise<UserProfile> {
+    return request<UserProfile>('/users/me/complete-profile', {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    })
+  },
+
+  completeOnboarding(): Promise<UserProfile> {
+    return request<UserProfile>('/users/me/complete-onboarding', {
+      method: 'PATCH',
+    })
+  },
+
+  updateLocation(lat: number, lng: number): Promise<{ message: string }> {
+    return request<{ message: string }>('/users/me/location', {
+      method: 'PATCH',
+      body: JSON.stringify({ lat, lng }),
     })
   },
 

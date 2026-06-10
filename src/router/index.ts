@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { useAuthStore } from '@/stores/auth'
+import { getPostAuthPath, useAuthStore } from '@/stores/auth'
 
 import Login from '@/views/auth/LoginPage.vue'
 import Register from '@/views/auth/RegisterPage.vue'
@@ -213,6 +213,22 @@ router.beforeEach((to, from, next) => {
   if ((to.name === 'Login' || to.name === 'Register') && auth.isLoggedIn) {
     next({ name: 'HomePage' })
     return
+  }
+
+  if (auth.isLoggedIn && auth.user?.role !== 'ADMIN') {
+    const onboardingPath = getPostAuthPath(auth.user)
+    const isOnboardingPage =
+      to.path === '/select-profile' || to.path === '/permission-request'
+
+    if (onboardingPath !== '/' && to.path !== onboardingPath) {
+      next(onboardingPath)
+      return
+    }
+
+    if (onboardingPath === '/' && isOnboardingPage) {
+      next({ name: 'HomePage' })
+      return
+    }
   }
 
   // Check login first
