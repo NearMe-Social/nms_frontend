@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import Navbar from '@/components/Navbar.vue'
 import AppSidebar from '@/components/AppSidebar.vue'
+import MobileBottomNav from '@/components/MobileBottomNav.vue'
 import PostOptionsMenu from '@/components/PostOptionsMenu.vue'
 import { postApi, type ApiPost } from '@/services/api'
 import { useAuthStore } from '@/stores/auth'
@@ -146,7 +147,7 @@ onMounted(loadPosts)
 
                 <RouterLink
                   to="/create-post"
-                  class="inline-flex shrink-0 items-center gap-2 rounded-full bg-cyan-800 px-4 py-2.5 text-xs font-bold text-white shadow-lg shadow-cyan-900/15 transition hover:bg-cyan-900"
+                  class="hidden sm:inline-flex shrink-0 items-center gap-2 rounded-full bg-cyan-800 px-4 py-2.5 text-xs font-bold text-white shadow-lg shadow-cyan-900/15 transition hover:bg-cyan-900"
                 >
                   <Plus class="h-4 w-4" />
                   Create Post
@@ -155,7 +156,7 @@ onMounted(loadPosts)
 
               <div class="mt-5 flex flex-wrap items-center gap-3 border-t border-slate-100 pt-5">
                 <div
-                  class="flex min-w-64 flex-1 items-center gap-3 rounded-full bg-slate-50 px-4 py-3 ring-1 ring-slate-200"
+                  class="hidden sm:flex min-w-64 flex-1 items-center gap-3 rounded-full bg-slate-50 px-4 py-3 ring-1 ring-slate-200"
                 >
                   <Search class="h-4 w-4 text-slate-400" />
                   <input
@@ -178,10 +179,10 @@ onMounted(loadPosts)
                         : 'bg-slate-50 text-slate-500 ring-1 ring-slate-200 hover:text-cyan-800'
                     "
                     @click="activeTab = tab.key"
-                  >
-                    {{ tab.label }}
-                  </button>
-                </div>
+                    >
+                      {{ tab.label }}
+                    </button>
+                  </div>
               </div>
             </section>
 
@@ -363,6 +364,7 @@ onMounted(loadPosts)
           </aside>
         </div>
       </div>
+    <MobileBottomNav />
     </div>
   </div>
 </template>
