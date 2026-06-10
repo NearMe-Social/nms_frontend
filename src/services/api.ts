@@ -113,6 +113,7 @@ export interface ApiConversation {
   conversation_id: number
   created_at: string
   updated_at: string
+  unread_count?: number
   participants?: ApiConversationParticipant[]
   messages?: ApiMessage[]
 }
