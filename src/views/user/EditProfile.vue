@@ -3,270 +3,260 @@
   <div class="flex min-w-0">
     <AppSidebar class="hidden md:flex" />
     <div class="edit-profile-page">
-    <!-- Header -->
-    <div class="page-header">
-      <h1 class="page-title">Edit Profile</h1>
-      <p class="page-subtitle">Personalize your presence in the editorial community.</p>
-    </div>
+      <!-- Header -->
+      <div class="page-header">
+        <h1 class="page-title">Edit Profile</h1>
+        <p class="page-subtitle">Personalize your presence in the editorial community.</p>
+      </div>
 
-    <div class="edit-profile-container">
-      <!-- Main Form -->
-      <form @submit.prevent="handleSaveChanges" class="profile-form">
-        <div class="form-layout">
-          <!-- Left Sidebar - Profile Photo -->
-          <aside class="form-sidebar">
-            <div class="profile-photo-card">
-              <div class="photo-section">
-                <div class="photo-preview" v-if="photoPreview">
-                  <img :src="photoPreview" :alt="formData.first_name" class="preview-img" />
-                </div>
-                <div v-else class="photo-placeholder">
-                  <UserIcon :size="48" />
-                </div>
-              </div>
-              <button type="button" class="photo-change-btn" @click="triggerFileInput">
-                <UploadCloudIcon :size="16" />
-                Change Photo
-              </button>
-              <input
-                ref="fileInput"
-                type="file"
-                accept="image/*"
-                style="display: none"
-                @change="handlePhotoUpload"
-              />
-              <p class="photo-hint">PNG, JPG up to 5MB</p>
-            </div>
-          </aside>
-
-          <!-- Right Content Area -->
-          <div class="form-content">
-            <!-- Public Identity Section -->
-            <div class="form-section">
-              <div class="section-header">
-                <UserIcon :size="18" />
-                <h2 class="section-title">Public Identity</h2>
-              </div>
-
-              <div class="form-row">
-                <div class="form-group">
-                  <label for="firstName" class="form-label">Full Name</label>
-                  <input
-                    id="firstName"
-                    v-model="formData.first_name"
-                    type="text"
-                    class="form-input"
-                    placeholder="Julian Alexander"
+      <div class="edit-profile-container">
+        <!-- Main Form -->
+        <form @submit.prevent="handleSaveChanges" class="profile-form">
+          <div class="form-layout">
+            <!-- Left Sidebar - Profile Photo -->
+            <aside class="form-sidebar">
+              <div class="profile-photo-card">
+                <div class="photo-section">
+                  <UserAvatar
+                    :src="photoPreview"
+                    :username="formData.username || authStore.user?.username"
+                    :alt="`${formData.username || 'User'} profile`"
+                    class="photo-preview avatar-preview"
                   />
                 </div>
-                <div class="form-group">
-                  <label for="username" class="form-label">Username</label>
-                  <input
-                    id="username"
-                    v-model="formData.username"
-                    type="text"
-                    class="form-input"
-                    placeholder="@juliant"
-                    disabled
-                  />
+                <button type="button" class="photo-change-btn" @click="triggerFileInput">
+                  <UploadCloudIcon :size="16" />
+                  Change Photo
+                </button>
+                <input
+                  ref="fileInput"
+                  type="file"
+                  accept="image/*"
+                  style="display: none"
+                  @change="handlePhotoUpload"
+                />
+                <p class="photo-hint">PNG, JPG up to 5MB</p>
+              </div>
+            </aside>
+
+            <!-- Right Content Area -->
+            <div class="form-content">
+              <!-- Public Identity Section -->
+              <div class="form-section">
+                <div class="section-header">
+                  <UserIcon :size="18" />
+                  <h2 class="section-title">Public Identity</h2>
                 </div>
-              </div>
 
-              <div class="form-group">
-                <label for="bio" class="form-label">Professional Bio</label>
-                <textarea
-                  id="bio"
-                  v-model="formData.bio"
-                  class="form-textarea"
-                  placeholder="Independent design critic and urban theorist. Exploring the intersection of digital and physical spaces."
-                  rows="3"
-                ></textarea>
-                <div class="char-count">{{ formData.bio?.length || 0 }} / 500 characters</div>
-              </div>
-            </div>
-
-            <!-- Presence Section -->
-            <div class="form-section">
-              <div class="section-header">
-                <MapPinIcon :size="18" />
-                <h2 class="section-title">Presence</h2>
-              </div>
-
-              <div class="form-row">
-                <div class="form-group">
-                  <label for="location" class="form-label">Location</label>
-                  <input
-                    id="location"
-                    v-model="formData.location"
-                    type="text"
-                    class="form-input"
-                    placeholder="Portland, Oregon"
-                  />
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="firstName" class="form-label">Full Name</label>
+                    <input
+                      id="firstName"
+                      v-model="formData.first_name"
+                      type="text"
+                      class="form-input"
+                      placeholder="Julian Alexander"
+                    />
+                  </div>
+                  <div class="form-group">
+                    <label for="username" class="form-label">Username</label>
+                    <input
+                      id="username"
+                      v-model="formData.username"
+                      type="text"
+                      class="form-input"
+                      placeholder="@juliant"
+                      disabled
+                    />
+                  </div>
                 </div>
 
                 <div class="form-group">
-                  <label for="website" class="form-label">Website / Portfolio</label>
-                  <input
-                    id="website"
-                    v-model="formData.website"
-                    type="url"
-                    class="form-input"
-                    placeholder="https://yourdesign.com"
-                  />
+                  <label for="bio" class="form-label">Professional Bio</label>
+                  <textarea
+                    id="bio"
+                    v-model="formData.bio"
+                    class="form-textarea"
+                    placeholder="Independent design critic and urban theorist. Exploring the intersection of digital and physical spaces."
+                    rows="3"
+                  ></textarea>
+                  <div class="char-count">{{ formData.bio?.length || 0 }} / 500 characters</div>
                 </div>
               </div>
-            </div>
 
-            <!-- Social Ties Section -->
-            <div class="form-section">
-              <div class="section-header">
-                <LinkIcon :size="18" />
-                <h2 class="section-title">Social Ties</h2>
-              </div>
-
-              <div class="social-grid">
-                <div class="social-item">
-                  <div class="social-platform">
-                    <TwitterIcon :size="18" />
-                    <span>X (Twitter)</span>
-                  </div>
-                  <input
-                    v-model="formData.twitter_handle"
-                    type="text"
-                    class="form-input form-input-sm"
-                    placeholder="@handle"
-                  />
-                  <div v-if="formData.twitter_handle" class="social-status connected">
-                    <CheckIcon :size="12" />
-                    Connected
-                  </div>
-                  <div v-else class="social-status disconnected">
-                    Not connected
-                  </div>
+              <!-- Presence Section -->
+              <div class="form-section">
+                <div class="section-header">
+                  <MapPinIcon :size="18" />
+                  <h2 class="section-title">Presence</h2>
                 </div>
 
-                <div class="social-item">
-                  <div class="social-platform">
-                    <InstagramIcon :size="18" />
-                    <span>Instagram</span>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="location" class="form-label">Location</label>
+                    <input
+                      id="location"
+                      v-model="formData.location"
+                      type="text"
+                      class="form-input"
+                      placeholder="Portland, Oregon"
+                    />
                   </div>
-                  <input
-                    v-model="formData.instagram_handle"
-                    type="text"
-                    class="form-input form-input-sm"
-                    placeholder="@username"
-                  />
-                  <div v-if="formData.instagram_handle" class="social-status connected">
-                    <CheckIcon :size="12" />
-                    Connected
-                  </div>
-                  <div v-else class="social-status disconnected">
-                    Not connected
-                  </div>
-                </div>
 
-                <div class="social-item">
-                  <div class="social-platform">
-                    <LinkedinIcon :size="18" />
-                    <span>LinkedIn</span>
-                  </div>
-                  <input
-                    v-model="formData.linkedin_url"
-                    type="url"
-                    class="form-input form-input-sm"
-                    placeholder="linkedin.com/in/..."
-                  />
-                  <div v-if="formData.linkedin_url" class="social-status connected">
-                    <CheckIcon :size="12" />
-                    Connected
-                  </div>
-                  <div v-else class="social-status disconnected">
-                    Not connected
+                  <div class="form-group">
+                    <label for="website" class="form-label">Website / Portfolio</label>
+                    <input
+                      id="website"
+                      v-model="formData.website"
+                      type="url"
+                      class="form-input"
+                      placeholder="https://yourdesign.com"
+                    />
                   </div>
                 </div>
               </div>
-            </div>
 
-            <!-- Editorial Focus Section -->
-            <div class="form-section">
-              <div class="section-header">
-                <TagIcon :size="18" />
-                <h2 class="section-title">Editorial Focus</h2>
-              </div>
+              <!-- Social Ties Section -->
+              <div class="form-section">
+                <div class="section-header">
+                  <LinkIcon :size="18" />
+                  <h2 class="section-title">Social Ties</h2>
+                </div>
 
-              <div class="form-group">
-                <label class="form-label">Topics & Interests</label>
-                <div class="tags-input-wrapper">
-                  <div class="tags-list">
-                    <div v-for="(tag, index) in formData.tags" :key="index" class="tag-item">
-                      {{ tag }}
-                      <button
-                        type="button"
-                        class="tag-remove"
-                        @click="removeTag(index)"
-                      >
-                        <XIcon :size="12" />
-                      </button>
+                <div class="social-grid">
+                  <div class="social-item">
+                    <div class="social-platform">
+                      <TwitterIcon :size="18" />
+                      <span>X (Twitter)</span>
                     </div>
+                    <input
+                      v-model="formData.twitter_handle"
+                      type="text"
+                      class="form-input form-input-sm"
+                      placeholder="@handle"
+                    />
+                    <div v-if="formData.twitter_handle" class="social-status connected">
+                      <CheckIcon :size="12" />
+                      Connected
+                    </div>
+                    <div v-else class="social-status disconnected">Not connected</div>
                   </div>
-                  <input
-                    v-model="tagInput"
-                    type="text"
-                    class="form-input tags-input"
-                    placeholder="Add topic (press Enter)"
-                    @keydown.enter="addTag"
-                  />
+
+                  <div class="social-item">
+                    <div class="social-platform">
+                      <InstagramIcon :size="18" />
+                      <span>Instagram</span>
+                    </div>
+                    <input
+                      v-model="formData.instagram_handle"
+                      type="text"
+                      class="form-input form-input-sm"
+                      placeholder="@username"
+                    />
+                    <div v-if="formData.instagram_handle" class="social-status connected">
+                      <CheckIcon :size="12" />
+                      Connected
+                    </div>
+                    <div v-else class="social-status disconnected">Not connected</div>
+                  </div>
+
+                  <div class="social-item">
+                    <div class="social-platform">
+                      <LinkedinIcon :size="18" />
+                      <span>LinkedIn</span>
+                    </div>
+                    <input
+                      v-model="formData.linkedin_url"
+                      type="url"
+                      class="form-input form-input-sm"
+                      placeholder="linkedin.com/in/..."
+                    />
+                    <div v-if="formData.linkedin_url" class="social-status connected">
+                      <CheckIcon :size="12" />
+                      Connected
+                    </div>
+                    <div v-else class="social-status disconnected">Not connected</div>
+                  </div>
                 </div>
-                <div class="tags-hint">Press Enter to add tags. Max 8 topics.</div>
+              </div>
+
+              <!-- Editorial Focus Section -->
+              <div class="form-section">
+                <div class="section-header">
+                  <TagIcon :size="18" />
+                  <h2 class="section-title">Editorial Focus</h2>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label">Topics & Interests</label>
+                  <div class="tags-input-wrapper">
+                    <div class="tags-list">
+                      <div v-for="(tag, index) in formData.tags" :key="index" class="tag-item">
+                        {{ tag }}
+                        <button type="button" class="tag-remove" @click="removeTag(index)">
+                          <XIcon :size="12" />
+                        </button>
+                      </div>
+                    </div>
+                    <input
+                      v-model="tagInput"
+                      type="text"
+                      class="form-input tags-input"
+                      placeholder="Add topic (press Enter)"
+                      @keydown.enter="addTag"
+                    />
+                  </div>
+                  <div class="tags-hint">Press Enter to add tags. Max 8 topics.</div>
+                </div>
               </div>
             </div>
           </div>
-        </div>
 
-        <!-- Action Buttons -->
-        <div class="form-actions">
-          <button type="button" class="btn-cancel" @click="handleCancel">
-            Cancel
-          </button>
-          <button type="submit" class="btn-save" :disabled="isSaving">
-            <span v-if="isSaving" class="btn-loading">
-              <LoaderIcon :size="16" class="spinner" />
-              Saving...
-            </span>
-            <span v-else>
-              <CheckIcon :size="16" />
-              Save Changes
-            </span>
-          </button>
-        </div>
+          <!-- Action Buttons -->
+          <div class="form-actions">
+            <button type="button" class="btn-cancel" @click="handleCancel">Cancel</button>
+            <button type="submit" class="btn-save" :disabled="isSaving">
+              <span v-if="isSaving" class="btn-loading">
+                <LoaderIcon :size="16" class="spinner" />
+                Saving...
+              </span>
+              <span v-else>
+                <CheckIcon :size="16" />
+                Save Changes
+              </span>
+            </button>
+          </div>
 
-        <!-- Status Messages -->
-        <div v-if="successMessage" class="alert alert-success">
-          <CheckIcon :size="16" />
-          {{ successMessage }}
-        </div>
-        <div v-if="errorMessage" class="alert alert-error">
-          <AlertCircleIcon :size="16" />
-          {{ errorMessage }}
-        </div>
-      </form>
+          <!-- Status Messages -->
+          <div v-if="successMessage" class="alert alert-success">
+            <CheckIcon :size="16" />
+            {{ successMessage }}
+          </div>
+          <div v-if="errorMessage" class="alert alert-error">
+            <AlertCircleIcon :size="16" />
+            {{ errorMessage }}
+          </div>
+        </form>
 
-      <!-- Footer Note -->
-      <div class="form-footer">
-        <p class="footer-note">
-          Your profile changes will be immediately visible across The Commons. Some data may be cached for up to 24 hours.
-        </p>
+        <!-- Footer Note -->
+        <div class="form-footer">
+          <p class="footer-note">
+            Your profile changes will be immediately visible across The Commons. Some data may be
+            cached for up to 24 hours.
+          </p>
+        </div>
       </div>
     </div>
-  </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { userApi, type UpdateProfilePayload } from '@/services/api'
+import UserAvatar from '@/components/UserAvatar.vue'
 import Navbar from '@/components/Navbar.vue'
 import AppSidebar from '@/components/AppSidebar.vue'
 import {
@@ -274,7 +264,6 @@ import {
   MapPin as MapPinIcon,
   Link as LinkIcon,
   Tag as TagIcon,
-  Image as ImageIcon,
   UploadCloud as UploadCloudIcon,
   X as XIcon,
   Check as CheckIcon,
@@ -317,7 +306,7 @@ onMounted(async () => {
   try {
     isLoading.value = true
     const profile = await userApi.getProfile()
-    
+
     // Populate form data
     formData.value = {
       first_name: profile.first_name || '',
@@ -402,6 +391,8 @@ const handlePhotoUpload = async (event: Event) => {
     // Upload to server
     const response = await userApi.uploadProfileImage(file)
     formData.value.profile_image = response.url
+    photoPreview.value = response.url
+    authStore.updateProfile(response.user)
     successMessage.value = 'Photo uploaded successfully'
   } catch (error) {
     errorMessage.value = 'Failed to upload photo'
@@ -430,13 +421,10 @@ const handleSaveChanges = async () => {
     const updatedProfile = await userApi.updateProfile(updatePayload)
 
     // Sync with auth store
-    if (authStore.user) {
-      authStore.user.profile = updatedProfile
-      localStorage.setItem('auth_user', JSON.stringify(authStore.user))
-    }
+    authStore.updateProfile(updatedProfile)
 
     successMessage.value = 'Profile updated successfully!'
-    
+
     // Redirect to profile page after 2 seconds
     setTimeout(() => {
       router.push('/profile')
@@ -547,6 +535,13 @@ const handleCancel = () => {
   align-items: center;
   justify-content: center;
   border: 1px solid #dce7ee;
+}
+
+.avatar-preview {
+  width: 100%;
+  height: 100%;
+  border-radius: 0;
+  font-size: clamp(3rem, 8vw, 5rem);
 }
 
 .preview-img {

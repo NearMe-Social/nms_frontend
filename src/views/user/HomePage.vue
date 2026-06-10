@@ -105,12 +105,11 @@
             <div class="flex items-start justify-between">
               <div class="flex items-center gap-3 min-w-0">
                 <RouterLink :to="profileRoute(post.user?.user_id)" class="shrink-0" @click.stop>
-                  <img
-                    :src="
-                      post.user?.profile_image ||
-                      `https://i.pravatar.cc/150?u=${post.user?.username || post.post_id}`
-                    "
-                    class="w-10 h-10 md:w-11 md:h-11 rounded-full object-cover"
+                  <UserAvatar
+                    :src="post.user?.profile_image"
+                    :username="post.user?.username || 'Neighbor'"
+                    :alt="`${post.user?.username || 'Neighbor'} profile`"
+                    class="w-10 h-10 md:w-11 md:h-11 rounded-full"
                   />
                 </RouterLink>
                 <div class="min-w-0">
@@ -226,6 +225,7 @@ import Navbar from '@/components/Navbar.vue'
 import AppSidebar from '@/components/AppSidebar.vue'
 import MobileBottomNav from '@/components/MobileBottomNav.vue'
 import PostOptionsMenu from '@/components/PostOptionsMenu.vue'
+import UserAvatar from '@/components/UserAvatar.vue'
 import { postApi, type ApiPost } from '@/services/api'
 import { MapPin, MessageCircle, Plus, Heart, Share2, Clock, Zap } from 'lucide-vue-next'
 

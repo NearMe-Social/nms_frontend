@@ -17,8 +17,9 @@
 
           <div class="profile-summary">
             <div class="avatar-wrap">
-              <img
+              <UserAvatar
                 :src="profileImage"
+                :username="username"
                 :alt="`${displayName} profile photo`"
                 class="avatar"
               />
@@ -44,7 +45,9 @@
             </div>
 
             <div class="actions">
-              <RouterLink v-if="isOwnProfile" to="/profile/edit" class="secondary-action">Edit profile</RouterLink>
+              <RouterLink v-if="isOwnProfile" to="/profile/edit" class="secondary-action"
+                >Edit profile</RouterLink
+              >
               <UserOptionsMenu v-else :user-id="profileUserId" />
               <RouterLink
                 v-if="!isOwnProfile"
@@ -130,6 +133,7 @@ import {
 import Navbar from '@/components/Navbar.vue'
 import AppSidebar from '@/components/AppSidebar.vue'
 import UserOptionsMenu from '@/components/UserOptionsMenu.vue'
+import UserAvatar from '@/components/UserAvatar.vue'
 import { userApi, type UserProfile } from '@/services/api'
 import { useAuthStore } from '@/stores/auth'
 
@@ -142,19 +146,22 @@ const error = ref('')
 const routeUserId = computed(() => Number(route.params.userId))
 const authUserId = computed(() => auth.user?.userId ?? auth.user?.user_id ?? null)
 const isPublicProfile = computed(() => Number.isInteger(routeUserId.value) && routeUserId.value > 0)
-const isOwnProfile = computed(() => !isPublicProfile.value || routeUserId.value === authUserId.value)
-const profileUserId = computed(() => profile.value?.userId ?? profile.value?.user_id ?? routeUserId.value)
+const isOwnProfile = computed(
+  () => !isPublicProfile.value || routeUserId.value === authUserId.value,
+)
+const profileUserId = computed(
+  () => profile.value?.userId ?? profile.value?.user_id ?? routeUserId.value,
+)
 const username = computed(() => profile.value?.username ?? auth.user?.username ?? 'neighbor')
-const displayName = computed(() =>
-  username.value
-    .split(/[._-]/)
-    .filter(Boolean)
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(' ') || 'Nearme Neighbor',
+const displayName = computed(
+  () =>
+    username.value
+      .split(/[._-]/)
+      .filter(Boolean)
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(' ') || 'Nearme Neighbor',
 )
-const profileImage = computed(
-  () => profile.value?.profile_image || `https://i.pravatar.cc/150?u=${encodeURIComponent(username.value)}`,
-)
+const profileImage = computed(() => profile.value?.profile_image || null)
 
 const bio = computed(
   () =>
@@ -304,8 +311,8 @@ watch(() => route.params.userId, loadProfile)
   height: 104px;
   border: 4px solid #fff;
   border-radius: 18px;
-  object-fit: cover;
   box-shadow: 0 14px 28px rgba(15, 45, 70, 0.16);
+  font-size: 2.4rem;
 }
 
 .status-dot {

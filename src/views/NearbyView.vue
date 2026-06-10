@@ -17,6 +17,7 @@ import GeoErrorState from '@/components/GeoErrorState.vue'
 import AppSidebar from '@/components/AppSidebar.vue'
 import MobileBottomNav from '@/components/MobileBottomNav.vue'
 import Navbar from '@/components/Navbar.vue'
+import UserAvatar from '@/components/UserAvatar.vue'
 import * as L from 'leaflet'
 
 const nearbyStore = useNearbyStore()
@@ -68,9 +69,10 @@ const displayName = computed(
       .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
       .join(' ') || 'Nearme Neighbor',
 )
-const profileImage = computed(
-  () => `https://i.pravatar.cc/150?u=${encodeURIComponent(username.value)}`,
-)
+const profileImage = computed(() => {
+  const profile = auth.user?.profile as { profile_image?: string | null } | undefined
+  return auth.user?.profile_image || profile?.profile_image || null
+})
 
 function approximateDistance(meters: number) {
   if (meters <= 50) return 'within 50m'
@@ -151,10 +153,11 @@ function updateMap(position: { lat: number; lng: number }) {
   userCircle.value?.setLatLng([position.lat, position.lng]).setRadius(radius.value)
 }
 
-function drawNearbyMarkers(position: { lat: number; lng: number }) {
+function drawNearbyMarkers() {
   clearNearbyMarkers()
 
-  if (privacyMode.value === 'Hidden From Search') {
+  const currentMap = map.value
+  if (privacyMode.value === 'Hidden From Search' || !currentMap) {
     return
   }
 
@@ -166,7 +169,7 @@ function drawNearbyMarkers(position: { lat: number; lng: number }) {
       fillColor: '#93c5fd',
       fillOpacity: 0.9,
       weight: 2,
-    }).addTo(map.value!) // eslint-disable-line @typescript-eslint/no-non-null-assertion
+    }).addTo(currentMap)
 
     marker.bindTooltip(`${user.username} • ${userDistance(user)}`, {
       permanent: false,
@@ -190,7 +193,7 @@ async function refreshNearby() {
     updateMap(position)
   }
 
-  drawNearbyMarkers(position)
+  drawNearbyMarkers()
   nearbyStore.startPolling(position.lat, position.lng, radius.value, shareLocation)
 }
 
@@ -240,21 +243,30 @@ onUnmounted(() => nearbyStore.stopPolling())
 
       <main class="workspace">
         <section class="page-heading">
-          <div>
-            <h1>Nearby Users</h1>
-            <p>{{ formattedTime }}</p>
+          <div class="heading-copy">
+            <span class="eyebrow"><MapPin /> Local discovery</span>
+            <h1>People near you</h1>
+            <p>Find nearby connections while keeping your exact location private.</p>
           </div>
-          <span class="detected-pill">{{ detectedLabel }}</span>
+          <div class="live-summary">
+            <span class="live-status">
+              <span class="live-dot"></span>
+              {{ detectedLabel }}
+            </span>
+            <span>{{ formattedTime }}</span>
+          </div>
         </section>
 
         <section class="identity-card">
           <div class="identity-left">
-            <img
+            <UserAvatar
               :src="profileImage"
+              :username="username"
               :alt="`${displayName} profile photo`"
               class="mini-avatar image-avatar"
             />
             <div>
+              <span class="section-label">Your nearby presence</span>
               <strong>{{ displayName }}</strong>
               <span>Posting as @{{ username }}</span>
             </div>
@@ -262,42 +274,51 @@ onUnmounted(() => nearbyStore.stopPolling())
 
           <div class="privacy-control">
             <Lock />
-            <select v-model="privacyMode" aria-label="Privacy mode">
-              <option>Neighbors Only</option>
-              <option>Approximate Distance Only</option>
-              <option>Hidden From Search</option>
-            </select>
+            <div>
+              <span>Who can find you</span>
+              <select v-model="privacyMode" aria-label="Privacy mode">
+                <option>Neighbors Only</option>
+                <option>Approximate Distance Only</option>
+                <option>Hidden From Search</option>
+              </select>
+            </div>
           </div>
         </section>
 
         <section class="control-row" aria-label="Nearby controls">
-          <div class="segmented">
-            <button
-              v-for="option in radiusOptions"
-              :key="option"
-              type="button"
-              :class="{ selected: radius === option }"
-              @click="radius = option"
-            >
-              {{ option }}m
-            </button>
+          <div class="control-group">
+            <span class="control-label">Search radius</span>
+            <div class="segmented">
+              <button
+                v-for="option in radiusOptions"
+                :key="option"
+                type="button"
+                :class="{ selected: radius === option }"
+                @click="radius = option"
+              >
+                {{ option }}m
+              </button>
+            </div>
           </div>
 
-          <div class="segmented compact">
-            <button
-              type="button"
-              :class="{ selected: sortMode === 'latest' }"
-              @click="sortMode = 'latest'"
-            >
-              Latest
-            </button>
-            <button
-              type="button"
-              :class="{ selected: sortMode === 'active' }"
-              @click="sortMode = 'active'"
-            >
-              Active
-            </button>
+          <div class="control-group align-right">
+            <span class="control-label">Sort results</span>
+            <div class="segmented compact">
+              <button
+                type="button"
+                :class="{ selected: sortMode === 'latest' }"
+                @click="sortMode = 'latest'"
+              >
+                Nearest
+              </button>
+              <button
+                type="button"
+                :class="{ selected: sortMode === 'active' }"
+                @click="sortMode = 'active'"
+              >
+                Farthest
+              </button>
+            </div>
           </div>
         </section>
 
@@ -313,7 +334,18 @@ onUnmounted(() => nearbyStore.stopPolling())
         />
 
         <section v-else class="map-panel" aria-label="Approximate nearby map">
+          <div class="map-header">
+            <div>
+              <span class="section-label">Approximate map</span>
+              <strong>{{ radius }}m around your location</strong>
+            </div>
+            <span class="privacy-badge"><ShieldCheck /> Exact position hidden</span>
+          </div>
           <div ref="mapElement" id="nearby-map" class="map-canvas"></div>
+          <div class="map-caption">
+            <MapPin />
+            <span>People markers are offset to protect everyone's precise location.</span>
+          </div>
         </section>
 
         <section class="status-grid">
@@ -349,8 +381,15 @@ onUnmounted(() => nearbyStore.stopPolling())
 
         <section class="nearby-list">
           <div class="list-header">
-            <h2>Nearby People</h2>
-            <span v-if="nearbyStore.loading">Refreshing...</span>
+            <div>
+              <span class="section-label">Your local circle</span>
+              <h2>Nearby people</h2>
+            </div>
+            <span v-if="nearbyStore.loading" class="refreshing">
+              <span class="loading-dot"></span>
+              Refreshing
+            </span>
+            <span v-else>{{ filteredUsers.length }} within {{ radius }}m</span>
           </div>
 
           <p v-if="nearbyStore.error" class="empty-state error-state">
@@ -360,20 +399,31 @@ onUnmounted(() => nearbyStore.stopPolling())
           <div v-else-if="filteredUsers.length > 0" class="people-list">
             <article v-for="user in filteredUsers" :key="user.id" class="person-row">
               <div class="person-avatar">{{ user.username.slice(0, 2).toUpperCase() }}</div>
-              <div>
+              <div class="person-details">
                 <strong>{{ user.username }}</strong>
-                <span>{{ userDistance(user) }}</span>
+                <span><MapPin /> {{ userDistance(user) }}</span>
               </div>
               <div class="person-actions">
-                <RouterLink :to="{ path: '/chat', query: { userId: user.id } }">Message</RouterLink>
-                <button type="button">Report</button>
+                <RouterLink :to="{ path: '/chat', query: { userId: user.id } }">
+                  <MessageCircle />
+                  Message
+                </RouterLink>
+                <button type="button" aria-label="Report nearby user">
+                  <Flag />
+                  Report
+                </button>
               </div>
             </article>
           </div>
 
-          <p v-else class="empty-state">
-            No nearby users inside {{ radius }}m yet. The map keeps your exact location private.
-          </p>
+          <div v-else class="empty-state">
+            <span class="empty-icon"><UserRound /></span>
+            <strong>No one nearby just yet</strong>
+            <p>
+              There are no users inside {{ radius }}m. Try a wider radius while we keep your exact
+              location private.
+            </p>
+          </div>
         </section>
       </main>
     </div>
@@ -385,34 +435,40 @@ onUnmounted(() => nearbyStore.stopPolling())
 .nearby-page {
   min-height: 100vh;
   background: #f4f7fb;
-  color: #16374c;
+  color: #1e3a4b;
   font-family: Inter, ui-sans-serif, system-ui, sans-serif;
 }
 
 .nearby-shell {
   display: flex;
   min-width: 0;
+  width: 100%;
 }
 
 .page-heading p,
-.identity-left span,
 .status-card span,
 .person-row span,
 .list-header span {
-  color: #7891a5;
-  font-size: 0.78rem;
+  color: #71879a;
+  font-size: 0.8rem;
 }
 
 .privacy-control svg,
-.status-card svg {
+.status-card svg,
+.person-actions svg,
+.person-details svg,
+.map-caption svg,
+.privacy-badge svg,
+.eyebrow svg {
   width: 16px;
   height: 16px;
 }
 
 .workspace {
+  width: 100%;
   min-width: 0;
   flex: 1;
-  padding: 24px clamp(16px, 2vw, 30px) 56px;
+  padding: 30px clamp(18px, 2.5vw, 38px) 64px;
 }
 
 .page-heading,
@@ -422,63 +478,119 @@ onUnmounted(() => nearbyStore.stopPolling())
 .person-row,
 .identity-left,
 .privacy-control,
-.status-card {
+.status-card,
+.live-status,
+.privacy-badge,
+.map-caption,
+.refreshing {
   display: flex;
   align-items: center;
 }
 
 .page-heading {
   justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 16px;
+  gap: 24px;
+  margin-bottom: 22px;
+}
+
+.heading-copy {
+  max-width: 650px;
+}
+
+.eyebrow,
+.section-label,
+.control-label {
+  color: #27828d;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 10px;
 }
 
 .page-heading h1 {
   margin: 0;
   color: #0f172a;
-  font-size: clamp(1.875rem, 2.6vw, 2.25rem);
-  font-weight: 800;
-  line-height: 1.1;
-  letter-spacing: 0;
+  font-size: clamp(2rem, 3vw, 2.65rem);
+  font-weight: 850;
+  line-height: 1.05;
+  letter-spacing: -0.035em;
 }
 
 .page-heading p {
-  margin: 8px 0 0;
-  color: #94a3b8;
-  font-size: 0.875rem;
-  font-weight: 600;
+  margin: 10px 0 0;
+  max-width: 540px;
+  color: #718096;
+  font-size: 0.92rem;
+  font-weight: 500;
+  line-height: 1.6;
 }
 
-.detected-pill {
+.live-summary {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  color: #8295a5;
+  font-size: 0.74rem;
+  font-weight: 650;
+}
+
+.live-status {
+  gap: 8px;
+  border: 1px solid #d5ebe9;
   border-radius: 999px;
-  background: #bce8f5;
-  color: #14546f;
-  padding: 6px 18px;
-  font-size: 0.72rem;
+  background: #f0faf8;
+  color: #236c70;
+  padding: 8px 13px;
+  font-size: 0.76rem;
   font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+}
+
+.live-dot,
+.loading-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #22a987;
+  box-shadow: 0 0 0 4px rgba(34, 169, 135, 0.12);
 }
 
 .identity-card {
   justify-content: space-between;
   gap: 18px;
   background: #fff;
-  border: 1px solid #e6edf4;
-  border-radius: 14px;
-  padding: 16px 20px;
-  box-shadow: 0 12px 28px rgba(35, 65, 85, 0.05);
-  margin-bottom: 16px;
+  border: 1px solid #e1eaf1;
+  border-radius: 18px;
+  padding: 18px 20px;
+  box-shadow: 0 10px 30px rgba(42, 67, 83, 0.055);
+  margin-bottom: 18px;
 }
 
 .identity-left {
-  gap: 12px;
+  gap: 14px;
 }
 
 .identity-left div:last-child {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
+}
+
+.identity-left strong {
+  color: #18394a;
+  font-size: 0.95rem;
+}
+
+.identity-left span:not(.section-label) {
+  color: #8294a3;
+  font-size: 0.78rem;
 }
 
 .mini-avatar,
@@ -492,86 +604,151 @@ onUnmounted(() => nearbyStore.stopPolling())
 }
 
 .mini-avatar {
-  width: 34px;
-  height: 34px;
-  border-radius: 10px;
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
 }
 
 .image-avatar {
   object-fit: cover;
-  border: 2px solid #fff;
-  box-shadow: 0 6px 16px rgba(15, 45, 70, 0.12);
+  border: 3px solid #fff;
+  box-shadow:
+    0 0 0 1px #dce9ee,
+    0 7px 18px rgba(15, 45, 70, 0.12);
 }
 
 .privacy-control {
-  gap: 8px;
-  border-radius: 10px;
-  background: #f5f7fa;
-  padding: 9px 12px;
-  color: #41576a;
+  gap: 10px;
+  min-width: 230px;
+  border: 1px solid #dfebef;
+  border-radius: 13px;
+  background: #f7fafb;
+  padding: 10px 13px;
+  color: #287781;
+}
+
+.privacy-control > div {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.privacy-control span {
+  color: #8294a3;
+  font-size: 0.66rem;
+  font-weight: 750;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
 }
 
 .privacy-control select {
+  width: 100%;
   border: 0;
   outline: 0;
   background: transparent;
-  color: #32495c;
-  font-weight: 700;
-  font-size: 0.78rem;
+  color: #244a5c;
+  font-weight: 750;
+  font-size: 0.8rem;
 }
 
 .control-row {
   justify-content: space-between;
   gap: 14px;
-  margin-bottom: 20px;
+  margin-bottom: 22px;
+}
+
+.control-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.control-group.align-right {
+  align-items: flex-end;
 }
 
 .segmented {
   display: inline-flex;
-  gap: 6px;
-  border-radius: 12px;
-  background: #e9f0f6;
-  padding: 5px;
+  gap: 4px;
+  border: 1px solid #dfe8ef;
+  border-radius: 13px;
+  background: #edf3f7;
+  padding: 4px;
 }
 
 .segmented button {
   border: 0;
   border-radius: 9px;
   background: transparent;
-  color: #577085;
-  padding: 8px 14px;
-  font-weight: 800;
-  font-size: 0.78rem;
+  color: #647b8e;
+  padding: 8px 15px;
+  font-weight: 750;
+  font-size: 0.79rem;
   cursor: pointer;
+  transition:
+    color 0.18s ease,
+    background 0.18s ease,
+    box-shadow 0.18s ease;
 }
 
 .segmented button.selected {
   background: #fff;
-  color: #164b66;
-  box-shadow: 0 8px 18px rgba(38, 68, 88, 0.08);
+  color: #176171;
+  box-shadow: 0 3px 10px rgba(38, 68, 88, 0.1);
 }
 
 .map-panel {
   position: relative;
   z-index: 0;
   isolation: isolate;
-  display: flex;
-  justify-content: center;
-  margin: 10px auto 26px;
   width: 100%;
-  max-width: 760px;
-  padding: 0 10px;
+  margin: 0 auto 22px;
+  overflow: hidden;
+  border: 1px solid #dde7ee;
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: 0 14px 34px rgba(38, 65, 82, 0.07);
+}
+
+.map-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 18px;
+}
+
+.map-header > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.map-header strong {
+  color: #18394a;
+  font-size: 0.92rem;
+}
+
+.privacy-badge {
+  gap: 6px;
+  border-radius: 999px;
+  background: #edf8f6;
+  color: #26747a;
+  padding: 7px 11px;
+  font-size: 0.72rem;
+  font-weight: 750;
 }
 
 .map-canvas {
   position: relative;
   z-index: 0;
   width: 100%;
-  max-width: 760px;
   min-height: 360px;
-  height: 420px;
+  height: min(46vw, 450px);
   overflow: hidden;
-  border: 3px solid #202020;
+  border-block: 1px solid #e1e9ee;
   background: #edf0e6;
 }
 
@@ -581,199 +758,163 @@ onUnmounted(() => nearbyStore.stopPolling())
   z-index: 0;
 }
 
-.map-grid {
-  position: absolute;
-  inset: 0;
-  opacity: 0.55;
-  background-image:
-    linear-gradient(32deg, transparent 46%, rgba(219, 205, 148, 0.78) 47% 50%, transparent 51%),
-    linear-gradient(102deg, transparent 44%, rgba(226, 226, 214, 0.92) 45% 48%, transparent 49%),
-    repeating-linear-gradient(8deg, rgba(138, 169, 120, 0.18) 0 3px, transparent 3px 24px),
-    repeating-linear-gradient(96deg, rgba(194, 186, 164, 0.22) 0 2px, transparent 2px 34px);
+.map-caption {
+  gap: 8px;
+  padding: 12px 18px;
+  color: #71879a;
+  font-size: 0.76rem;
+  font-weight: 600;
 }
 
-.river {
-  position: absolute;
-  left: -12%;
-  bottom: -18%;
-  width: 46%;
-  height: 58%;
-  transform: rotate(-26deg);
-  background: rgba(132, 207, 231, 0.85);
-}
-
-.road {
-  position: absolute;
-  border-radius: 999px;
-  background: rgba(237, 224, 164, 0.85);
-  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.75);
-}
-
-.road-a {
-  width: 82%;
-  height: 12px;
-  top: 56%;
-  left: 5%;
-  transform: rotate(-29deg);
-}
-
-.road-b {
-  width: 62%;
-  height: 10px;
-  top: 20%;
-  left: 28%;
-  transform: rotate(62deg);
-}
-
-.road-c {
-  width: 50%;
-  height: 8px;
-  top: 78%;
-  left: 38%;
-  transform: rotate(-8deg);
-}
-
-.privacy-radius {
-  --radius-size: 115px;
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: var(--radius-size);
-  height: var(--radius-size);
-  transform: translate(-50%, -50%);
-  border-radius: 999px;
-  background: rgba(75, 133, 239, 0.42);
-  border: 4px solid rgba(75, 133, 239, 0.76);
-}
-
-.privacy-radius span,
-.self-pin {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-}
-
-.privacy-radius span {
-  width: 16px;
-  height: 16px;
-  border-radius: 999px;
-  background: #3573e8;
-}
-
-.self-pin {
-  width: 34px;
-  height: 34px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: #114fbd;
-}
-
-.self-pin svg {
-  width: 20px;
-  height: 20px;
-}
-
-.user-pin {
-  position: absolute;
-  width: 48px;
-  height: 48px;
-  transform: translate(-50%, -50%);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: 4px solid #111;
-  border-radius: 999px;
-  color: #000;
-  cursor: pointer;
-}
-
-.user-pin svg {
-  width: 24px;
-  height: 24px;
-}
-
-.user-pin.green {
-  background: #cdebbd;
-}
-
-.user-pin.blue {
-  background: #bcd2ff;
-}
-
-.user-pin.pink {
-  background: #e8bdd8;
-}
-
-.user-pin.orange {
-  background: #ffd49a;
+.map-caption svg {
+  flex: 0 0 auto;
+  color: #35838c;
 }
 
 .status-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
+  gap: 14px;
   margin-bottom: 22px;
 }
 
 .status-card {
   align-items: flex-start;
-  gap: 10px;
+  gap: 12px;
   background: #fff;
-  border: 1px solid #e6edf4;
-  border-radius: 14px;
-  padding: 14px;
+  border: 1px solid #e1eaf1;
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: 0 7px 20px rgba(42, 67, 83, 0.035);
 }
 
 .status-card svg {
-  color: #1a6b84;
+  width: 34px;
+  height: 34px;
   flex: 0 0 auto;
-  margin-top: 2px;
+  border-radius: 10px;
+  background: #edf8f7;
+  color: #247682;
+  padding: 8px;
+  margin-top: 0;
+}
+
+.status-card strong {
+  color: #254558;
+  font-size: 0.82rem;
+}
+
+.status-card span {
+  line-height: 1.5;
 }
 
 .status-card div,
-.person-row div:nth-child(2) {
+.person-details {
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 4px;
 }
 
 .nearby-list {
   background: #fff;
-  border: 1px solid #e6edf4;
-  border-radius: 16px;
-  padding: 16px;
+  border: 1px solid #e1eaf1;
+  border-radius: 20px;
+  padding: 20px;
+  box-shadow: 0 10px 28px rgba(42, 67, 83, 0.045);
 }
 
 .list-header {
   justify-content: space-between;
-  margin-bottom: 12px;
+  margin-bottom: 16px;
+}
+
+.list-header > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .list-header h2 {
   margin: 0;
-  font-size: 1rem;
+  color: #17384a;
+  font-size: 1.12rem;
+  letter-spacing: -0.01em;
+}
+
+.list-header .section-label {
+  color: #27828d;
+  font-size: 0.7rem;
+}
+
+.refreshing {
+  gap: 8px;
+  color: #287781 !important;
+  font-weight: 750;
+}
+
+.loading-dot {
+  animation: loading-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes loading-pulse {
+  50% {
+    opacity: 0.35;
+    transform: scale(0.8);
+  }
 }
 
 .people-list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 9px;
 }
 
 .person-row {
-  gap: 12px;
-  padding: 12px;
-  border-radius: 12px;
-  background: #f8fbff;
+  gap: 13px;
+  border: 1px solid transparent;
+  border-radius: 15px;
+  background: #f7fafc;
+  padding: 13px 14px;
+  transition:
+    border-color 0.18s ease,
+    background 0.18s ease,
+    transform 0.18s ease;
+}
+
+.person-row:hover {
+  transform: translateY(-1px);
+  border-color: #dce9ee;
+  background: #fbfdfd;
 }
 
 .person-avatar {
-  width: 38px;
-  height: 38px;
-  border-radius: 12px;
-  font-size: 0.74rem;
+  width: 42px;
+  height: 42px;
+  flex: 0 0 auto;
+  border: 2px solid #fff;
+  border-radius: 13px;
+  background: linear-gradient(145deg, #d9f0ef, #e9f4fa);
+  color: #266b75;
+  box-shadow: 0 0 0 1px #dce9ee;
+  font-size: 0.75rem;
+}
+
+.person-details strong {
+  color: #244558;
+  font-size: 0.88rem;
+}
+
+.person-details span {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.person-details svg {
+  width: 12px;
+  height: 12px;
+  color: #4c9097;
 }
 
 .person-actions {
@@ -784,27 +925,95 @@ onUnmounted(() => nearbyStore.stopPolling())
 
 .person-actions a,
 .person-actions button {
-  border: 1px solid #d9e5ee;
-  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid #d7e4eb;
+  border-radius: 10px;
   background: #fff;
-  color: #244d64;
-  padding: 7px 12px;
+  color: #31576b;
+  padding: 8px 11px;
   text-decoration: none;
   font-weight: 750;
-  font-size: 0.76rem;
+  font-size: 0.75rem;
   cursor: pointer;
+  transition:
+    border-color 0.18s ease,
+    color 0.18s ease,
+    background 0.18s ease;
+}
+
+.person-actions a:hover {
+  border-color: #9fd2d3;
+  background: #eef9f8;
+  color: #176d72;
+}
+
+.person-actions button:hover {
+  border-color: #f0c6c6;
+  background: #fff5f5;
+  color: #b64b4b;
+}
+
+.segmented button:focus-visible,
+.person-actions a:focus-visible,
+.person-actions button:focus-visible,
+.privacy-control select:focus-visible {
+  outline: 3px solid rgba(39, 130, 141, 0.22);
+  outline-offset: 2px;
 }
 
 .empty-state {
+  display: flex;
+  min-height: 220px;
   margin: 0;
-  padding: 26px 12px;
+  padding: 30px 16px;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
   text-align: center;
   color: #7891a5;
 }
 
+.empty-state strong {
+  margin-top: 12px;
+  color: #315064;
+  font-size: 0.95rem;
+}
+
+.empty-state p {
+  max-width: 420px;
+  margin: 7px 0 0;
+  font-size: 0.82rem;
+  line-height: 1.6;
+}
+
+.empty-icon {
+  display: inline-flex;
+  width: 48px;
+  height: 48px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 15px;
+  background: #edf7f7;
+  color: #39818a;
+}
+
+.empty-icon svg {
+  width: 22px;
+  height: 22px;
+}
+
 .error-state {
-  color: #dc2626;
+  min-height: auto;
+  color: #c94f4f;
   font-weight: 700;
+}
+
+@media (max-width: 1100px) {
+  .status-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 980px) {
@@ -812,38 +1021,261 @@ onUnmounted(() => nearbyStore.stopPolling())
     padding-inline: 18px;
   }
 
-  .status-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .page-heading {
+    gap: 18px;
+  }
+
+  .identity-card {
+    padding: 16px 18px;
+  }
+
+  .map-canvas {
+    height: min(52vw, 430px);
   }
 }
 
-@media (max-width: 640px) {
+@media (max-width: 767px) {
   .nearby-page {
-    padding-bottom: calc(72px + env(safe-area-inset-bottom));
+    padding-bottom: calc(84px + env(safe-area-inset-bottom));
   }
 
-  .topbar,
+  .workspace {
+    padding: 20px 14px 30px;
+  }
+
+  .page-heading,
   .identity-card,
   .control-row,
-  .page-heading,
   .person-row {
     align-items: stretch;
     flex-direction: column;
   }
 
-  .search-box,
-  .segmented,
+  .page-heading {
+    gap: 16px;
+    margin-bottom: 18px;
+  }
+
+  .heading-copy {
+    max-width: none;
+  }
+
+  .eyebrow {
+    margin-bottom: 8px;
+    font-size: 0.65rem;
+  }
+
+  .page-heading h1 {
+    font-size: clamp(1.85rem, 9vw, 2.25rem);
+    line-height: 1.08;
+  }
+
+  .page-heading p {
+    margin-top: 8px;
+    font-size: 0.86rem;
+    line-height: 1.5;
+  }
+
+  .live-summary {
+    width: 100%;
+    align-items: center;
+    flex-direction: row;
+    justify-content: space-between;
+    gap: 10px;
+    border-top: 1px solid #e2eaf0;
+    padding-top: 12px;
+  }
+
+  .live-summary > span:last-child {
+    font-size: 0.7rem;
+    white-space: nowrap;
+  }
+
+  .live-status {
+    padding: 7px 11px;
+    font-size: 0.7rem;
+  }
+
+  .identity-card {
+    gap: 15px;
+    margin-bottom: 16px;
+    border-radius: 16px;
+    padding: 15px;
+  }
+
+  .identity-left {
+    gap: 12px;
+  }
+
+  .mini-avatar {
+    width: 42px;
+    height: 42px;
+  }
+
   .privacy-control,
+  .segmented,
   .person-actions {
     width: 100%;
   }
 
+  .privacy-control {
+    min-width: 0;
+  }
+
+  .control-row {
+    gap: 14px;
+    margin-bottom: 18px;
+    border: 1px solid #e1eaf1;
+    border-radius: 16px;
+    background: #fff;
+    padding: 14px;
+    box-shadow: 0 7px 20px rgba(42, 67, 83, 0.035);
+  }
+
+  .control-group,
+  .control-group.align-right {
+    width: 100%;
+    align-items: stretch;
+  }
+
+  .control-label {
+    font-size: 0.65rem;
+  }
+
+  .segmented button {
+    flex: 1;
+    padding: 9px 8px;
+  }
+
+  .map-panel {
+    margin-bottom: 16px;
+    border-radius: 17px;
+  }
+
+  .map-header {
+    align-items: flex-start;
+    padding: 14px 15px;
+  }
+
+  .map-header strong {
+    font-size: 0.86rem;
+  }
+
+  .privacy-badge {
+    padding: 6px 9px;
+    font-size: 0.66rem;
+  }
+
+  .map-canvas {
+    min-height: 300px;
+    height: 46vh;
+    max-height: 380px;
+  }
+
+  .map-caption {
+    align-items: flex-start;
+    padding: 11px 14px;
+    font-size: 0.7rem;
+    line-height: 1.45;
+  }
+
   .status-grid {
     grid-template-columns: 1fr;
+    gap: 9px;
+    margin-bottom: 16px;
+  }
+
+  .status-card {
+    align-items: center;
+    padding: 13px 14px;
+  }
+
+  .status-card svg {
+    width: 32px;
+    height: 32px;
+  }
+
+  .nearby-list {
+    border-radius: 17px;
+    padding: 15px;
+  }
+
+  .list-header {
+    align-items: flex-end;
+    gap: 12px;
+    margin-bottom: 13px;
+  }
+
+  .list-header > span {
+    text-align: right;
+    white-space: nowrap;
+  }
+
+  .person-row {
+    gap: 11px;
+    padding: 12px;
   }
 
   .person-actions {
     margin-left: 0;
+  }
+
+  .person-actions a,
+  .person-actions button {
+    justify-content: center;
+    flex: 1;
+  }
+
+  .empty-state {
+    min-height: 190px;
+    padding-inline: 8px;
+  }
+}
+
+@media (max-width: 420px) {
+  .workspace {
+    padding-inline: 12px;
+  }
+
+  .live-summary {
+    gap: 8px;
+  }
+
+  .live-summary > span:last-child {
+    font-size: 0.67rem;
+  }
+
+  .map-header {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .privacy-badge {
+    align-self: flex-start;
+  }
+
+  .map-canvas {
+    min-height: 270px;
+    height: 40vh;
+    max-height: 340px;
+  }
+
+  .list-header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 7px;
+  }
+
+  .list-header > span {
+    text-align: left;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loading-dot,
+  .person-row {
+    animation: none;
+    transition: none;
   }
 }
 </style>

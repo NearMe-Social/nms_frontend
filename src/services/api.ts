@@ -243,7 +243,7 @@ export const authApi = {
     })
   },
   me(): Promise<AuthResponse['user']> {
-    return request<AuthResponse['user']>('/auth/me');
+    return request<AuthResponse['user']>('/auth/me')
   },
 }
 
@@ -461,15 +461,23 @@ export const userApi = {
     })
   },
 
-  uploadProfileImage(file: File): Promise<{ url: string }> {
+  async uploadProfileImage(file: File): Promise<{ url: string; user: UserProfile }> {
     const formData = new FormData()
     formData.append('file', file)
-    return fetch(`${API_URL}/user/profile-image`, {
+    const response = await fetch(`${API_URL}/users/me/profile-image`, {
       method: 'POST',
       headers: localStorage.getItem('token')
         ? { Authorization: `Bearer ${localStorage.getItem('token')}` }
         : {},
       body: formData,
-    }).then((res) => res.json())
+    })
+
+    const body = await response.json().catch(() => ({}))
+    if (!response.ok) {
+      const message = Array.isArray(body?.message) ? body.message.join(', ') : body?.message
+      throw new Error(message || `Profile image upload failed: HTTP ${response.status}`)
+    }
+
+    return body
   },
 }
