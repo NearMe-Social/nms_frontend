@@ -234,6 +234,9 @@ export const authApi = {
       body: JSON.stringify({ email, otp }),
     })
   },
+  me(): Promise<AuthResponse['user']> {
+    return request<AuthResponse['user']>('/auth/me');
+  },
 }
 
 export const postApi = {
