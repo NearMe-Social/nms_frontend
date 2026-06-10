@@ -151,6 +151,7 @@
         </div>
       </div>
     </div>
+    <MobileBottomNav />
   </div>
 </template>
 
@@ -161,6 +162,7 @@ import CommentSection from './CommentSection.vue'
 import Navbar from '@/components/Navbar.vue'
 import AppSidebar from '@/components/AppSidebar.vue'
 import UserOptionsMenu from '@/components/UserOptionsMenu.vue'
+import MobileBottomNav from '@/components/MobileBottomNav.vue'
 import { commentApi, postApi, type ApiComment, type ApiPost } from '@/services/api'
 import { useAuthStore } from '@/stores/auth'
 
