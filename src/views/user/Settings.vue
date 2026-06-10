@@ -40,10 +40,12 @@
                   <aside class="form-sidebar">
                     <div class="profile-photo-card">
                       <div class="photo-section">
-                        <img v-if="photoPreview" :src="photoPreview" class="preview-img" />
-                        <div v-else class="photo-placeholder">
-                          <UserIcon :size="48" />
-                        </div>
+                        <UserAvatar
+                          :src="photoPreview"
+                          :username="profileForm.username || authStore.user?.username"
+                          alt="Profile picture"
+                          class="settings-avatar"
+                        />
                       </div>
                       <button type="button" class="photo-change-btn" @click="triggerFileInput">
                         <UploadCloudIcon :size="16" /> Change Photo
@@ -344,12 +346,15 @@
 </template>
 
 <script setup lang="ts">
+defineOptions({ name: 'UserSettingsPage' })
+
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { userApi, type UpdateProfilePayload } from '@/services/api'
 import Navbar from '@/components/Navbar.vue'
 import AppSidebar from '@/components/AppSidebar.vue'
+import UserAvatar from '@/components/UserAvatar.vue'
 import {
   User as UserIcon,
   MapPin as MapPinIcon,
@@ -403,8 +408,8 @@ onMounted(async () => {
       username: profile.username || '',
       email: profile.email || '',
       bio: profile.bio || '',
-      location: (profile as any).location || '',
-      website: (profile as any).website || '',
+      location: profile.location || '',
+      website: profile.website || '',
       profile_image: profile.profile_image || '',
     }
     if (profile.profile_image) photoPreview.value = profile.profile_image
@@ -426,14 +431,25 @@ function triggerFileInput() {
   fileInput.value?.click()
 }
 
-function handlePhotoUpload(event: Event) {
+async function handlePhotoUpload(event: Event) {
   const file = (event.target as HTMLInputElement).files?.[0]
   if (!file) return
-  const reader = new FileReader()
-  reader.onload = (e) => {
-    photoPreview.value = e.target?.result as string
+
+  if (file.size > 5 * 1024 * 1024) {
+    profileError.value = 'File size must be less than 5MB'
+    return
   }
-  reader.readAsDataURL(file)
+
+  profileError.value = ''
+  try {
+    const response = await userApi.uploadProfileImage(file)
+    photoPreview.value = response.url
+    profileForm.value.profile_image = response.url
+    authStore.updateProfile(response.user)
+    profileSuccess.value = 'Photo uploaded successfully!'
+  } catch (error) {
+    profileError.value = error instanceof Error ? error.message : 'Failed to upload photo'
+  }
 }
 
 async function handleSaveProfile() {
@@ -445,7 +461,8 @@ async function handleSaveProfile() {
       username: profileForm.value.username,
       bio: profileForm.value.bio,
     }
-    await userApi.updateProfile(payload)
+    const updatedProfile = await userApi.updateProfile(payload)
+    authStore.updateProfile(updatedProfile)
     profileSuccess.value = 'Profile updated successfully!'
   } catch (err) {
     profileError.value = err instanceof Error ? err.message : 'Failed to save profile'
@@ -727,6 +744,12 @@ function handleDeleteAccount() {
   align-items: center;
   justify-content: center;
   border: 1px solid #dce7ee;
+}
+.settings-avatar {
+  width: 100%;
+  height: 100%;
+  border-radius: 0;
+  font-size: clamp(3rem, 8vw, 5rem);
 }
 .preview-img {
   width: 100%;
