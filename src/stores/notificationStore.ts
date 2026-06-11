@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import { API_URL } from '@/services/api'
 
 export interface NotificationData {
   notification_id: number
@@ -8,6 +9,12 @@ export interface NotificationData {
   is_read: boolean
   created_at: string
   related_id: number
+  target_path?: string | null
+}
+
+interface NotificationsResponse {
+  total: number
+  data: NotificationData[]
 }
 
 export const useNotificationStore = defineStore('notifications', () => {
@@ -24,7 +31,7 @@ export const useNotificationStore = defineStore('notifications', () => {
     error.value = null
 
     try {
-      const res = await fetch('http://localhost:3000/notifications', {
+      const res = await fetch(`${API_URL}/notifications`, {
         headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -36,7 +43,8 @@ export const useNotificationStore = defineStore('notifications', () => {
         throw new Error(body?.message ?? `HTTP ${res.status}`)
       }
 
-      notifications.value = await res.json()
+      const body = (await res.json()) as NotificationsResponse | NotificationData[]
+      notifications.value = Array.isArray(body) ? body : body.data
       lastFetchedAt.value = new Date()
     } catch (err: unknown) {
       error.value = err instanceof Error ? err.message : 'Unknown error'
@@ -49,6 +57,28 @@ export const useNotificationStore = defineStore('notifications', () => {
     notifications.value = notifications.value.map((n) => ({ ...n, is_read: true }))
   }
 
+  async function markAsRead(notificationId: number) {
+    const notification = notifications.value.find(
+      (item) => item.notification_id === notificationId,
+    )
+    if (!notification || notification.is_read) return
+
+    notification.is_read = true
+    try {
+      const token = localStorage.getItem('token')
+      const res = await fetch(`${API_URL}/notifications/${notificationId}/read`, {
+        method: 'PATCH',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      })
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    } catch {
+      notification.is_read = false
+    }
+  }
+
   return {
     notifications,
     loading,
@@ -57,5 +87,6 @@ export const useNotificationStore = defineStore('notifications', () => {
     unreadCount,
     fetchNotifications,
     markAllRead,
+    markAsRead,
   }
 })

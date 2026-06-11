@@ -5,170 +5,260 @@
     <div class="chat-shell">
       <AppSidebar class="hidden md:flex" />
 
-      <main class="workspace" :class="{ 'list-collapsed': isListCollapsed }">
-        <section class="conversation-list" :aria-expanded="!isListCollapsed">
-          <div class="list-header">
-            <div>
-              <p class="eyebrow">Private Chat</p>
-              <h1>Messages</h1>
-            </div>
-            <button
-              type="button"
-              class="collapse-btn"
-              :title="isListCollapsed ? 'Show conversations' : 'Collapse conversations'"
-              @click="isListCollapsed = !isListCollapsed"
-            >
-              <PanelLeftClose v-if="!isListCollapsed" class="icon" />
-              <PanelLeftOpen v-else class="icon" />
-            </button>
-          </div>
-
-          <div v-if="!isListCollapsed" class="list-content">
-            <label class="search-box">
-              <Search class="icon" />
-              <input v-model="searchTerm" type="text" placeholder="Search conversations..." />
-            </label>
-
-            <div class="conversation-items">
-              <button
-                v-for="conversation in filteredConversations"
-                :key="conversation.id"
-                type="button"
-                class="conversation-card"
-                :class="{ active: activeConversation && conversation.id === activeConversation.id }"
-                @click="selectConversation(conversation.id)"
-              >
-                <div class="avatar-wrap">
-                  <img :src="conversation.avatar" :alt="conversation.name" />
-                  <span :class="conversation.online ? 'online' : 'offline'" />
-                </div>
-                <div class="conversation-copy">
-                  <div class="conversation-topline">
-                    <strong>{{ conversation.name }}</strong>
-                    <span>{{ conversation.time }}</span>
-                  </div>
-                  <p>{{ conversation.preview }}</p>
-                </div>
-                <span v-if="conversation.unread" class="unread-count">{{ conversation.unread }}</span>
-              </button>
-            </div>
-          </div>
-        </section>
-
-        <section v-if="activeConversation" class="active-chat">
-          <header class="chat-header">
-            <button
-              v-if="isListCollapsed"
-              type="button"
-              class="icon-btn"
-              title="Show conversations"
-              @click="isListCollapsed = false"
-            >
-              <PanelLeftOpen class="icon" />
-            </button>
-
-            <div class="contact-avatar">
-              <img :src="activeConversation.avatar" :alt="activeConversation.name" />
-              <span :class="activeConversation.online ? 'online' : 'offline'" />
-            </div>
-
-            <div class="contact-copy">
-              <h2>{{ activeConversation.name }}</h2>
-              <p>{{ activeConversation.online ? 'Active now' : activeConversation.presence }}</p>
-            </div>
-
-            <div class="chat-actions">
-              <button type="button" class="icon-btn" aria-label="Start voice call">
-                <Phone class="icon" />
-              </button>
-              <button type="button" class="icon-btn" aria-label="Start video call">
-                <Video class="icon" />
-              </button>
-              <button type="button" class="icon-btn" aria-label="Conversation info">
-                <Info class="icon" />
-              </button>
-            </div>
-          </header>
-
-          <div class="privacy-strip">
-            <span>
-              <ShieldCheck class="icon" />
-              Private one-to-one chat
-            </span>
-            <span>{{ messageCount }} message{{ messageCount === 1 ? '' : 's' }}</span>
-          </div>
-
-          <section ref="threadRef" class="thread">
-            <div class="date-pill">Today</div>
-
-            <article
-              v-for="message in messages"
-              :key="message.id"
-              class="message-row"
-              :class="message.sender === 'me' ? 'mine' : 'theirs'"
-            >
-              <img
-                v-if="message.sender === 'them'"
-                :src="activeConversation.avatar"
-                :alt="activeConversation.name"
-              />
-
-              <div class="message-stack">
-                <div class="bubble">
-                  <p>{{ message.text }}</p>
-                </div>
-                <span class="message-meta">
-                  {{ message.time }}
-                  <template v-if="message.sender === 'me'">
-                    <CheckCheck class="tiny-icon" :class="{ seen: message.readAt }" />
-                    {{ message.readAt ? 'Seen' : 'Sent' }}
-                  </template>
-                </span>
+      <main class="workspace" :class="{ 'list-collapsed': isListCollapsed && !isMobileOrTablet }">
+        <Transition name="slide">
+          <section
+            v-if="showConversationPanel"
+            class="conversation-list"
+            :class="{ collapsed: isListCollapsed && !isMobileOrTablet }"
+            :aria-expanded="!isListCollapsed"
+          >
+            <div class="list-header" :class="{ collapsed: isListCollapsed && !isMobileOrTablet }">
+              <div v-if="!isListCollapsed || isMobileOrTablet">
+                <p class="eyebrow">Private Chat</p>
+                <h1>Messages</h1>
               </div>
-            </article>
+              <button
+                type="button"
+                class="collapse-btn"
+                :title="isListCollapsed ? 'Show conversations' : 'Collapse conversations'"
+                @click="isListCollapsed = !isListCollapsed"
+              >
+                <PanelLeftClose v-if="!isListCollapsed" class="icon" />
+                <PanelLeftOpen v-else class="icon" />
+              </button>
+            </div>
 
-            <div v-if="typingConversationId === activeConversation.id" class="typing-row">
-              <img :src="activeConversation.avatar" :alt="activeConversation.name" />
-              <div class="typing-bubble" aria-live="polite">
-                <span />
-                <span />
-                <span />
+            <div v-if="!isListCollapsed" class="list-content">
+              <label class="search-box">
+                <Search class="icon" />
+                <input
+                  v-model="searchTerm"
+                  type="text"
+                  placeholder="Search conversations..."
+                  aria-label="Search conversations"
+                />
+              </label>
+
+              <div v-if="loadingConversations" class="state-message">
+                <div class="skeleton-list">
+                  <div v-for="i in 5" :key="i" class="skeleton-item">
+                    <div class="skeleton-avatar"></div>
+                    <div class="skeleton-lines">
+                      <div class="skeleton-line"></div>
+                      <div class="skeleton-line short"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div v-else-if="error" class="state-message error">
+                <AlertCircle class="icon" />
+                <p>{{ error }}</p>
+                <button @click="loadConversations" class="retry-btn">Try Again</button>
+              </div>
+
+              <div v-else-if="conversations.length === 0" class="state-message">
+                <MessagesSquare class="icon" />
+                <p>No conversations yet</p>
+                <p class="hint">Start a conversation from a nearby user profile.</p>
+              </div>
+
+              <div v-else-if="filteredConversations.length === 0" class="state-message">
+                <SearchX class="icon" />
+                <p>No conversations match</p>
+                <p class="hint">Try a different search term</p>
+              </div>
+
+              <div v-else class="conversation-items">
+                <button
+                  v-for="conversation in filteredConversations"
+                  :key="conversation.id"
+                  type="button"
+                  class="conversation-card"
+                  :class="{ active: activeConversation && conversation.id === activeConversation.id }"
+                  @click="selectConversation(conversation.id)"
+                >
+                  <div class="avatar-wrap">
+                    <UserAvatar
+                      :src="conversation.avatar"
+                      :username="conversation.name"
+                      :alt="conversation.name"
+                      class="chat-avatar"
+                    />
+                    <span :class="conversation.online ? 'online' : 'offline'" />
+                  </div>
+                  <div class="conversation-copy">
+                    <div class="conversation-topline">
+                      <strong>{{ conversation.name }}</strong>
+                      <span class="time">{{ conversation.time }}</span>
+                    </div>
+                    <div class="conversation-preview">
+                      <p>{{ conversation.preview }}</p>
+                      <span v-if="conversation.unread" class="unread-count">{{ conversation.unread }}</span>
+                    </div>
+                  </div>
+                </button>
               </div>
             </div>
           </section>
+        </Transition>
 
-          <footer class="composer">
-            <button type="button" class="composer-tool" aria-label="Attach file">
-              <Paperclip class="icon" />
-            </button>
-            <textarea
-              ref="composerRef"
-              v-model="draft"
-              rows="1"
-              placeholder="Type your message..."
-              @input="handleTypingInput"
-              @keydown="handleComposerKeydown"
-            />
-            <button
-              type="button"
-              class="send-btn"
-              :disabled="!canSend"
-              aria-label="Send message"
-              @click="sendMessage"
-            >
-              <Send class="icon" />
-            </button>
-          </footer>
-        </section>
+        <Transition name="fade-slide">
+          <section v-if="showActiveChat && activeConversation" class="active-chat">
+            <header class="chat-header">
+              <button
+                v-if="isMobileOrTablet && activeConversationId && !showConversationList"
+                type="button"
+                class="icon-btn back-btn"
+                title="Back to conversations"
+                @click="showConversationList = true"
+              >
+                <ArrowLeft class="icon" />
+              </button>
 
-        <section v-else class="active-chat empty-chat">
-          <div class="empty-state">
-            <h2>No conversations yet</h2>
-            <p>Start a conversation from a nearby user profile.</p>
-          </div>
-        </section>
+              <button
+                v-else-if="isListCollapsed"
+                type="button"
+                class="icon-btn"
+                title="Show conversations"
+                @click="isListCollapsed = false"
+              >
+                <PanelLeftOpen class="icon" />
+              </button>
+
+              <div class="contact-avatar">
+                <UserAvatar
+                  :src="activeConversation.avatar"
+                  :username="activeConversation.name"
+                  :alt="activeConversation.name"
+                  class="chat-avatar"
+                />
+                <span :class="activeConversation.online ? 'online' : 'offline'" />
+              </div>
+
+              <div class="contact-copy">
+                <h2>{{ activeConversation.name }}</h2>
+                <p>{{ activeConversation.online ? 'Active now' : activeConversation.presence }}</p>
+              </div>
+
+              <div class="chat-actions">
+                <button type="button" class="icon-btn" aria-label="Start voice call">
+                  <Phone class="icon" />
+                </button>
+                <button type="button" class="icon-btn" aria-label="Start video call">
+                  <Video class="icon" />
+                </button>
+                <button type="button" class="icon-btn" aria-label="Conversation info">
+                  <Info class="icon" />
+                </button>
+              </div>
+            </header>
+
+            <div class="privacy-strip">
+              <span>
+                <ShieldCheck class="icon" />
+                Private one-to-one chat
+              </span>
+              <span>{{ messageCount }} message{{ messageCount === 1 ? '' : 's' }}</span>
+            </div>
+
+            <section ref="threadRef" class="thread">
+              <div v-if="loadingMessages" class="thread-state">
+                <span class="loading-dot" />
+                Loading messages...
+              </div>
+
+              <div v-else-if="messages.length === 0" class="thread-state">
+                <MessagesSquare class="icon" />
+                <span>No messages yet. Say hello.</span>
+              </div>
+
+              <template v-else v-for="group in groupedMessages" :key="group.date">
+                <div class="date-pill">{{ group.label }}</div>
+
+                <article
+                  v-for="message in group.messages"
+                  :key="message.id"
+                  :id="`message-${message.id}`"
+                  class="message-row"
+                  :class="[
+                    message.sender === 'me' ? 'mine' : 'theirs',
+                    { highlighted: message.id === targetMessageId },
+                  ]"
+                >
+                  <UserAvatar
+                    v-if="message.sender === 'them'"
+                    :src="activeConversation.avatar"
+                    :username="activeConversation.name"
+                    :alt="activeConversation.name"
+                    class="message-avatar"
+                  />
+
+                  <div class="message-stack">
+                    <div class="bubble">
+                      <p>{{ message.text }}</p>
+                    </div>
+                    <span class="message-meta">
+                      {{ message.time }}
+                      <template v-if="message.sender === 'me'">
+                        <CheckCheck class="tiny-icon" :class="{ seen: message.readAt }" />
+                        {{ message.readAt ? 'Seen' : 'Sent' }}
+                      </template>
+                    </span>
+                  </div>
+                </article>
+              </template>
+
+              <div v-if="typingConversationId === activeConversation.id" class="typing-row">
+                <UserAvatar
+                  :src="activeConversation.avatar"
+                  :username="activeConversation.name"
+                  :alt="activeConversation.name"
+                  class="message-avatar"
+                />
+                <div class="typing-bubble" aria-live="polite">
+                  <span />
+                  <span />
+                  <span />
+                </div>
+              </div>
+            </section>
+
+            <footer class="composer">
+              <textarea
+                ref="composerRef"
+                v-model="draft"
+                rows="1"
+                placeholder="Type your message..."
+                aria-label="Message input"
+                @input="handleTypingInput"
+                @keydown="handleComposerKeydown"
+              />
+              <button
+                type="button"
+                class="send-btn"
+                :disabled="!canSend"
+                :aria-label="canSend ? 'Send message' : 'Type a message to send'"
+                @click="sendMessage"
+              >
+                <Send class="icon" />
+              </button>
+            </footer>
+          </section>
+
+          <section v-else-if="!isMobileOrTablet" class="active-chat empty-chat">
+            <div class="empty-state">
+              <MessagesSquare class="empty-icon" />
+              <h2>No conversation selected</h2>
+              <p>Choose a conversation from the list to start messaging.</p>
+            </div>
+          </section>
+        </Transition>
       </main>
     </div>
+
+    <MobileBottomNav />
   </div>
 </template>
 
@@ -176,23 +266,23 @@
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import AppSidebar from '@/components/AppSidebar.vue'
+import MobileBottomNav from '@/components/MobileBottomNav.vue'
 import Navbar from '@/components/Navbar.vue'
-import {
-  conversationApi,
-  messageApi,
-  type ApiConversation,
-  type ApiMessage,
-} from '@/services/api'
+import UserAvatar from '@/components/UserAvatar.vue'
+import { conversationApi, messageApi, type ApiConversation, type ApiMessage } from '@/services/api'
 import { useAuthStore } from '@/stores/auth'
 import { useChatSocketStore } from '@/stores/chatSocket'
 import {
+  AlertCircle,
+  ArrowLeft,
   CheckCheck,
   Info,
+  MessagesSquare,
   PanelLeftClose,
   PanelLeftOpen,
-  Paperclip,
   Phone,
   Search,
+  SearchX,
   Send,
   ShieldCheck,
   Video,
@@ -200,19 +290,20 @@ import {
 
 type ChatSender = 'me' | 'them'
 
-type ChatMessage = {
+interface ChatMessage {
   id: number
   sender: ChatSender
   text: string
   time: string
   readAt: string | null
+  createdAt: Date
 }
 
-type Conversation = {
+interface Conversation {
   id: number
   participantId: number | null
   name: string
-  avatar: string
+  avatar: string | null
   online: boolean
   presence: string
   preview: string
@@ -231,28 +322,95 @@ const threadRef = ref<HTMLElement | null>(null)
 const composerRef = ref<HTMLTextAreaElement | null>(null)
 const draft = ref('')
 const messages = ref<ChatMessage[]>([])
-const loading = ref(false)
+const loadingConversations = ref(false)
+const loadingMessages = ref(false)
 const error = ref('')
 const typingConversationId = ref<number | null>(null)
+const showConversationList = ref(true)
+const isMobileOrTablet = ref(false)
+
 let typingTimeout: ReturnType<typeof setTimeout> | null = null
 let socketListenerStops: Array<() => void> = []
+let messageRequestId = 0
+
+// Group messages by date
+const groupedMessages = computed(() => {
+  const groups: { date: string; label: string; messages: ChatMessage[] }[] = []
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const yesterday = new Date(today)
+  yesterday.setDate(yesterday.getDate() - 1)
+
+  for (const message of messages.value) {
+    const messageDate = new Date(message.createdAt)
+    messageDate.setHours(0, 0, 0, 0)
+    let label = ''
+
+    if (messageDate.getTime() === today.getTime()) {
+      label = 'Today'
+    } else if (messageDate.getTime() === yesterday.getTime()) {
+      label = 'Yesterday'
+    } else {
+      label = messageDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+    }
+
+    const dateKey = messageDate.toISOString().split('T')[0]
+    let group = groups.find(g => g.date === dateKey)
+    if (!group) {
+      group = { date: dateKey, label, messages: [] }
+      groups.push(group)
+    }
+    group.messages.push(message)
+  }
+
+  return groups
+})
 
 const activeConversation = computed(
   (): Conversation | null =>
-    conversations.value.find((conversation) => conversation.id === activeConversationId.value) ?? null,
+    conversations.value.find((conversation) => conversation.id === activeConversationId.value) ??
+    null,
 )
+const showConversationPanel = computed(
+  () =>
+    !isMobileOrTablet.value ||
+    showConversationList.value ||
+    activeConversationId.value === null,
+)
+const showActiveChat = computed(
+  () => !isMobileOrTablet.value || !showConversationList.value,
+)
+const targetMessageId = computed(() => {
+  const messageId = Number(route.query.messageId)
+  return Number.isInteger(messageId) && messageId > 0 ? messageId : null
+})
+
 const filteredConversations = computed(() => {
   const needle = searchTerm.value.trim().toLowerCase()
   if (!needle) return conversations.value
-
   return conversations.value.filter(
     (conversation) =>
       conversation.name.toLowerCase().includes(needle) ||
       conversation.preview.toLowerCase().includes(needle),
   )
 })
+
 const messageCount = computed(() => messages.value.length)
 const canSend = computed(() => !!activeConversation.value && draft.value.trim().length > 0)
+
+function checkScreenSize() {
+  const mobile = window.innerWidth <= 900
+  isMobileOrTablet.value = mobile
+
+  if (mobile) {
+    isListCollapsed.value = false
+    if (!activeConversationId.value) {
+      showConversationList.value = true
+    }
+  } else {
+    showConversationList.value = true
+  }
+}
 
 async function selectConversation(id: number) {
   const previousConversationId = activeConversationId.value
@@ -262,13 +420,46 @@ async function selectConversation(id: number) {
   }
 
   activeConversationId.value = id
+  showConversationList.value = !isMobileOrTablet.value
+  messages.value = []
+  typingConversationId.value = null
+
+  const conversation = conversations.value.find(c => c.id === id)
+  if (conversation?.unread) {
+    conversation.unread = 0
+  }
+
   await loadMessages(id)
   joinConversation(id)
-  void nextTick(scrollToBottom)
+  void nextTick(() => {
+    if (!scrollToTargetMessage()) {
+      scrollToBottom()
+    }
+    autoResizeTextarea()
+  })
 }
 
-function formatTime(date = new Date()) {
+function scrollToTargetMessage() {
+  if (!targetMessageId.value) return false
+  const target = document.getElementById(`message-${targetMessageId.value}`)
+  if (!target) return false
+  target.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  return true
+}
+
+function formatTime(date: Date) {
   return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+}
+
+function formatDateForPreview(date: Date) {
+  const now = new Date()
+  const diff = now.getTime() - date.getTime()
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24))
+
+  if (days === 0) return formatTime(date)
+  if (days === 1) return 'Yesterday'
+  if (days < 7) return date.toLocaleDateString(undefined, { weekday: 'short' })
+  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
 }
 
 async function sendMessage() {
@@ -277,6 +468,7 @@ async function sendMessage() {
   if (!text || !conversationId) return
 
   draft.value = ''
+  autoResizeTextarea()
 
   if (chatSocket.connected) {
     chatSocket.emit(
@@ -285,6 +477,7 @@ async function sendMessage() {
       (response: { success?: boolean; message?: ApiMessage; error?: string }) => {
         if (response?.error) {
           error.value = response.error
+          draft.value = text
           return
         }
         if (response?.message) upsertMessage(response.message)
@@ -303,12 +496,21 @@ async function sendMessage() {
 }
 
 function handleComposerKeydown(event: KeyboardEvent) {
-  if (event.key !== 'Enter' || event.shiftKey) return
-  event.preventDefault()
-  sendMessage()
+  if (event.key === 'Enter' && !event.shiftKey) {
+    event.preventDefault()
+    sendMessage()
+  }
+}
+
+function autoResizeTextarea() {
+  const textarea = composerRef.value
+  if (!textarea) return
+  textarea.style.height = 'auto'
+  textarea.style.height = `${Math.min(textarea.scrollHeight, 120)}px`
 }
 
 function handleTypingInput() {
+  autoResizeTextarea()
   const conversationId = activeConversationId.value
   if (!conversationId || !chatSocket.connected) return
 
@@ -339,17 +541,20 @@ function toConversation(conversation: ApiConversation): Conversation {
   const latestMessage = [...(conversation.messages ?? [])].sort(
     (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
   )[0]
-  const name = user?.username || 'Neighbor'
 
+  const name = user?.username || 'Neighbor'
   return {
     id: conversation.conversation_id,
     participantId: user?.user_id ?? otherParticipant?.user_id ?? null,
     name,
-    avatar: user?.profile_image || `https://i.pravatar.cc/200?u=${encodeURIComponent(name)}`,
+    avatar: user?.profile_image || null,
     online: false,
     presence: 'Offline',
     preview: latestMessage?.content || 'No messages yet',
-    time: latestMessage ? formatTime(new Date(latestMessage.created_at)) : formatTime(new Date(conversation.updated_at)),
+    time: latestMessage
+      ? formatDateForPreview(new Date(latestMessage.created_at))
+      : formatDateForPreview(new Date(conversation.updated_at)),
+    unread: conversation.unread_count ?? 0,
   }
 }
 
@@ -360,28 +565,40 @@ function toChatMessage(message: ApiMessage): ChatMessage {
     text: message.content,
     time: formatTime(new Date(message.created_at)),
     readAt: message.read_at,
+    createdAt: new Date(message.created_at),
   }
 }
 
 async function loadConversations() {
-  loading.value = true
+  loadingConversations.value = true
   error.value = ''
 
   try {
     const data = await conversationApi.list()
     conversations.value = data.map(toConversation)
 
+    const targetConversationId = Number(route.query.conversationId)
     const targetUserId = Number(route.query.userId)
 
-    if (Number.isInteger(targetUserId) && targetUserId > 0) {
+    if (
+      Number.isInteger(targetConversationId) &&
+      targetConversationId > 0 &&
+      conversations.value.some((conversation) => conversation.id === targetConversationId)
+    ) {
+      await selectConversation(targetConversationId)
+    } else if (Number.isInteger(targetUserId) && targetUserId > 0) {
       await openConversationWith(targetUserId)
-    } else if (conversations.value.length > 0) {
-      await selectConversation(activeConversationId.value ?? conversations.value[0]!.id)
+    } else if (
+      conversations.value.length > 0 &&
+      !activeConversationId.value &&
+      !isMobileOrTablet.value
+    ) {
+      await selectConversation(conversations.value[0]!.id)
     }
   } catch (err: unknown) {
     error.value = err instanceof Error ? err.message : 'Failed to load conversations.'
   } finally {
-    loading.value = false
+    loadingConversations.value = false
   }
 }
 
@@ -400,15 +617,43 @@ async function openConversationWith(userId: number) {
 }
 
 async function loadMessages(conversationId: number) {
+  const requestId = ++messageRequestId
+  loadingMessages.value = true
+
   try {
     const page = await messageApi.list(conversationId, 0, 50)
+    if (
+      requestId !== messageRequestId ||
+      conversationId !== activeConversationId.value
+    ) {
+      return
+    }
+
     messages.value = page.data.map(toChatMessage)
     await messageApi.markSeen(conversationId)
+    if (
+      requestId !== messageRequestId ||
+      conversationId !== activeConversationId.value
+    ) {
+      return
+    }
+
     chatSocket.markConversationRead(conversationId)
     emitSeen(conversationId)
   } catch (err: unknown) {
+    if (
+      requestId !== messageRequestId ||
+      conversationId !== activeConversationId.value
+    ) {
+      return
+    }
+
     error.value = err instanceof Error ? err.message : 'Failed to load messages.'
     messages.value = []
+  } finally {
+    if (requestId === messageRequestId) {
+      loadingMessages.value = false
+    }
   }
 }
 
@@ -418,6 +663,12 @@ function upsertMessage(message: ApiMessage) {
   if (message.conversation_id !== activeConversationId.value) {
     if (!conversations.value.some((item) => item.id === message.conversation_id)) {
       void refreshConversationsSilently()
+    } else {
+      // Increment unread count if not active conversation
+      const conv = conversations.value.find(c => c.id === message.conversation_id)
+      if (conv && conv.id !== activeConversationId.value) {
+        conv.unread = (conv.unread || 0) + 1
+      }
     }
     return
   }
@@ -439,7 +690,7 @@ function updateConversationPreview(message: ApiMessage) {
   if (!conversation) return
 
   conversation.preview = message.content
-  conversation.time = formatTime(new Date(message.created_at))
+  conversation.time = formatDateForPreview(new Date(message.created_at))
 
   const index = conversations.value.findIndex((item) => item.id === message.conversation_id)
   if (index > 0) {
@@ -522,11 +773,14 @@ function leaveConversation(conversationId: number) {
 }
 
 onMounted(() => {
+  checkScreenSize()
+  window.addEventListener('resize', checkScreenSize)
   registerSocketListeners()
   void loadConversations()
 })
 
 onUnmounted(() => {
+  window.removeEventListener('resize', checkScreenSize)
   stopTyping()
   if (activeConversationId.value) leaveConversation(activeConversationId.value)
   socketListenerStops.forEach((stop) => stop())
@@ -557,26 +811,30 @@ watch(
 </script>
 
 <style scoped>
+
 .chat-page {
   min-height: 100vh;
   background: #f4f7fb;
-  color: #1f4054;
-  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  color: #1a3a4f;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
 .chat-shell {
   display: flex;
   min-width: 0;
+  min-height: calc(100vh - 64px);
 }
 
 .workspace {
+  position: relative;
   display: grid;
-  grid-template-columns: minmax(280px, 360px) minmax(0, 1fr);
+  grid-template-columns: minmax(300px, 360px) minmax(0, 1fr);
   gap: 16px;
   width: 100%;
   min-width: 0;
-  height: calc(100vh - 64px);
+  height: calc(100dvh - 64px);
   padding: 18px clamp(14px, 2vw, 24px);
+  transition: grid-template-columns 0.25s ease;
 }
 
 .workspace.list-collapsed {
@@ -587,15 +845,19 @@ watch(
 .active-chat {
   min-height: 0;
   overflow: hidden;
-  border: 1px solid #e3ebf2;
-  border-radius: 18px;
+  border: 1px solid #e1eaf0;
+  border-radius: 20px;
   background: #fff;
-  box-shadow: 0 1px 3px rgba(15, 45, 70, 0.04);
+  box-shadow: 0 8px 24px rgba(20, 45, 70, 0.045);
 }
 
 .conversation-list {
   display: flex;
   flex-direction: column;
+}
+
+.conversation-list.collapsed {
+  overflow: visible;
 }
 
 .list-header,
@@ -608,41 +870,45 @@ watch(
 
 .list-header {
   justify-content: space-between;
-  gap: 12px;
-  padding: 18px;
-  border-bottom: 1px solid #e9f0f5;
+  padding: 20px 20px 16px;
+  border-bottom: 1px solid #eef3f8;
+}
+
+.list-header.collapsed {
+  height: 100%;
+  justify-content: center;
+  padding: 14px 0;
+  border-bottom: 0;
 }
 
 .eyebrow {
   margin: 0;
-  color: #0e6378;
+  color: #0f766e;
   font-size: 0.7rem;
-  font-weight: 900;
-  letter-spacing: 0.16em;
+  font-weight: 800;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
 }
 
-h1,
+h1 {
+  margin: 4px 0 0;
+  font-size: 1.65rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, #1a4a5f 0%, #0f766e 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
 h2 {
   margin: 0;
-  color: #17364a;
-  letter-spacing: 0;
-}
-
-h1 {
-  margin-top: 3px;
-  font-size: 1.55rem;
-  font-weight: 900;
-}
-
-h2 {
   font-size: 1.05rem;
-  font-weight: 900;
+  font-weight: 700;
+  color: #1a4a5f;
 }
 
 .collapse-btn,
 .icon-btn,
-.composer-tool,
 .send-btn {
   display: inline-flex;
   align-items: center;
@@ -650,46 +916,53 @@ h2 {
   border: 0;
   border-radius: 999px;
   cursor: pointer;
+  transition: all 0.2s ease;
 }
 
 .collapse-btn,
-.icon-btn,
-.composer-tool {
-  width: 38px;
-  height: 38px;
-  background: #f3f7fa;
-  color: #526b80;
+.icon-btn {
+  width: 40px;
+  height: 40px;
+  background: #f0f6fa;
+  color: #4a6f83;
 }
 
 .collapse-btn:hover,
-.icon-btn:hover,
-.composer-tool:hover {
+.icon-btn:hover {
   background: #e4f5f4;
   color: #0f766e;
+  transform: scale(1.02);
 }
 
 .icon {
-  width: 17px;
-  height: 17px;
+  width: 18px;
+  height: 18px;
 }
 
 .list-content {
   display: flex;
-  min-height: 0;
-  flex: 1;
   flex-direction: column;
-  gap: 14px;
-  padding: 16px;
+  gap: 16px;
+  padding: 16px 20px 20px;
+  flex: 1;
+  min-height: 0;
 }
 
 .search-box {
   display: flex;
   align-items: center;
-  gap: 10px;
-  border-radius: 999px;
-  background: #f0f5f8;
-  padding: 10px 13px;
-  color: #7f93a5;
+  gap: 12px;
+  border-radius: 40px;
+  background: #f5fafd;
+  padding: 10px 16px;
+  border: 1px solid #e2edf4;
+  transition: all 0.2s;
+}
+
+.search-box:focus-within {
+  border-color: #0f766e;
+  background: white;
+  box-shadow: 0 2px 12px rgba(15, 118, 110, 0.1);
 }
 
 .search-box input {
@@ -697,39 +970,133 @@ h2 {
   border: 0;
   outline: 0;
   background: transparent;
-  color: #29475b;
-  font-size: 0.86rem;
+  font-size: 0.9rem;
+  color: #1a4a5f;
+}
+
+.skeleton-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.skeleton-item {
+  display: flex;
+  gap: 14px;
+  padding: 12px;
+  border-radius: 20px;
+}
+
+.skeleton-avatar {
+  width: 52px;
+  height: 52px;
+  border-radius: 18px;
+  background: linear-gradient(90deg, #eef3f8 25%, #f5fafd 50%, #eef3f8 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+.skeleton-lines {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 8px;
+}
+
+.skeleton-line {
+  height: 14px;
+  background: linear-gradient(90deg, #eef3f8 25%, #f5fafd 50%, #eef3f8 75%);
+  background-size: 200% 100%;
+  border-radius: 7px;
+  animation: shimmer 1.5s infinite;
+}
+
+.skeleton-line.short {
+  width: 60%;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.state-message {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 40px 20px;
+  text-align: center;
+  color: #6b8da3;
+}
+
+.state-message .icon {
+  width: 48px;
+  height: 48px;
+  opacity: 0.5;
+}
+
+.state-message.error {
+  color: #e53e3e;
+}
+
+.retry-btn {
+  margin-top: 8px;
+  padding: 8px 20px;
+  border-radius: 40px;
+  background: #0f766e;
+  color: white;
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.retry-btn:hover {
+  background: #0d5c56;
+  transform: translateY(-1px);
+}
+
+.hint {
+  font-size: 0.8rem;
+  opacity: 0.7;
 }
 
 .conversation-items {
-  display: grid;
-  gap: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
   overflow-y: auto;
-  padding-right: 2px;
+  padding-right: 4px;
 }
 
 .conversation-card {
-  position: relative;
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  gap: 12px;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 14px;
   align-items: center;
   border: 1px solid transparent;
-  border-radius: 14px;
+  border-radius: 20px;
   background: transparent;
-  padding: 12px;
-  color: inherit;
+  padding: 12px 14px;
   text-align: left;
   cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  width: 100%;
 }
 
 .conversation-card:hover {
-  background: #f6fafc;
+  background: #f8fcfd;
+  transform: translateX(4px);
+  border-color: #e2edf4;
 }
 
 .conversation-card.active {
-  border-color: #cfecef;
   background: #eef8fb;
+  border-color: #cce7e5;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
 .avatar-wrap,
@@ -737,32 +1104,33 @@ h2 {
   position: relative;
 }
 
-.avatar-wrap img,
-.contact-avatar img {
+.chat-avatar {
   display: block;
-  width: 46px;
-  height: 46px;
-  border-radius: 14px;
-  object-fit: cover;
+  width: 52px;
+  height: 52px;
+  border-radius: 18px;
+  font-size: 1.2rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
 
 .avatar-wrap span,
 .contact-avatar span {
   position: absolute;
-  right: -1px;
-  bottom: -1px;
-  width: 12px;
-  height: 12px;
-  border: 2px solid #fff;
+  right: 2px;
+  bottom: 2px;
+  width: 14px;
+  height: 14px;
+  border: 2px solid white;
   border-radius: 999px;
 }
 
 .online {
-  background: #0f8a7c;
+  background: #10b981;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
 }
 
 .offline {
-  background: #a7b4c2;
+  background: #94a3b8;
 }
 
 .conversation-copy {
@@ -771,32 +1139,39 @@ h2 {
 
 .conversation-topline {
   display: flex;
-  gap: 8px;
   justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
 }
 
 .conversation-topline strong {
   overflow: hidden;
-  color: #1e3a4f;
-  font-size: 0.9rem;
-  font-weight: 900;
+  font-size: 0.95rem;
+  font-weight: 700;
   text-overflow: ellipsis;
   white-space: nowrap;
+  color: #1a4a5f;
 }
 
-.conversation-topline span,
-.conversation-copy p,
-.contact-copy p,
-.privacy-strip,
-.message-meta {
-  color: #7890a2;
-  font-size: 0.76rem;
-  font-weight: 700;
+.time {
+  font-size: 0.7rem;
+  color: #8aaec2;
+  flex-shrink: 0;
 }
 
-.conversation-copy p {
+.conversation-preview {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.conversation-preview p {
   overflow: hidden;
-  margin: 4px 0 0;
+  margin: 0;
+  font-size: 0.8rem;
+  color: #7c9ab0;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -808,30 +1183,38 @@ h2 {
   align-items: center;
   justify-content: center;
   border-radius: 999px;
-  background: #0f8a7c;
-  color: #fff;
-  font-size: 0.72rem;
-  font-weight: 900;
+  background: #0f766e;
+  color: white;
+  font-size: 0.7rem;
+  font-weight: 700;
+  flex-shrink: 0;
 }
 
 .active-chat {
   display: flex;
   flex-direction: column;
+  background: white;
 }
 
 .chat-header {
-  gap: 12px;
-  border-bottom: 1px solid #e9f0f5;
-  padding: 14px 18px;
+  gap: 14px;
+  padding: 14px 24px;
+  border-bottom: 1px solid #eef3f8;
+}
+
+.back-btn {
+  display: none;
 }
 
 .contact-copy {
-  min-width: 0;
   flex: 1;
+  min-width: 0;
 }
 
 .contact-copy p {
-  margin: 3px 0 0;
+  margin: 4px 0 0;
+  font-size: 0.75rem;
+  color: #8aaec2;
 }
 
 .chat-actions {
@@ -841,43 +1224,74 @@ h2 {
 
 .privacy-strip {
   justify-content: space-between;
-  gap: 10px;
-  border-bottom: 1px solid #eef3f7;
-  background: #f8fbff;
-  padding: 10px 18px;
+  padding: 10px 24px;
+  background: #fbfeff;
+  border-bottom: 1px solid #eef3f8;
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: #7c9ab0;
 }
 
 .privacy-strip span {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
+  gap: 8px;
 }
 
 .thread {
   flex: 1;
-  min-height: 0;
   overflow-y: auto;
-  background: #f4f7fb;
-  padding: 22px 28px;
+  padding: 24px 28px;
+  background: #f9fdfe;
+}
+
+.thread-state {
+  display: flex;
+  min-height: 100%;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: #7c9ab0;
+  font-size: 0.86rem;
+}
+
+.loading-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  background: #0f766e;
+  animation: loading-pulse 1s ease-in-out infinite;
+}
+
+@keyframes loading-pulse {
+  50% {
+    opacity: 0.35;
+    transform: scale(0.8);
+  }
 }
 
 .date-pill {
   width: fit-content;
-  margin: 0 auto 18px;
-  border-radius: 999px;
-  background: #e9eff5;
-  padding: 6px 12px;
-  color: #70869a;
-  font-size: 0.68rem;
-  font-weight: 900;
-  letter-spacing: 0.12em;
+  margin: 0 auto 20px;
+  padding: 6px 16px;
+  border-radius: 40px;
+  background: #eef3f8;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #5c7f94;
   text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .message-row {
   display: flex;
-  gap: 10px;
-  margin-bottom: 16px;
+  gap: 12px;
+  margin-bottom: 20px;
+  animation: messageAppear 0.2s ease-out;
+}
+
+.message-row.highlighted .bubble {
+  box-shadow: 0 0 0 3px rgba(15, 138, 124, 0.2);
 }
 
 .typing-row {
@@ -887,12 +1301,12 @@ h2 {
   margin-bottom: 16px;
 }
 
-.typing-row img {
+.typing-row .message-avatar {
   width: 34px;
   height: 34px;
   flex: 0 0 auto;
   border-radius: 12px;
-  object-fit: cover;
+  font-size: 0.95rem;
 }
 
 .typing-bubble {
@@ -918,8 +1332,15 @@ h2 {
   animation-delay: 0.12s;
 }
 
-.typing-bubble span:nth-child(3) {
-  animation-delay: 0.24s;
+@keyframes messageAppear {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .message-row.theirs {
@@ -930,46 +1351,51 @@ h2 {
   justify-content: flex-end;
 }
 
-.message-row > img {
-  width: 34px;
-  height: 34px;
-  flex: 0 0 auto;
-  border-radius: 12px;
-  object-fit: cover;
+.message-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 14px;
+  font-size: 0.95rem;
+  flex-shrink: 0;
 }
 
 .message-stack {
-  max-width: min(680px, 72%);
+  max-width: 70%;
 }
 
 .bubble {
-  border-radius: 18px;
-  padding: 12px 15px;
-  line-height: 1.55;
-  box-shadow: 0 8px 20px rgba(15, 45, 70, 0.05);
+  padding: 10px 16px;
+  border-radius: 24px;
+  line-height: 1.45;
+  font-size: 0.9rem;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
 }
 
 .theirs .bubble {
-  border-bottom-left-radius: 6px;
-  background: #fff;
-  color: #273f52;
+  background: white;
+  border: 1px solid #eef3f8;
+  border-bottom-left-radius: 8px;
+  color: #1a3a4f;
 }
 
 .mine .bubble {
-  border-bottom-right-radius: 6px;
-  background: #0f8a7c;
-  color: #fff;
+  background: #0f766e;
+  border-bottom-right-radius: 8px;
+  color: white;
 }
 
 .bubble p {
   margin: 0;
-  white-space: pre-line;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 .message-meta {
   display: flex;
-  gap: 5px;
-  margin-top: 5px;
+  gap: 6px;
+  margin-top: 6px;
+  font-size: 0.65rem;
+  color: #8aaec2;
 }
 
 .mine .message-meta {
@@ -977,117 +1403,266 @@ h2 {
 }
 
 .tiny-icon {
-  width: 13px;
-  height: 13px;
-  color: #9cafbd;
+  width: 14px;
+  height: 14px;
 }
 
 .tiny-icon.seen {
-  color: #0f8a7c;
+  color: #10b981;
 }
 
-@keyframes typing-pulse {
-  0%,
-  80%,
-  100% {
-    opacity: 0.35;
-    transform: translateY(0);
-  }
+.typing-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
 
-  40% {
-    opacity: 1;
-    transform: translateY(-3px);
-  }
+.typing-bubble {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  padding: 14px 18px;
+  background: white;
+  border-radius: 24px;
+  border-bottom-left-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.typing-bubble span {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: #9bb8ca;
+  animation: typingPulse 1.2s infinite ease-in-out;
+}
+
+.typing-bubble span:nth-child(2) { animation-delay: 0.15s; }
+.typing-bubble span:nth-child(3) { animation-delay: 0.3s; }
+
+@keyframes typingPulse {
+  0%, 60%, 100% { opacity: 0.4; transform: translateY(0); }
+  30% { opacity: 1; transform: translateY(-4px); }
 }
 
 .composer {
-  gap: 10px;
-  border-top: 1px solid #e9f0f5;
-  background: #fff;
-  padding: 14px 18px;
+  gap: 12px;
+  padding: 16px 24px;
+  border-top: 1px solid #eef3f8;
+  background: white;
 }
 
 .composer textarea {
+  flex: 1;
   min-height: 44px;
   max-height: 120px;
-  flex: 1;
-  resize: none;
-  border: 0;
-  border-radius: 999px;
-  outline: 0;
-  background: #f0f5f8;
-  padding: 12px 16px;
-  color: #29475b;
+  padding: 12px 18px;
+  border: 1px solid #e2edf4;
+  border-radius: 40px;
+  background: #fafdfe;
   font: inherit;
+  font-size: 0.9rem;
+  resize: none;
+  outline: none;
+  transition: all 0.2s;
+}
+
+.composer textarea:focus {
+  border-color: #0f766e;
+  background: white;
+  box-shadow: 0 2px 8px rgba(15, 118, 110, 0.1);
 }
 
 .send-btn {
-  width: 44px;
-  height: 44px;
-  background: #0f8a7c;
-  color: #fff;
-  box-shadow: 0 10px 20px rgba(15, 138, 124, 0.18);
+  width: 48px;
+  height: 48px;
+  background: #0f766e;
+  color: white;
+  box-shadow: 0 4px 12px rgba(15, 118, 110, 0.3);
 }
 
 .send-btn:disabled {
+  opacity: 0.5;
   cursor: not-allowed;
-  background: #cbd7df;
   box-shadow: none;
 }
 
-.conversation-list[aria-expanded='false'] .list-header {
-  height: 100%;
-  flex-direction: column;
-  justify-content: flex-start;
-  padding: 14px 10px;
+.empty-chat {
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.conversation-list[aria-expanded='false'] .list-header > div {
-  display: none;
+.empty-state {
+  text-align: center;
+  padding: 40px;
+}
+
+.empty-icon {
+  width: 80px;
+  height: 80px;
+  margin-bottom: 24px;
+  color: #cbdde6;
+}
+
+.empty-state h2 {
+  margin-bottom: 12px;
+  font-size: 1.4rem;
+  background: none;
+  -webkit-text-fill-color: #1a4a5f;
+}
+
+.empty-state p {
+  color: #8aaec2;
+}
+
+.slide-enter-active,
+.slide-leave-active {
+  transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+.slide-enter-from,
+.slide-leave-to {
+  transform: translateX(-20px);
+  opacity: 0;
+}
+
+.fade-slide-enter-active,
+.fade-slide-leave-active {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.fade-slide-enter-from,
+.fade-slide-leave-to {
+  opacity: 0;
+  transform: translateX(10px);
 }
 
 @media (max-width: 900px) {
   .workspace,
   .workspace.list-collapsed {
-    grid-template-columns: 1fr;
+    display: block;
+    height: calc(100dvh - 64px);
+    overflow: hidden;
+    padding: 12px;
+  }
+
+  .conversation-list,
+  .active-chat {
+    position: absolute;
+    inset: 12px;
+    width: auto;
     height: auto;
-    min-height: calc(100vh - 64px);
+    min-height: 0;
+    border-radius: 18px;
   }
 
-  .conversation-list {
-    max-height: 360px;
-  }
-
-  .conversation-list[aria-expanded='false'] {
-    max-height: 68px;
-  }
-
-  .conversation-list[aria-expanded='false'] .list-header {
-    height: auto;
-    flex-direction: row;
-    justify-content: flex-end;
+  .collapse-btn {
+    display: none;
   }
 
   .active-chat {
-    min-height: calc(100vh - 180px);
+    min-height: 0;
+  }
+
+  .back-btn {
+    display: inline-flex;
   }
 
   .message-stack {
-    max-width: 84%;
+    max-width: 85%;
+  }
+
+  .thread {
+    padding: 20px 16px;
+  }
+
+  .chat-header,
+  .privacy-strip,
+  .composer {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+}
+
+@media (max-width: 767px) {
+  .workspace,
+  .workspace.list-collapsed {
+    height: calc(100dvh - 64px - 68px);
+    padding-bottom: 8px;
   }
 }
 
 @media (max-width: 640px) {
   .workspace {
-    padding: 12px;
+    padding: 8px;
+  }
+
+  .conversation-list,
+  .active-chat {
+    inset: 8px;
   }
 
   .chat-actions {
     display: none;
   }
 
-  .thread {
-    padding: 18px 12px;
+  .conversation-card {
+    padding: 10px 12px;
   }
+
+  .chat-avatar {
+    width: 48px;
+    height: 48px;
+  }
+
+  .bubble {
+    padding: 8px 12px;
+    font-size: 0.85rem;
+  }
+
+  .message-stack {
+    max-width: 90%;
+  }
+
+  .empty-icon {
+    width: 60px;
+    height: 60px;
+  }
+
+  .privacy-strip > span:last-child {
+    display: none;
+  }
+
+  .chat-header {
+    gap: 10px;
+  }
+
+  .contact-copy h2 {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+.thread::-webkit-scrollbar,
+.conversation-items::-webkit-scrollbar {
+  width: 4px;
+}
+
+.thread::-webkit-scrollbar-track,
+.conversation-items::-webkit-scrollbar-track {
+  background: #eef3f8;
+  border-radius: 4px;
+}
+
+.thread::-webkit-scrollbar-thumb,
+.conversation-items::-webkit-scrollbar-thumb {
+  background: #c5d9e5;
+  border-radius: 4px;
+}
+
+.thread::-webkit-scrollbar-thumb:hover {
+  background: #a8c2d2;
 }
 </style>

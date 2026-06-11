@@ -1,7 +1,10 @@
 <template>
-  <div>
+  <section class="comments-panel">
     <div class="section-header">
-      <span class="section-title">Neighbor Conversations</span>
+      <div>
+        <span class="section-kicker">Responses</span>
+        <span class="section-title">Discussion</span>
+      </div>
       <select class="sort-select" :value="sortBy" @change="updateSortBy">
         <option value="top">Top</option>
         <option value="newest">Newest</option>
@@ -11,20 +14,34 @@
 
     <p v-if="errorMessage" class="comment-error">{{ errorMessage }}</p>
 
+    <div v-if="sortedComments.length === 0" class="comments-empty">
+      <MessageCircle />
+      <div>
+        <strong>No responses yet</strong>
+        <span>Start the conversation with something helpful.</span>
+      </div>
+    </div>
+
     <div
       v-for="(c, ci) in sortedComments"
       :key="c.id"
+      :id="`comment-${c.id}`"
       class="comment-card"
+      :class="{ highlighted: c.id === highlightCommentId }"
       :style="{ animationDelay: ci * 0.06 + 's' }"
     >
       <div class="comment-header">
         <button
-          class="comment-avatar comment-author-link"
-          :style="{ background: c.color }"
+          class="comment-author-link"
           type="button"
           @click="goToProfile(c.userId)"
         >
-          {{ c.initials }}
+          <UserAvatar
+            :src="c.avatar"
+            :username="c.name"
+            :alt="`${c.name} profile`"
+            class="comment-avatar"
+          />
         </button>
         <div class="comment-copy">
           <button class="comment-name comment-name-button" type="button" @click="goToProfile(c.userId)">
@@ -59,7 +76,7 @@
       </div>
 
       <!-- INLINE REPLY INPUT -->
-      <div v-if="c.showReply" style="margin-top:12px; margin-left:24px;">
+      <div v-if="c.showReply" class="inline-reply">
         <div class="reply-input-row">
           <input
             class="reply-input"
@@ -78,8 +95,13 @@
     </div>
 
     <!-- MAIN REPLY INPUT -->
-    <div class="reply-input-row" style="margin-top:20px;">
-      <div class="author-avatar" style="width:34px;height:34px;font-size:0.78rem;flex-shrink:0;">{{ currentUserInitials }}</div>
+    <div class="reply-input-row main-reply">
+      <UserAvatar
+        :src="currentUserAvatar"
+        :username="auth.user?.username || 'Neighbor'"
+        :alt="`${auth.user?.username || 'Neighbor'} profile`"
+        class="current-user-avatar"
+      />
       <input
         ref="mainReplyInput"
         class="reply-input"
@@ -87,52 +109,81 @@
         v-model="mainReplyText"
         @keyup.enter="addComment"
       />
-      <button class="send-btn" @click="addComment">
+      <button class="send-btn" :disabled="submitting" @click="addComment">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
           <line x1="22" y1="2" x2="11" y2="13"/>
           <polygon points="22 2 15 22 11 13 2 9 22 2"/>
         </svg>
       </button>
     </div>
-  </div>
+  </section>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, nextTick, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import CommentOptionsMenu from '@/components/CommentOptionsMenu.vue'
+import UserAvatar from '@/components/UserAvatar.vue'
+import { MessageCircle } from 'lucide-vue-next'
 
-const props = defineProps({
-  comments: {
-    type: Array,
-    required: true
-  },
-  sortBy: {
-    type: String,
-    default: 'top'
-  },
-  submitting: {
-    type: Boolean,
-    default: false
-  },
-  errorMessage: {
-    type: String,
-    default: ''
-  }
-})
+type ReplyItem = {
+  name: string
+  initials: string
+  time: string
+  color: string
+  body: string
+}
 
-const emit = defineEmits(['update:sort-by', 'add-comment', 'submit-reply'])
+type CommentItem = {
+  id: number
+  name: string
+  userId: number | null
+  avatar: string | null
+  initials: string
+  time: string
+  color: string
+  body: string
+  likes: number
+  showReply: boolean
+  replyText: string
+  replies: ReplyItem[]
+}
+
+const props = withDefaults(
+  defineProps<{
+    comments: CommentItem[]
+    sortBy?: string
+    submitting?: boolean
+    errorMessage?: string
+    highlightCommentId?: number | null
+  }>(),
+  {
+    sortBy: 'top',
+    submitting: false,
+    errorMessage: '',
+    highlightCommentId: null,
+  },
+)
+
+const emit = defineEmits<{
+  'update:sort-by': [value: string]
+  'add-comment': [text: string]
+  'submit-reply': [comment: CommentItem, text: string]
+}>()
 
 const auth = useAuthStore()
 const router = useRouter()
 const mainReplyText = ref('')
 const mainReplyInput = ref<HTMLInputElement | null>(null)
-const currentUserInitials = computed(() => initials(auth.user?.username || 'Neighbor'))
+const currentUserAvatar = computed(() => {
+  const profile = auth.user?.profile as { profile_image?: string | null } | undefined
+  return auth.user?.profile_image || profile?.profile_image || null
+})
 
 // Computed sorted comments
 const sortedComments = computed(() => {
-  const list = [...props.comments] as Array<any>
+  const list = [...props.comments]
   if (props.sortBy === 'top') {
     return list.sort((a, b) => b.likes - a.likes)
   }
@@ -141,6 +192,19 @@ const sortedComments = computed(() => {
   }
   return list.sort((a, b) => a.id - b.id)
 })
+
+watch(
+  [() => props.highlightCommentId, () => props.comments],
+  async ([commentId]) => {
+    if (!commentId) return
+    await nextTick()
+    document.getElementById(`comment-${commentId}`)?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'center',
+    })
+  },
+  { immediate: true },
+)
 
 function updateSortBy(event: Event) {
   emit('update:sort-by', (event.target as HTMLSelectElement).value)
@@ -151,15 +215,15 @@ function goToProfile(userId?: number | null) {
   router.push(`/users/${userId}`)
 }
 
-function likeComment(comment: any) {
+function likeComment(comment: CommentItem) {
   comment.likes++
 }
 
-function toggleReply(comment: any) {
+function toggleReply(comment: CommentItem) {
   comment.showReply = !comment.showReply
 }
 
-function submitReply(comment: any) {
+function submitReply(comment: CommentItem) {
   if (!comment.replyText.trim()) return
   emit('submit-reply', comment, comment.replyText)
 }
@@ -175,15 +239,6 @@ function focusMainReply() {
   mainReplyInput.value?.focus()
 }
 
-function initials(value: string) {
-  return value
-    .split(/[\s._-]+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part.charAt(0).toUpperCase())
-    .join('') || 'N'
-}
-
 // Expose focus method to parent
 defineExpose({
   focusMainReply
@@ -191,37 +246,96 @@ defineExpose({
 </script>
 
 <style scoped>
+.comments-panel {
+  margin-top: 20px;
+}
 
 .section-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin: 24px 0 14px;
+  margin: 0 0 12px;
 }
+
+.section-header > div {
+  display: grid;
+  gap: 2px;
+}
+
+.section-kicker {
+  color: var(--accent, #0f766e);
+  font-size: 0.64rem;
+  font-weight: 850;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
 .section-title {
   color: var(--text, #172033);
-  font-size: 1rem;
-  font-weight: 950;
+  font-size: 1.08rem;
+  font-weight: 850;
 }
+
 .sort-select {
-  font-size: 0.78rem;
   border: 1px solid var(--border);
+  border-radius: 10px;
   background: var(--card);
+  padding: 8px 10px;
   color: var(--text);
-  border-radius: 999px;
-  padding: 7px 11px;
+  font-size: 0.75rem;
+  font-weight: 700;
   cursor: pointer;
   outline: none;
 }
 
 .comment-card {
-  background: var(--card);
-  border-radius: var(--radius);
   border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--card);
   padding: 16px 18px;
-  box-shadow: var(--shadow);
   margin-bottom: 12px;
-  animation: fadeUp .35s ease both;
+  box-shadow: 0 6px 18px rgba(20, 45, 70, 0.035);
+  animation: fadeUp 0.3s ease both;
+}
+
+.comment-card.highlighted {
+  border-color: #5bbdb3;
+  background: #f0fbf9;
+  box-shadow: 0 0 0 3px rgba(15, 138, 124, 0.12);
+}
+
+.comments-empty {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  border: 1px dashed #d5e2e8;
+  border-radius: 15px;
+  background: rgba(255, 255, 255, 0.62);
+  padding: 18px;
+  color: #7a8f9f;
+}
+
+.comments-empty > svg {
+  width: 22px;
+  height: 22px;
+  color: var(--accent, #0f766e);
+}
+
+.comments-empty strong,
+.comments-empty span {
+  display: block;
+}
+
+.comments-empty strong {
+  color: var(--text, #172033);
+  font-size: 0.82rem;
+  font-weight: 850;
+}
+
+.comments-empty span {
+  margin-top: 3px;
+  font-size: 0.73rem;
 }
 
 .comment-error {
@@ -252,33 +366,34 @@ defineExpose({
   gap: 9px;
   margin-bottom: 10px;
 }
+
 .comment-avatar {
-  border: 0;
   width: 36px;
   height: 36px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #fff;
-  font-weight: 700;
-  font-size: 0.82rem;
+  border-radius: 11px;
+  font-size: 0.85rem;
   flex-shrink: 0;
 }
+
 .comment-author-link {
+  border: 0;
+  background: transparent;
+  padding: 0;
   cursor: pointer;
 }
+
 .comment-author-link:hover {
-  filter: brightness(0.95);
+  opacity: 0.86;
 }
+
 .comment-copy {
   min-width: 0;
   flex: 1;
 }
 .comment-name {
   color: var(--text, #172033);
-  font-weight: 900;
-  font-size: 0.88rem;
+  font-size: 0.85rem;
+  font-weight: 850;
 }
 .comment-name-button {
   border: 0;
@@ -293,15 +408,16 @@ defineExpose({
   margin-left: auto;
 }
 .comment-time {
-  font-size: 0.75rem;
-  color: var(--text-muted);
   margin-left: 4px;
+  color: var(--text-muted);
+  font-size: 0.72rem;
 }
+
 .comment-body {
-  font-size: 0.88rem;
-  line-height: 1.68;
-  color: #334155;
   margin-bottom: 10px;
+  color: #40576b;
+  font-size: 0.86rem;
+  line-height: 1.68;
 }
 .comment-footer {
   display: flex;
@@ -315,7 +431,6 @@ defineExpose({
   background: none;
   border: none;
   cursor: pointer;
-  font-family: 'DM Sans', sans-serif;
   font-size: 0.8rem;
   color: var(--text-muted);
   border-radius: 6px;
@@ -329,7 +444,7 @@ defineExpose({
 .reply-btn {
   font-size: 0.8rem;
   color: var(--accent);
-  font-weight: 600;
+  font-weight: 750;
   background: none;
   border: none;
   cursor: pointer;
@@ -349,6 +464,11 @@ defineExpose({
   border-radius: 0 10px 10px 0;
   padding: 14px 16px;
 }
+
+.inline-reply {
+  margin-top: 12px;
+  margin-left: 24px;
+}
 .nested-reply .comment-avatar {
   width: 30px;
   height: 30px;
@@ -367,16 +487,28 @@ defineExpose({
   gap: 10px;
   background: #fff;
   border: 1px solid var(--border);
-  border-radius: 50px;
-  padding: 8px 8px 8px 16px;
-  box-shadow: var(--shadow);
+  border-radius: 14px;
+  padding: 7px 7px 7px 13px;
+  box-shadow: 0 6px 18px rgba(20, 45, 70, 0.035);
   margin-top: 16px;
 }
+
+.main-reply {
+  margin-top: 18px;
+}
+
+.current-user-avatar {
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  border-radius: 10px;
+  font-size: 0.8rem;
+}
+
 .reply-input {
   flex: 1;
   border: none;
   outline: none;
-  font-family: 'DM Sans', sans-serif;
   font-size: 0.88rem;
   background: transparent;
   color: var(--text);
@@ -395,30 +527,21 @@ defineExpose({
   align-items: center;
   justify-content: center;
   color: #fff;
-  transition: background .2s, transform .15s;
+  transition: background 0.2s, transform 0.15s;
   flex-shrink: 0;
 }
 .send-btn:hover {
   background: var(--accent-dark, #164e63);
   transform: scale(1.07);
 }
+
+.send-btn:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
 .send-btn svg {
   width: 16px;
   height: 16px;
-}
-
-.author-avatar {
-  width: 42px;
-  height: 42px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, var(--accent, #0f766e), #22c1b6);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #fff;
-  font-weight: 700;
-  font-size: 0.95rem;
-  flex-shrink: 0;
 }
 
 @media (max-width: 640px) {
@@ -438,8 +561,11 @@ defineExpose({
   }
 
   .reply-input-row {
-    border-radius: 18px;
     padding-left: 12px;
+  }
+
+  .inline-reply {
+    margin-left: 8px;
   }
 }
 </style>

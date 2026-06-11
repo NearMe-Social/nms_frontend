@@ -1,4 +1,4 @@
-const API_URL = import.meta.env.VITE_API_URL;
+export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = localStorage.getItem('token')
@@ -30,7 +30,15 @@ export interface AuthResponse {
     username: string
     email: string
     role: string
+    profile_completed?: boolean
+    onboarding_completed?: boolean
+    profile_image?: string | null
   }
+}
+
+export interface RegistrationResponse {
+  message: string
+  email: string
 }
 
 export interface PostUser {
@@ -43,11 +51,13 @@ export interface ApiPost {
   post_id: number
   title: string
   content: string
+  image_url?: string | null
   visibility_radius: number
   status: string
   expires_at: string
   created_at: string
   updated_at: string
+  image_url?: string | null
   user?: PostUser | null
   comments?: unknown[]
   reactions?: unknown[]
@@ -55,6 +65,14 @@ export interface ApiPost {
   reactions_count?: number
   distance_m?: number
   distance_label?: string
+}
+
+export interface ApiSearchUser {
+  user_id: number
+  username: string
+  first_name: string
+  last_name: string
+  profile_image?: string | null
 }
 
 export interface ApiCommentUser {
@@ -95,6 +113,7 @@ export interface ApiConversation {
   conversation_id: number
   created_at: string
   updated_at: string
+  unread_count?: number
   participants?: ApiConversationParticipant[]
   messages?: ApiMessage[]
 }
@@ -181,7 +200,6 @@ export interface CreateBlockPayload {
 }
 
 export interface CreatePostPayload {
-  user_id: number
   title: string
   content: string
   latitude: number
@@ -206,11 +224,28 @@ export const authApi = {
     password: string
     birthday?: string
     gender?: string
-  }): Promise<AuthResponse> {
-    return request<AuthResponse>('/auth/register', {
+  }): Promise<RegistrationResponse> {
+    return request<RegistrationResponse>('/auth/register', {
       method: 'POST',
       body: JSON.stringify(payload),
     })
+  },
+
+  sendOtp(email: string): Promise<{ message: string }> {
+    return request<{ message: string }>('/auth/send-otp', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    })
+  },
+
+  verifyOtp(email: string, otp: string): Promise<AuthResponse> {
+    return request<AuthResponse>('/auth/verify-otp', {
+      method: 'POST',
+      body: JSON.stringify({ email, otp }),
+    })
+  },
+  me(): Promise<AuthResponse['user']> {
+    return request<AuthResponse['user']>('/auth/me')
   },
 }
 
@@ -219,15 +254,89 @@ export const postApi = {
     return request<ApiPost[]>(`/posts?sort=${sort}`)
   },
 
-  get(postId: number): Promise<ApiPost> {
-    return request<ApiPost>(`/posts/${postId}`)
+  mine(): Promise<ApiPost[]> {
+    return request<ApiPost[]>('/posts/mine')
   },
 
-  create(payload: CreatePostPayload): Promise<ApiPost> {
-    return request<ApiPost>('/posts', {
-      method: 'POST',
-      body: JSON.stringify(payload),
+  byUser(
+    userId: number,
+    coords?: { lat: number; lng: number } | null,
+    limit = 20,
+  ): Promise<ApiPost[]> {
+    const params = new URLSearchParams({ limit: String(limit) })
+    if (coords) {
+      params.set('lat', String(coords.lat))
+      params.set('lng', String(coords.lng))
+    }
+    return request<ApiPost[]>(`/posts/user/${userId}?${params.toString()}`)
+  },
+
+  nearby(
+    lat: number,
+    lng: number,
+    sort: 'latest' | 'active' = 'latest',
+  ): Promise<ApiPost[]> {
+    const params = new URLSearchParams({
+      lat: String(lat),
+      lng: String(lng),
+      radius: '50000',
+      sort,
     })
+    return request<ApiPost[]>(`/posts/nearby?${params.toString()}`)
+  },
+
+  get(postId: number, coords?: { lat: number; lng: number } | null): Promise<ApiPost> {
+    const params = coords
+      ? `?${new URLSearchParams({
+          lat: String(coords.lat),
+          lng: String(coords.lng),
+        }).toString()}`
+      : ''
+    return request<ApiPost>(`/posts/${postId}${params}`)
+  },
+
+  async create(payload: CreatePostPayload, image?: File | null): Promise<ApiPost> {
+    const formData = new FormData()
+    formData.append('title', payload.title)
+    formData.append('content', payload.content)
+    formData.append('latitude', String(payload.latitude))
+    formData.append('longitude', String(payload.longitude))
+    formData.append('visibility_radius', String(payload.visibility_radius))
+    formData.append('expires_at', payload.expires_at)
+    if (image) formData.append('image', image)
+
+    const token = localStorage.getItem('token')
+    const response = await fetch(`${API_URL}/posts`, {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: formData,
+    })
+
+    const body = await response.json().catch(() => ({}))
+    if (!response.ok) {
+      const message = Array.isArray(body?.message) ? body.message.join(', ') : body?.message
+      throw new Error(message || `Post creation failed: HTTP ${response.status}`)
+    }
+
+    return body as ApiPost
+  },
+}
+
+export const searchApi = {
+  async search(
+    query: string,
+    coords?: { lat: number; lng: number } | null,
+  ): Promise<{ users: ApiSearchUser[]; posts: ApiPost[] }> {
+    const encodedQuery = encodeURIComponent(query.trim())
+    const usersPromise = request<ApiSearchUser[]>(`/users/search?q=${encodedQuery}`)
+    const postsPromise = coords
+      ? request<ApiPost[]>(
+          `/posts/search?q=${encodedQuery}&lat=${encodeURIComponent(coords.lat)}&lng=${encodeURIComponent(coords.lng)}`,
+        )
+      : Promise.resolve([])
+    const [users, posts] = await Promise.all([usersPromise, postsPromise])
+
+    return { users, posts }
   },
 }
 
@@ -259,7 +368,9 @@ export const conversationApi = {
 
 export const messageApi = {
   list(conversationId: number, page = 0, size = 50): Promise<ApiMessagePage> {
-    return request<ApiMessagePage>(`/conversations/${conversationId}/messages?page=${page}&size=${size}`)
+    return request<ApiMessagePage>(
+      `/conversations/${conversationId}/messages?page=${page}&size=${size}`,
+    )
   },
 
   create(conversationId: number, content: string): Promise<ApiMessage> {
@@ -285,10 +396,7 @@ export const adminReportsApi = {
     return request<ApiAdminReport>(`/admin/reports/${reportId}`)
   },
 
-  updateStatus(
-    reportId: number,
-    payload: UpdateAdminReportStatusPayload,
-  ): Promise<ApiAdminReport> {
+  updateStatus(reportId: number, payload: UpdateAdminReportStatusPayload): Promise<ApiAdminReport> {
     return request<ApiAdminReport>(`/admin/reports/${reportId}/status`, {
       method: 'PATCH',
       body: JSON.stringify(payload),
@@ -360,16 +468,20 @@ export interface UserProfile {
   user_id?: number
   username: string
   email: string
+  role: string
   first_name: string
   last_name: string
   bio?: string
   location?: string
   website?: string
   twitter_handle?: string
+  telegram_handle?: string
   instagram_handle?: string
   linkedin_url?: string
   tags?: string[]
-  profile_image?: string
+  profile_image?: string | null
+  profile_completed?: boolean
+  onboarding_completed?: boolean
 }
 
 export interface UpdateProfilePayload {
@@ -394,15 +506,43 @@ export const userApi = {
     })
   },
 
-  uploadProfileImage(file: File): Promise<{ url: string }> {
+  completeProfile(payload: { username?: string }): Promise<UserProfile> {
+    return request<UserProfile>('/users/me/complete-profile', {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    })
+  },
+
+  completeOnboarding(): Promise<UserProfile> {
+    return request<UserProfile>('/users/me/complete-onboarding', {
+      method: 'PATCH',
+    })
+  },
+
+  updateLocation(lat: number, lng: number): Promise<{ message: string }> {
+    return request<{ message: string }>('/users/me/location', {
+      method: 'PATCH',
+      body: JSON.stringify({ lat, lng }),
+    })
+  },
+
+  async uploadProfileImage(file: File): Promise<{ url: string; user: UserProfile }> {
     const formData = new FormData()
     formData.append('file', file)
-    return fetch(`${API_URL}/user/profile-image`, {
+    const response = await fetch(`${API_URL}/users/me/profile-image`, {
       method: 'POST',
-      headers: (localStorage.getItem('token')
-          ? { Authorization: `Bearer ${localStorage.getItem('token')}` }
-          : {}),
+      headers: localStorage.getItem('token')
+        ? { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        : {},
       body: formData,
-    }).then((res) => res.json())
+    })
+
+    const body = await response.json().catch(() => ({}))
+    if (!response.ok) {
+      const message = Array.isArray(body?.message) ? body.message.join(', ') : body?.message
+      throw new Error(message || `Profile image upload failed: HTTP ${response.status}`)
+    }
+
+    return body
   },
 }

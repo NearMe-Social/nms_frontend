@@ -1,20 +1,31 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 
-interface AuthUser {
+export interface AuthUser {
   userId?: number
   user_id?: number
   username: string
   email: string
   role: string
+  profile_completed?: boolean
+  onboarding_completed?: boolean
+  profile_image?: string | null
+  first_name?: string
+  last_name?: string
+  bio?: string | null
   profile?: unknown
+}
+
+export function getPostAuthPath(user: AuthUser | null): string {
+  if (user?.role === 'ADMIN') return '/admin/reports'
+  if (user?.profile_completed !== true) return '/select-profile'
+  if (user?.onboarding_completed !== true) return '/permission-request'
+  return '/'
 }
 
 export const useAuthStore = defineStore('auth', () => {
   const token = ref<string | null>(localStorage.getItem('token') || null)
-  const user = ref<AuthUser | null>(
-    JSON.parse(localStorage.getItem('auth_user') || 'null'),
-  )
+  const user = ref<AuthUser | null>(JSON.parse(localStorage.getItem('auth_user') || 'null'))
 
   const isLoggedIn = computed(() => !!token.value)
 
@@ -44,9 +55,21 @@ export const useAuthStore = defineStore('auth', () => {
     localStorage.removeItem('nms_token')
   }
 
-  function updateProfile(profileData: unknown) {
+  function updateProfile(profileData: object) {
     if (user.value) {
-      user.value.profile = profileData
+      const profileFields = profileData as Partial<AuthUser>
+      const existingProfile =
+        user.value.profile && typeof user.value.profile === 'object' ? user.value.profile : {}
+
+      user.value = {
+        ...user.value,
+        ...profileFields,
+        userId: profileFields.userId ?? profileFields.user_id ?? user.value.userId,
+        profile: {
+          ...existingProfile,
+          ...profileData,
+        },
+      }
       localStorage.setItem('auth_user', JSON.stringify(user.value))
     }
   }

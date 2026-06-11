@@ -71,8 +71,8 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
-import { useAuthStore } from '@/stores/auth'
-import { authApi } from '@/services/api'
+import { getPostAuthPath, useAuthStore } from '@/stores/auth'
+import { API_URL, authApi } from '@/services/api'
 
 import googleIcon from '@/assets/icons/Google.png'
 import facebookIcon from '@/assets/icons/Facebook.png'
@@ -93,15 +93,14 @@ async function handleLogin() {
         const res = await authApi.login(email.value, password.value)
         auth.setAuth(res.token, res.user)
         const redirect = router.currentRoute.value.query.redirect
-        const userRole = res.user?.role
-        if(userRole == 'ADMIN') {
-            router.replace(typeof redirect === 'string' ? redirect : '/admin/reports')
+        const postAuthPath = getPostAuthPath(res.user)
+
+        if (postAuthPath !== '/') {
+            router.replace(postAuthPath)
+        } else if (typeof redirect === 'string' && !redirect.startsWith('/admin')) {
+            router.replace(redirect)
         } else {
-            if (typeof redirect === 'string' && redirect.startsWith('/admin')) {
-                router.replace('/')
-            } else {
-                router.replace(typeof redirect === 'string' ? redirect : '/')
-            }
+            router.replace('/')
         }
     } catch (err: unknown) {
         errorMsg.value = err instanceof Error ? err.message : 'Login failed. Please try again.'
@@ -111,7 +110,9 @@ async function handleLogin() {
 }
 
 function handleSocialLogin(provider: string) {
-    console.log('social login', provider)
+    if (provider === 'google') {
+        window.location.assign(`${API_URL}/auth/google`)
+    }
 }
 </script>
 

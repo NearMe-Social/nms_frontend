@@ -56,7 +56,7 @@
             :disabled="resendCooldown > 0"
             @click="handleResend"
           >
-            {{ resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Resend Code' }}
+            {{ resendCooldown > 0 ? 'Resend in ' + resendCooldown + 's' : 'Resend Code' }}
           </button>
         </div>
 
@@ -73,7 +73,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { useAuthStore } from '@/stores/auth'
+import { getPostAuthPath, useAuthStore } from '@/stores/auth'
 import { authApi } from '@/services/api'
 import { Mail } from 'lucide-vue-next'
 
@@ -95,11 +95,23 @@ let cooldownTimer: ReturnType<typeof setInterval> | null = null
 const isComplete = computed(() => otpDigits.value.every(d => d !== ''))
 const otpValue = computed(() => otpDigits.value.join(''))
 
-onMounted(() => {
+onMounted(async () => {
   // Focus first input
   setTimeout(() => inputRefs.value[0]?.focus(), 100)
-  // Start resend cooldown
-  startCooldown()
+
+  if (!email.value) {
+    await router.replace('/register')
+    return
+  }
+
+  try {
+    await authApi.sendOtp(email.value)
+    startCooldown()
+    errorMsg.value = ''
+    hasError.value = false
+  } catch (err: unknown) {
+    errorMsg.value = err instanceof Error ? err.message : 'Failed to send OTP. Please try again.'
+  }
 })
 
 onUnmounted(() => {
@@ -166,7 +178,7 @@ async function handleVerify() {
   try {
     const res = await authApi.verifyOtp(email.value, otpValue.value)
     auth.setAuth(res.token, res.user)
-    router.replace('/')
+    router.replace(getPostAuthPath(res.user))
   } catch (err: unknown) {
     hasError.value = true
     errorMsg.value = err instanceof Error ? err.message : 'Invalid OTP. Please try again.'
@@ -182,11 +194,11 @@ async function handleResend() {
   if (resendCooldown.value > 0) return
   try {
     await authApi.sendOtp(email.value)
+    startCooldown()
     errorMsg.value = ''
     hasError.value = false
     otpDigits.value = ['', '', '', '', '', '']
     inputRefs.value[0]?.focus()
-    startCooldown()
   } catch (err: unknown) {
     errorMsg.value = err instanceof Error ? err.message : 'Failed to resend OTP.'
   }

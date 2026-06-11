@@ -17,8 +17,9 @@
 
           <div class="profile-summary">
             <div class="avatar-wrap">
-              <img
+              <UserAvatar
                 :src="profileImage"
+                :username="username"
                 :alt="`${displayName} profile photo`"
                 class="avatar"
               />
@@ -32,19 +33,39 @@
               <p class="bio">{{ bio }}</p>
 
               <div class="meta-row">
-                <span>
+                <span v-if="locationDisplay">
                   <MapPin class="icon" />
-                  Oak Ridge Commons
+                  {{ locationDisplay }}
+                </span>
+                <span v-if="websiteUrl">
+                  <Globe class="icon" />
+                  <a :href="websiteUrl" target="_blank" rel="noopener noreferrer" class="web-link">{{ websiteUrl }}</a>
                 </span>
                 <span>
                   <ShieldCheck class="icon" />
                   Approximate radius only
                 </span>
               </div>
+
+              <div v-if="socialLinks.length > 0" class="social-links-row">
+                <a
+                  v-for="social in socialLinks"
+                  :key="social.url"
+                  :href="social.url"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="social-link"
+                >
+                  <component :is="social.icon" class="icon-sm" />
+                  {{ social.label }}
+                </a>
+              </div>
             </div>
 
             <div class="actions">
-              <RouterLink v-if="isOwnProfile" to="/profile/edit" class="secondary-action">Edit profile</RouterLink>
+              <RouterLink v-if="isOwnProfile" to="/profile/edit" class="secondary-action"
+                >Edit profile</RouterLink
+              >
               <UserOptionsMenu v-else :user-id="profileUserId" />
               <RouterLink
                 v-if="!isOwnProfile"
@@ -83,8 +104,8 @@
 
             <p class="panel-text">{{ bio }}</p>
 
-            <div class="tag-row">
-              <span v-for="tag in tags" :key="tag">{{ tag }}</span>
+            <div class="tag-row" v-if="customTags.length > 0">
+              <span v-for="tag in customTags" :key="tag">#{{ tag }}</span>
             </div>
           </section>
 
@@ -94,19 +115,34 @@
                 <p class="eyebrow">Activity</p>
                 <h2>Recent posts</h2>
               </div>
-              <RouterLink to="/discussions">View all</RouterLink>
+              <RouterLink v-if="isOwnProfile" to="/discussions">View all</RouterLink>
             </div>
 
-            <div class="activity-list">
-              <article v-for="post in recentPosts" :key="post.title" class="activity-item">
+            <p v-if="activityLoading" class="activity-state">Loading recent posts...</p>
+            <p v-else-if="activityError" class="activity-state">{{ activityError }}</p>
+            <p v-else-if="recentPosts.length === 0" class="activity-state">
+              No visible posts yet.
+            </p>
+
+            <div v-else class="activity-list">
+              <RouterLink
+                v-for="post in recentPosts"
+                :key="post.post_id"
+                :to="`/posts/${post.post_id}`"
+                class="activity-item"
+              >
                 <div class="activity-icon">
                   <MessageSquare class="icon" />
                 </div>
-                <div>
+                <div class="activity-copy">
                   <strong>{{ post.title }}</strong>
-                  <span>{{ post.meta }}</span>
+                  <p>{{ brief(post.content) }}</p>
+                  <span>
+                    {{ timeAgo(post.created_at) }} ·
+                    {{ post.comments?.length ?? post.comments_count ?? 0 }} responses
+                  </span>
                 </div>
-              </article>
+              </RouterLink>
             </div>
           </section>
         </div>
@@ -126,35 +162,54 @@ import {
   Plus,
   ShieldCheck,
   Users,
+  Globe,
+  Send,
+  Instagram,
+  Linkedin
 } from 'lucide-vue-next'
 import Navbar from '@/components/Navbar.vue'
 import AppSidebar from '@/components/AppSidebar.vue'
 import UserOptionsMenu from '@/components/UserOptionsMenu.vue'
-import { userApi, type UserProfile } from '@/services/api'
+import UserAvatar from '@/components/UserAvatar.vue'
+import { postApi, userApi, type ApiPost, type UserProfile } from '@/services/api'
 import { useAuthStore } from '@/stores/auth'
+import { useGeolocation } from '@/composables/useGeolocation'
 
 const auth = useAuthStore()
 const route = useRoute()
+const geo = useGeolocation()
 const profile = ref<UserProfile | null>(null)
+const profilePosts = ref<ApiPost[]>([])
 const loading = ref(false)
 const error = ref('')
+const activityLoading = ref(false)
+const activityError = ref('')
 
 const routeUserId = computed(() => Number(route.params.userId))
 const authUserId = computed(() => auth.user?.userId ?? auth.user?.user_id ?? null)
 const isPublicProfile = computed(() => Number.isInteger(routeUserId.value) && routeUserId.value > 0)
-const isOwnProfile = computed(() => !isPublicProfile.value || routeUserId.value === authUserId.value)
-const profileUserId = computed(() => profile.value?.userId ?? profile.value?.user_id ?? routeUserId.value)
+const isOwnProfile = computed(
+  () => !isPublicProfile.value || routeUserId.value === authUserId.value,
+)
+const profileUserId = computed(
+  () => profile.value?.userId ?? profile.value?.user_id ?? routeUserId.value,
+)
 const username = computed(() => profile.value?.username ?? auth.user?.username ?? 'neighbor')
-const displayName = computed(() =>
-  username.value
-    .split(/[._-]/)
-    .filter(Boolean)
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(' ') || 'Nearme Neighbor',
-)
-const profileImage = computed(
-  () => profile.value?.profile_image || `https://i.pravatar.cc/150?u=${encodeURIComponent(username.value)}`,
-)
+
+const displayName = computed(() => {
+  if (profile.value?.first_name || profile.value?.last_name) {
+    return `${profile.value?.first_name || ''} ${profile.value?.last_name || ''}`.trim()
+  }
+  return (
+    username.value
+      .split(/[._-]/)
+      .filter(Boolean)
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(' ') || 'Nearme Neighbor'
+  )
+})
+
+const profileImage = computed(() => profile.value?.profile_image || null)
 
 const bio = computed(
   () =>
@@ -162,28 +217,119 @@ const bio = computed(
     'Sharing useful local updates, nearby questions, and quick notices for neighbors in the commons.',
 )
 
-const tags = ['Local updates', 'Safety aware', 'Community helper']
+const customTags = computed(() => {
+  return profile.value?.tags && profile.value.tags.length > 0
+    ? profile.value.tags
+    : ['Local updates', 'Safety aware', 'Community helper']
+})
 
-const stats = [
-  { label: 'Posts', value: 'Live', icon: ClipboardList },
-  { label: 'Neighbors', value: 'Nearby', icon: Users },
-  { label: 'Helpful actions', value: 'Active', icon: Heart },
-]
+const locationDisplay = computed(() => profile.value?.location || null)
 
-const recentPosts = [
+const websiteUrl = computed(() => profile.value?.website || null)
+
+const socialLinks = computed(() => {
+  const links = []
+
+  if (profile.value?.telegram_handle) {
+    links.push({
+      icon: Send,
+      url: `https://t.me/${profile.value.telegram_handle.replace('@', '')}`,
+      label: profile.value.telegram_handle
+    })
+  } else if (profile.value?.twitter_handle) {
+    links.push({
+      icon: Send,
+      url: `https://t.me/${profile.value.twitter_handle.replace('@', '')}`,
+      label: profile.value.twitter_handle
+    })
+  }
+
+  if (profile.value?.instagram_handle) {
+    links.push({
+      icon: Instagram,
+      url: `https://instagram.com/${profile.value.instagram_handle.replace('@', '')}`,
+      label: profile.value.instagram_handle
+    })
+  }
+  if (profile.value?.linkedin_url) {
+    let url = profile.value.linkedin_url
+    if (!url.startsWith('http')) {
+      url = `https://${url}`
+    }
+    links.push({
+      icon: Linkedin,
+      url: url,
+      label: 'LinkedIn'
+    })
+  }
+  return links
+})
+
+const recentPosts = computed(() => profilePosts.value.slice(0, 3))
+const stats = computed(() => [
+  { label: 'Posts', value: profilePosts.value.length, icon: ClipboardList },
   {
-    title: 'Neighborhood updates',
-    meta: 'Your posts now load from the backend in My Posts.',
+    label: 'Responses',
+    value: profilePosts.value.reduce(
+      (sum, post) => sum + (post.comments?.length ?? post.comments_count ?? 0),
+      0,
+    ),
+    icon: Users,
   },
   {
-    title: 'Nearby visibility',
-    meta: 'Location is protected with approximate distance only.',
+    label: 'Reactions',
+    value: profilePosts.value.reduce(
+      (sum, post) => sum + (post.reactions?.length ?? post.reactions_count ?? 0),
+      0,
+    ),
+    icon: Heart,
   },
-  {
-    title: 'Private chat ready',
-    meta: 'Message neighbors from the shared navigation.',
-  },
-]
+])
+
+function brief(content: string) {
+  const normalized = content.replace(/\s+/g, ' ').trim()
+  return normalized.length > 130 ? `${normalized.slice(0, 127)}...` : normalized
+}
+
+function timeAgo(value: string) {
+  const minutes = Math.max(0, Math.floor((Date.now() - new Date(value).getTime()) / 60000))
+  if (minutes < 1) return 'Just now'
+  if (minutes < 60) return `${minutes}m ago`
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `${hours}h ago`
+  return `${Math.floor(hours / 24)}d ago`
+}
+
+async function loadProfilePosts() {
+  const userId = Number(profileUserId.value)
+  if (!Number.isInteger(userId) || userId <= 0) {
+    profilePosts.value = []
+    return
+  }
+
+  activityLoading.value = true
+  activityError.value = ''
+  try {
+    if (isOwnProfile.value) {
+      profilePosts.value = await postApi.mine()
+      return
+    }
+
+    const position = await geo.request()
+    if (!position) {
+      profilePosts.value = []
+      activityError.value = 'Location is needed to show posts visible near you.'
+      return
+    }
+    profilePosts.value = await postApi.byUser(userId, position)
+  } catch (err: unknown) {
+    profilePosts.value = []
+    activityError.value =
+      err instanceof Error ? err.message : 'Failed to load recent posts.'
+  } finally {
+    activityLoading.value = false
+  }
+}
 
 async function loadProfile() {
   loading.value = true
@@ -193,12 +339,24 @@ async function loadProfile() {
     profile.value = isPublicProfile.value
       ? await userApi.getById(routeUserId.value)
       : await userApi.getProfile()
+
+    // MOCK DATA: Apply our local storage fields if viewing our own profile
+    if (isOwnProfile.value) {
+      const savedMockData = localStorage.getItem('temp_profile_mock')
+      if (savedMockData) {
+        const parsedMock = JSON.parse(savedMockData)
+        profile.value = { ...profile.value, ...parsedMock }
+      }
+    }
+
   } catch (err: unknown) {
     error.value = err instanceof Error ? err.message : 'Failed to load profile.'
     profile.value = null
   } finally {
     loading.value = false
   }
+
+  await loadProfilePosts()
 }
 
 onMounted(loadProfile)
@@ -304,8 +462,8 @@ watch(() => route.params.userId, loadProfile)
   height: 104px;
   border: 4px solid #fff;
   border-radius: 18px;
-  object-fit: cover;
   box-shadow: 0 14px 28px rgba(15, 45, 70, 0.16);
+  font-size: 2.4rem;
 }
 
 .status-dot {
@@ -518,6 +676,14 @@ h2 {
   border-radius: 14px;
   background: #f8fbff;
   padding: 12px;
+  color: inherit;
+  text-decoration: none;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.activity-item:hover {
+  background: #eff8f8;
+  transform: translateY(-1px);
 }
 
 .activity-icon {
@@ -535,6 +701,63 @@ h2 {
   display: block;
   color: #263f52;
   font-size: 0.9rem;
+}
+
+.activity-copy {
+  min-width: 0;
+}
+
+.activity-copy p {
+  display: -webkit-box;
+  overflow: hidden;
+  margin: 4px 0 5px;
+  color: #5d7285;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.activity-state {
+  margin: 16px 0 0;
+  border-radius: 13px;
+  background: #f8fbff;
+  padding: 16px;
+  color: #7890a2;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.web-link {
+  color: #0f8a7c;
+  text-decoration: none;
+}
+.web-link:hover {
+  text-decoration: underline;
+}
+
+.social-links-row {
+  display: flex;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.social-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.8rem;
+  color: #4f687d;
+  text-decoration: none;
+  font-weight: 600;
+}
+.social-link:hover {
+  color: #0f8a7c;
+}
+
+.icon-sm {
+  width: 14px;
+  height: 14px;
 }
 
 @media (max-width: 900px) {

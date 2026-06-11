@@ -1,8 +1,9 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { useAuthStore } from '@/stores/auth'
+import { getPostAuthPath, useAuthStore } from '@/stores/auth'
 
 import Login from '@/views/auth/LoginPage.vue'
 import Register from '@/views/auth/RegisterPage.vue'
+import SelectProfile from '@/views/auth/SelectProfilePage.vue'
 import HomePage from '@/views/user/HomePage.vue'
 import UserProfile from '@/views/user/UserProfile.vue'
 import EditProfile from '@/views/user/EditProfile.vue'
@@ -20,23 +21,39 @@ import ReportUserPage from '@/views/ReportUserPage.vue'
 import ReportCommentPage from '@/views/ReportCommentPage.vue'
 import AdminReportsPage from '@/views/admin/AdminReportsPage.vue'
 import AdminLayout from '@/views/admin/AdminLayout.vue'
+import AdminDashboard from '@/views/admin/AdminDashboard.vue'
 import AdminReportDetail from '@/views/admin/AdminReportDetail.vue'
 import AdminUsersPage from '@/views/admin/AdminUsersPage.vue'
 import AdminModerationPage from '@/views/admin/AdminModerationPage.vue'
 import OtpPage from '@/views/auth/OtpPage.vue'
 
-
-
 const routes = [
+  // Authentication routes
+  // /login - Hit auth login endpoint
   {
     path: '/login',
     name: 'Login',
     component: Login,
   },
+  // /register - User registration
   {
     path: '/register',
     name: 'Register',
     component: Register,
+  },
+  // End of authentication routes
+
+  // User and application routes
+  {
+    path: '/auth/google/callback',
+    name: 'GoogleCallback',
+    component: () => import('@/views/auth/GoogleCallback.vue'),
+  },
+  {
+    path: '/select-profile',
+    name: 'SelectProfile',
+    component: SelectProfile,
+    meta: { requiresAuth: true },
   },
   {
     path: '/permission-request',
@@ -140,6 +157,7 @@ const routes = [
     component: NearbyView,
     meta: { requiresAuth: true },
   },
+  // Admin routes
   {
     path: '/verify-otp',
     name: 'OtpPage',
@@ -150,6 +168,11 @@ const routes = [
     component: AdminLayout,
     meta: { requiresAuth: true, requiresAdmin: true },
     children: [
+      {
+        path: '',
+        name: 'AdminDashboard',
+        component: AdminDashboard,
+      },
       {
         path: 'reports',
         name: 'AdminReports',
@@ -172,6 +195,10 @@ const routes = [
       },
     ],
   },
+  {
+    path: '/admin/dashboard',
+    redirect: '/admin',
+  },
 ]
 
 const router = createRouter({
@@ -188,7 +215,24 @@ router.beforeEach((to, from, next) => {
     return
   }
 
+  if (auth.isLoggedIn && auth.user?.role !== 'ADMIN') {
+    const onboardingPath = getPostAuthPath(auth.user)
+    const isOnboardingPage =
+      to.path === '/select-profile' || to.path === '/permission-request'
+
+    if (onboardingPath !== '/' && to.path !== onboardingPath) {
+      next(onboardingPath)
+      return
+    }
+
+    if (onboardingPath === '/' && isOnboardingPage) {
+      next({ name: 'HomePage' })
+      return
+    }
+  }
+
   // Check login first
+  // http://localhost:5173/login?redirect=/admin or any admin path redirects here
   if (to.meta.requiresAuth && !auth.isLoggedIn) {
     next({
       name: 'Login',
@@ -204,12 +248,13 @@ router.beforeEach((to, from, next) => {
     const userRole = auth.user?.role
 
     if (userRole !== 'ADMIN') {
-     next({ name: 'HomePage' })
+      next({ name: 'HomePage' })
       return
     }
   }
 
   next()
 })
+// End of beforeEach navigation guard
 
 export default router
