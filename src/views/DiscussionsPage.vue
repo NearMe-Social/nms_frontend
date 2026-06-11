@@ -152,14 +152,14 @@ onMounted(loadPosts)
             </div>
           </article>
           <article class="summary-card">
-            <span class="summary-icon active"><Clock3 /></span>
+            <span class="summary-icon"><Clock3 /></span>
             <div>
               <strong>{{ stats.active }}</strong>
               <span>Currently active</span>
             </div>
           </article>
           <article class="summary-card">
-            <span class="summary-icon responses"><MessageSquare /></span>
+            <span class="summary-icon"><MessageSquare /></span>
             <div>
               <strong>{{ stats.responses }}</strong>
               <span>Reactions and comments</span>
@@ -224,9 +224,7 @@ onMounted(loadPosts)
             <h2>No matching posts</h2>
             <p>Try another search term or choose a different filter.</p>
           </div>
-          <button type="button" @click="clearFilters">
-            Clear filters
-          </button>
+          <button type="button" @click="clearFilters">Clear filters</button>
         </section>
 
         <section v-else class="post-grid">
@@ -356,7 +354,9 @@ h1 {
   font-size: 0.82rem;
   font-weight: 800;
   cursor: pointer;
-  transition: background 0.2s ease, transform 0.2s ease;
+  transition:
+    background 0.2s ease,
+    transform 0.2s ease;
 }
 
 .primary-action:hover,
@@ -404,23 +404,14 @@ h1 {
   color: #0e7c86;
 }
 
-.summary-icon.active {
-  background: #fff7e7;
-  color: #b66a11;
-}
-
-.summary-icon.responses {
-  background: #eef3ff;
-  color: #516bb0;
-}
-
 .summary-icon svg {
   width: 19px;
   height: 19px;
+  display: block;
 }
 
-.summary-card strong,
-.summary-card span {
+.summary-card div > strong,
+.summary-card div > span {
   display: block;
 }
 
@@ -525,7 +516,10 @@ h1 {
   border-radius: 18px;
   background: #fff;
   box-shadow: 0 8px 24px rgba(20, 45, 70, 0.045);
-  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
 }
 
 .post-card:hover {

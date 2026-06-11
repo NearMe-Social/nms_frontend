@@ -35,10 +35,12 @@
               <div class="profile-header-card">
                 <div class="profile-avatar-area">
                   <div class="avatar-wrapper">
-                    <img v-if="photoPreview" :src="photoPreview" class="avatar-img" />
-                    <div v-else class="avatar-placeholder">
-                      <UserIcon :size="40" />
-                    </div>
+                    <UserAvatar
+                      :src="photoPreview"
+                      :username="profileForm.username || authStore.user?.username"
+                      alt="Profile picture"
+                      class="avatar-display"
+                    />
                     <button type="button" class="avatar-edit-btn" @click="triggerFileInput">
                       <UploadCloudIcon :size="14" />
                     </button>
@@ -46,7 +48,7 @@
                   <input
                     ref="fileInput"
                     type="file"
-                    accept="image/*"
+                    accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
                     style="display: none"
                     @change="handlePhotoUpload"
                   />
@@ -72,21 +74,6 @@
                   <div class="form-row">
                     <div class="form-group">
                       <label class="form-label">Full Name</label>
-                <div class="form-layout">
-                  <!-- Photo sidebar -->
-                  <aside class="form-sidebar">
-                    <div class="profile-photo-card">
-                      <div class="photo-section">
-                        <UserAvatar
-                          :src="photoPreview"
-                          :username="profileForm.username || authStore.user?.username"
-                          alt="Profile picture"
-                          class="settings-avatar"
-                        />
-                      </div>
-                      <button type="button" class="photo-change-btn" @click="triggerFileInput">
-                        <UploadCloudIcon :size="16" /> Change Photo
-                      </button>
                       <input
                         v-model="profileForm.first_name"
                         type="text"
@@ -150,7 +137,7 @@
                     <span v-if="isSavingProfile" class="btn-loading"
                       ><LoaderIcon :size="16" class="spinner" /> Saving...</span
                     >
-                    <span v-else><CheckIcon :size="16" /> Save Changes</span>
+                    <span v-else class="btn-content"><CheckIcon :size="16" /> Save Changes</span>
                   </button>
                 </div>
 
@@ -236,7 +223,9 @@
                       <span v-if="pwSaving" class="btn-loading"
                         ><LoaderIcon :size="16" class="spinner" /> Saving...</span
                       >
-                      <span v-else><CheckIcon :size="16" /> Update Password</span>
+                      <span v-else class="btn-content"
+                        ><CheckIcon :size="16" /> Update Password</span
+                      >
                     </button>
                   </div>
                   <div v-if="pwSuccess" class="alert alert-success">
@@ -270,7 +259,7 @@
                   </div>
                 </div>
                 <div class="form-actions mt-4">
-                  <button class="btn-save" @click="savePrivacy">
+                  <button type="button" class="btn-save" @click="savePrivacy">
                     <CheckIcon :size="16" /> Save Privacy Settings
                   </button>
                 </div>
@@ -691,23 +680,12 @@ function handleDeleteAccount() {
   width: 72px;
   height: 72px;
 }
-.avatar-img {
+.avatar-display {
   width: 72px;
   height: 72px;
   border-radius: 50%;
-  object-fit: cover;
   border: 3px solid #e3ebf2;
-}
-.avatar-placeholder {
-  width: 72px;
-  height: 72px;
-  border-radius: 50%;
-  background: #f0f5f8;
-  border: 3px solid #e3ebf2;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #7890a2;
+  font-size: 1.75rem;
 }
 .avatar-edit-btn {
   position: absolute;
@@ -793,18 +771,6 @@ function handleDeleteAccount() {
   padding-bottom: 14px;
   border-bottom: 1px solid #eef3f7;
   color: #0e6378;
-  justify-content: center;
-}
-.settings-avatar {
-  width: 100%;
-  height: 100%;
-  border-radius: 0;
-  font-size: clamp(3rem, 8vw, 5rem);
-}
-.preview-img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
 }
 .section-title {
   margin: 0;
@@ -1139,6 +1105,7 @@ function handleDeleteAccount() {
   cursor: pointer;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 7px;
   font-family: inherit;
   transition: all 0.2s;
@@ -1150,10 +1117,15 @@ function handleDeleteAccount() {
   opacity: 0.6;
   cursor: not-allowed;
 }
+.btn-content,
 .btn-loading {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 7px;
+  line-height: 1;
+}
+.btn-save svg {
+  flex-shrink: 0;
 }
 .spinner {
   animation: spin 1s linear infinite;
