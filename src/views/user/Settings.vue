@@ -3,9 +3,7 @@
     <Navbar />
     <div class="flex min-w-0">
       <AppSidebar class="hidden md:flex" />
-
       <div class="settings-page">
-        <!-- Header -->
         <div class="page-header">
           <h1 class="page-title">Settings</h1>
           <p class="page-subtitle">Manage your account, security and privacy preferences.</p>
@@ -33,125 +31,125 @@
           <!-- Main content -->
           <div class="settings-content">
             <!-- ── PROFILE TAB ── -->
-            <div v-if="activeTab === 'profile'">
+            <div v-if="activeTab === 'profile'" class="profile-tab">
+              <div class="profile-header-card">
+                <div class="profile-avatar-area">
+                  <div class="avatar-wrapper">
+                    <img v-if="photoPreview" :src="photoPreview" class="avatar-img" />
+                    <div v-else class="avatar-placeholder">
+                      <UserIcon :size="40" />
+                    </div>
+                    <button type="button" class="avatar-edit-btn" @click="triggerFileInput">
+                      <UploadCloudIcon :size="14" />
+                    </button>
+                  </div>
+                  <input
+                    ref="fileInput"
+                    type="file"
+                    accept="image/*"
+                    style="display: none"
+                    @change="handlePhotoUpload"
+                  />
+                </div>
+                <div class="profile-header-info">
+                  <p class="profile-display-name">
+                    {{ profileForm.first_name || 'Your Name' }} {{ profileForm.last_name }}
+                  </p>
+                  <p class="profile-username">@{{ profileForm.username || 'username' }}</p>
+                  <p class="profile-email">{{ profileForm.email }}</p>
+                </div>
+                <button type="button" class="btn-change-photo-sm" @click="triggerFileInput">
+                  <UploadCloudIcon :size="14" /> Change Photo
+                </button>
+              </div>
+
               <form @submit.prevent="handleSaveProfile" class="profile-form">
-                <div class="form-layout">
-                  <!-- Photo sidebar -->
-                  <aside class="form-sidebar">
-                    <div class="profile-photo-card">
-                      <div class="photo-section">
-                        <img v-if="photoPreview" :src="photoPreview" class="preview-img" />
-                        <div v-else class="photo-placeholder">
-                          <UserIcon :size="48" />
-                        </div>
-                      </div>
-                      <button type="button" class="photo-change-btn" @click="triggerFileInput">
-                        <UploadCloudIcon :size="16" /> Change Photo
-                      </button>
+                <section class="settings-section">
+                  <div class="section-header">
+                    <UserIcon :size="18" />
+                    <h2 class="section-title">Public Identity</h2>
+                  </div>
+                  <div class="form-row">
+                    <div class="form-group">
+                      <label class="form-label">Full Name</label>
                       <input
-                        ref="fileInput"
-                        type="file"
-                        accept="image/*"
-                        style="display: none"
-                        @change="handlePhotoUpload"
+                        v-model="profileForm.first_name"
+                        type="text"
+                        class="form-input"
+                        placeholder="Your full name"
                       />
-                      <p class="photo-hint">PNG, JPG up to 5MB</p>
                     </div>
-                  </aside>
-
-                  <!-- Profile fields -->
-                  <div class="form-content">
-                    <section class="settings-section">
-                      <div class="section-header">
-                        <UserIcon :size="18" />
-                        <h2 class="section-title">Public Identity</h2>
-                      </div>
-                      <div class="form-row">
-                        <div class="form-group">
-                          <label class="form-label">Full Name</label>
-                          <input
-                            v-model="profileForm.first_name"
-                            type="text"
-                            class="form-input"
-                            placeholder="Your name"
-                          />
-                        </div>
-                        <div class="form-group">
-                          <label class="form-label">Username</label>
-                          <input
-                            v-model="profileForm.username"
-                            type="text"
-                            class="form-input"
-                            placeholder="@username"
-                            disabled
-                          />
-                        </div>
-                      </div>
-                      <div class="form-group">
-                        <label class="form-label">Bio</label>
-                        <textarea
-                          v-model="profileForm.bio"
-                          class="form-textarea"
-                          rows="3"
-                          placeholder="Tell people about yourself..."
-                        />
-                        <div class="char-count">{{ profileForm.bio?.length || 0 }} / 500</div>
-                      </div>
-                    </section>
-
-                    <section class="settings-section">
-                      <div class="section-header">
-                        <MapPinIcon :size="18" />
-                        <h2 class="section-title">Presence</h2>
-                      </div>
-                      <div class="form-row">
-                        <div class="form-group">
-                          <label class="form-label">Location</label>
-                          <input
-                            v-model="profileForm.location"
-                            type="text"
-                            class="form-input"
-                            placeholder="City, Country"
-                          />
-                        </div>
-                        <div class="form-group">
-                          <label class="form-label">Website</label>
-                          <input
-                            v-model="profileForm.website"
-                            type="url"
-                            class="form-input"
-                            placeholder="https://yoursite.com"
-                          />
-                        </div>
-                      </div>
-                    </section>
-
-                    <div class="form-actions">
-                      <button type="button" class="btn-cancel" @click="$router.back()">
-                        Cancel
-                      </button>
-                      <button type="submit" class="btn-save" :disabled="isSavingProfile">
-                        <span v-if="isSavingProfile" class="btn-loading"
-                          ><LoaderIcon :size="16" class="spinner" /> Saving...</span
-                        >
-                        <span v-else><CheckIcon :size="16" /> Save Changes</span>
-                      </button>
-                    </div>
-
-                    <div v-if="profileSuccess" class="alert alert-success">
-                      <CheckIcon :size="16" /> {{ profileSuccess }}
-                    </div>
-                    <div v-if="profileError" class="alert alert-error">
-                      <AlertCircleIcon :size="16" /> {{ profileError }}
+                    <div class="form-group">
+                      <label class="form-label">Username</label>
+                      <input
+                        v-model="profileForm.username"
+                        type="text"
+                        class="form-input"
+                        placeholder="@username"
+                        disabled
+                      />
                     </div>
                   </div>
+                  <div class="form-group">
+                    <label class="form-label">Bio</label>
+                    <textarea
+                      v-model="profileForm.bio"
+                      class="form-textarea"
+                      rows="3"
+                      placeholder="Tell people about yourself..."
+                    />
+                    <div class="char-count">{{ profileForm.bio?.length || 0 }} / 500</div>
+                  </div>
+                </section>
+
+                <section class="settings-section">
+                  <div class="section-header">
+                    <MapPinIcon :size="18" />
+                    <h2 class="section-title">Presence</h2>
+                  </div>
+                  <div class="form-row">
+                    <div class="form-group">
+                      <label class="form-label">Location</label>
+                      <input
+                        v-model="profileForm.location"
+                        type="text"
+                        class="form-input"
+                        placeholder="City, Country"
+                      />
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label">Website</label>
+                      <input
+                        v-model="profileForm.website"
+                        type="url"
+                        class="form-input"
+                        placeholder="https://yoursite.com"
+                      />
+                    </div>
+                  </div>
+                </section>
+
+                <div class="form-actions">
+                  <button type="button" class="btn-cancel" @click="$router.back()">Cancel</button>
+                  <button type="submit" class="btn-save" :disabled="isSavingProfile">
+                    <span v-if="isSavingProfile" class="btn-loading"
+                      ><LoaderIcon :size="16" class="spinner" /> Saving...</span
+                    >
+                    <span v-else><CheckIcon :size="16" /> Save Changes</span>
+                  </button>
+                </div>
+
+                <div v-if="profileSuccess" class="alert alert-success">
+                  <CheckIcon :size="16" /> {{ profileSuccess }}
+                </div>
+                <div v-if="profileError" class="alert alert-error">
+                  <AlertCircleIcon :size="16" /> {{ profileError }}
                 </div>
               </form>
             </div>
 
             <!-- ── SECURITY & PRIVACY TAB ── -->
             <div v-else-if="activeTab === 'security'">
-              <!-- Change Password -->
               <section class="settings-section">
                 <div class="section-header">
                   <LockIcon :size="18" />
@@ -235,7 +233,6 @@
                 </form>
               </section>
 
-              <!-- Privacy -->
               <section class="settings-section">
                 <div class="section-header">
                   <ShieldIcon :size="18" />
@@ -264,7 +261,6 @@
                 </div>
               </section>
 
-              <!-- Blocked Users -->
               <section class="settings-section">
                 <div class="section-header">
                   <UserXIcon :size="18" />
@@ -288,7 +284,6 @@
                 </div>
               </section>
 
-              <!-- Danger Zone -->
               <section class="settings-section danger-section">
                 <div class="section-header">
                   <AlertTriangleIcon :size="18" />
@@ -307,7 +302,7 @@
               </section>
             </div>
 
-            <!-- ── PREFERENCES TAB (placeholder) ── -->
+            <!-- ── PREFERENCES TAB ── -->
             <div v-else-if="activeTab === 'preferences'" class="placeholder-tab">
               <div class="placeholder-icon"><SlidersIcon :size="40" /></div>
               <p class="placeholder-title">Preferences</p>
@@ -369,7 +364,6 @@ import {
 const router = useRouter()
 const authStore = useAuthStore()
 
-// ── Tabs ──────────────────────────────────────────────
 const tabs = [
   { key: 'profile', label: 'Profile', icon: UserIcon, enabled: true },
   { key: 'security', label: 'Security & Privacy', icon: ShieldIcon, enabled: true },
@@ -377,7 +371,6 @@ const tabs = [
 ]
 const activeTab = ref('profile')
 
-// ── Profile tab ───────────────────────────────────────
 const profileForm = ref({
   first_name: '',
   last_name: '',
@@ -425,7 +418,6 @@ onMounted(async () => {
 function triggerFileInput() {
   fileInput.value?.click()
 }
-
 function handlePhotoUpload(event: Event) {
   const file = (event.target as HTMLInputElement).files?.[0]
   if (!file) return
@@ -454,7 +446,6 @@ async function handleSaveProfile() {
   }
 }
 
-// ── Security tab ──────────────────────────────────────
 const passwordForm = ref({ current: '', new: '', confirm: '' })
 const showCurrent = ref(false)
 const showNew = ref(false)
@@ -519,7 +510,6 @@ const privacyToggles = ref([
     value: false,
   },
 ])
-
 function savePrivacy() {
   console.log('Privacy saved', privacyToggles.value)
 }
@@ -575,17 +565,14 @@ function handleDeleteAccount() {
   font-weight: 600;
 }
 
-/* Layout */
 .settings-layout {
   display: flex;
   gap: 24px;
   align-items: flex-start;
 }
 
-/* Sub sidebar */
 .settings-sidebar {
-  width: 220px;
-  shrink: 0;
+  width: 210px;
   flex-shrink: 0;
   background: #fff;
   border: 1px solid #e3ebf2;
@@ -638,10 +625,8 @@ function handleDeleteAccount() {
   padding: 2px 6px;
   border-radius: 6px;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
 }
 
-/* Content area */
 .settings-content {
   flex: 1;
   min-width: 0;
@@ -650,7 +635,118 @@ function handleDeleteAccount() {
   gap: 20px;
 }
 
-/* Sections */
+/* Profile tab */
+.profile-tab {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.profile-header-card {
+  background: #fff;
+  border: 1px solid #e3ebf2;
+  border-radius: 18px;
+  padding: 24px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  box-shadow: 0 1px 3px rgba(15, 45, 70, 0.04);
+}
+.profile-avatar-area {
+  flex-shrink: 0;
+}
+.avatar-wrapper {
+  position: relative;
+  width: 72px;
+  height: 72px;
+}
+.avatar-img {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid #e3ebf2;
+}
+.avatar-placeholder {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: #f0f5f8;
+  border: 3px solid #e3ebf2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #7890a2;
+}
+.avatar-edit-btn {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #0f8a7c;
+  border: 2px solid #fff;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.avatar-edit-btn:hover {
+  background: #0d7a6d;
+}
+.profile-header-info {
+  flex: 1;
+  min-width: 0;
+}
+.profile-display-name {
+  font-size: 18px;
+  font-weight: 800;
+  color: #17364a;
+  margin: 0 0 2px;
+}
+.profile-username {
+  font-size: 13px;
+  color: #0f8a7c;
+  font-weight: 600;
+  margin: 0 0 2px;
+}
+.profile-email {
+  font-size: 12px;
+  color: #7890a2;
+  margin: 0;
+}
+.btn-change-photo-sm {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: #f0f5f8;
+  border: 1px solid #dce7ee;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #4f687d;
+  cursor: pointer;
+  white-space: nowrap;
+  font-family: inherit;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+.btn-change-photo-sm:hover {
+  background: #e3ebf2;
+  border-color: #0f8a7c;
+  color: #0f8a7c;
+}
+
+.profile-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
 .settings-section {
   border: 1px solid #e3ebf2;
   border-radius: 18px;
@@ -679,93 +775,6 @@ function handleDeleteAccount() {
   margin-bottom: 16px;
 }
 
-/* Profile form layout */
-.profile-form {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-.form-layout {
-  display: grid;
-  grid-template-columns: 200px 1fr;
-  gap: 24px;
-}
-@media (max-width: 768px) {
-  .form-layout {
-    grid-template-columns: 1fr;
-  }
-  .settings-layout {
-    flex-direction: column;
-  }
-  .settings-sidebar {
-    width: 100%;
-    position: static;
-  }
-}
-
-/* Photo card */
-.form-sidebar {
-}
-.profile-photo-card {
-  border: 1px solid #e3ebf2;
-  border-radius: 18px;
-  background: #fff;
-  padding: 20px;
-  box-shadow: 0 1px 3px rgba(15, 45, 70, 0.04);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 14px;
-}
-.photo-section {
-  width: 100%;
-  aspect-ratio: 1;
-  border-radius: 14px;
-  overflow: hidden;
-  background: #f0f5f8;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid #dce7ee;
-}
-.preview-img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-.photo-placeholder {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #7890a2;
-}
-.photo-change-btn {
-  width: 100%;
-  padding: 10px 16px;
-  background: #0f8a7c;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  transition: all 0.2s;
-  font-family: inherit;
-}
-.photo-change-btn:hover {
-  box-shadow: 0 4px 12px rgba(15, 138, 124, 0.3);
-}
-.photo-hint {
-  font-size: 12px;
-  color: #7890a2;
-  margin: 0;
-}
-
-/* Form groups */
 .form-content {
   display: flex;
   flex-direction: column;
@@ -827,16 +836,25 @@ function handleDeleteAccount() {
   grid-template-columns: 1fr 1fr;
   gap: 16px;
 }
-@media (max-width: 640px) {
-  .form-row {
-    grid-template-columns: 1fr;
-  }
-}
 .input-error {
   border-color: #ef4444 !important;
 }
+.input-wrapper {
+  position: relative;
+}
+.eye-btn {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #7890a2;
+  padding: 0;
+  display: flex;
+}
 
-/* Password strength */
 .strength-bar-wrap {
   display: flex;
   align-items: center;
@@ -861,24 +879,6 @@ function handleDeleteAccount() {
   min-width: 40px;
 }
 
-/* Input wrapper */
-.input-wrapper {
-  position: relative;
-}
-.eye-btn {
-  position: absolute;
-  right: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: #7890a2;
-  padding: 0;
-  display: flex;
-}
-
-/* Toggles */
 .toggle-list {
   display: flex;
   flex-direction: column;
@@ -895,8 +895,6 @@ function handleDeleteAccount() {
 .toggle-item:last-child {
   border-bottom: none;
   padding-bottom: 0;
-}
-.toggle-info {
 }
 .toggle-title {
   font-size: 14px;
@@ -941,7 +939,6 @@ function handleDeleteAccount() {
   margin-top: 16px;
 }
 
-/* Blocked users */
 .blocked-list {
   display: flex;
   flex-direction: column;
@@ -1004,7 +1001,6 @@ function handleDeleteAccount() {
   padding: 20px 0;
 }
 
-/* Danger zone */
 .danger-section {
   border-color: #fee2e2;
 }
@@ -1045,7 +1041,6 @@ function handleDeleteAccount() {
   cursor: not-allowed;
 }
 
-/* Placeholder tab */
 .placeholder-tab {
   display: flex;
   flex-direction: column;
@@ -1074,7 +1069,6 @@ function handleDeleteAccount() {
   line-height: 1.6;
 }
 
-/* Actions */
 .form-actions {
   display: flex;
   gap: 12px;
@@ -1127,7 +1121,6 @@ function handleDeleteAccount() {
   }
 }
 
-/* Alerts */
 .alert {
   padding: 13px 16px;
   border-radius: 8px;
@@ -1149,7 +1142,6 @@ function handleDeleteAccount() {
   border: 1px solid rgba(239, 68, 68, 0.25);
 }
 
-/* Modal */
 .modal-overlay {
   position: fixed;
   inset: 0;
@@ -1183,5 +1175,21 @@ function handleDeleteAccount() {
   gap: 10px;
   justify-content: flex-end;
   margin-top: 16px;
+}
+
+@media (max-width: 768px) {
+  .settings-layout {
+    flex-direction: column;
+  }
+  .settings-sidebar {
+    width: 100%;
+    position: static;
+  }
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+  .profile-header-card {
+    flex-wrap: wrap;
+  }
 }
 </style>
