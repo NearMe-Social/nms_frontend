@@ -5,7 +5,6 @@
       <AppSidebar class="hidden md:flex" />
 
       <main class="flex-1 flex flex-col gap-4 min-w-0 px-4 py-5 md:px-6">
-
         <!-- Header -->
         <div class="flex flex-wrap items-end justify-between gap-3 animate-fade-down">
           <div>
@@ -13,7 +12,8 @@
               Nearby Feed
             </h1>
             <p class="mt-1 text-sm text-slate-400 font-medium">
-              See what's happening <span class="text-teal-500 font-semibold">right now</span> in your immediate circle.
+              See what's happening <span class="text-teal-500 font-semibold">right now</span> in
+              your immediate circle.
             </p>
           </div>
           <div class="flex items-center gap-2">
@@ -21,7 +21,11 @@
               <button
                 type="button"
                 class="px-4 py-1.5 rounded-lg text-xs font-bold transition-all duration-300 ease-in-out"
-                :class="sortMode === 'latest' ? 'bg-gray-800 text-white scale-105 shadow-md' : 'text-gray-500 hover:bg-gray-100 hover:scale-105'"
+                :class="
+                  sortMode === 'latest'
+                    ? 'bg-gray-800 text-white scale-105 shadow-md'
+                    : 'text-gray-500 hover:bg-gray-100 hover:scale-105'
+                "
                 @click="setSort('latest')"
               >
                 Latest
@@ -29,7 +33,11 @@
               <button
                 type="button"
                 class="px-4 py-1.5 rounded-lg text-xs font-bold transition-all duration-300 ease-in-out"
-                :class="sortMode === 'active' ? 'bg-gray-800 text-white scale-105 shadow-md' : 'text-gray-500 hover:bg-gray-100 hover:scale-105'"
+                :class="
+                  sortMode === 'active'
+                    ? 'bg-gray-800 text-white scale-105 shadow-md'
+                    : 'text-gray-500 hover:bg-gray-100 hover:scale-105'
+                "
                 @click="setSort('active')"
               >
                 Most Active
@@ -94,7 +102,7 @@
                   <button
                     type="button"
                     class="inline-flex items-center gap-2 rounded-xl bg-teal-600 px-4 py-2.5 text-xs font-bold text-white transition hover:bg-teal-700"
-                    @click="loadPosts"
+                    @click="loadPosts()"
                   >
                     <RefreshCw class="h-4 w-4" />
                     I enabled it, retry
@@ -149,7 +157,7 @@
           </div>
           <p class="text-sm font-bold text-rose-600">{{ error }}</p>
           <button
-            @click="loadPosts"
+            @click="loadPosts()"
             class="text-xs font-bold text-teal-600 hover:underline hover:text-teal-700 transition-colors duration-200"
           >
             Try again
@@ -161,12 +169,16 @@
           v-else-if="posts.length === 0"
           class="animate-fade-up rounded-[18px] bg-white p-12 text-center ring-1 ring-slate-200/70 flex flex-col items-center gap-4"
         >
-          <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center animate-bounce">
+          <div
+            class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center animate-bounce"
+          >
             <MapPin class="w-7 h-7 text-gray-300" />
           </div>
           <div>
             <p class="text-base font-black text-gray-700">No posts nearby</p>
-            <p class="text-sm text-gray-400 mt-1 font-medium">Be the first to share something in your area!</p>
+            <p class="text-sm text-gray-400 mt-1 font-medium">
+              Be the first to share something in your area!
+            </p>
           </div>
           <RouterLink
             to="/create-post"
@@ -177,12 +189,7 @@
         </div>
 
         <!-- POSTS -->
-        <TransitionGroup
-          v-else
-          name="post"
-          tag="section"
-          class="flex flex-col gap-4"
-        >
+        <TransitionGroup v-else name="post" tag="section" class="flex flex-col gap-4">
           <div
             v-for="post in posts"
             :key="post.post_id"
@@ -212,10 +219,14 @@
                     {{ post.user?.username || 'Neighbor' }}
                   </RouterLink>
                   <div class="flex items-center gap-2 mt-0.5 flex-wrap">
-                    <span class="text-xs bg-teal-50 text-teal-600 font-semibold px-2 py-0.5 rounded-full flex items-center gap-1 transition-colors duration-200 group-hover:bg-teal-100">
+                    <span
+                      class="text-xs bg-teal-50 text-teal-600 font-semibold px-2 py-0.5 rounded-full flex items-center gap-1 transition-colors duration-200 group-hover:bg-teal-100"
+                    >
                       <MapPin class="w-3 h-3" /> {{ post.visibility_radius }}m
                     </span>
-                    <span class="text-xs text-gray-400 font-medium">{{ timeAgo(post.created_at) }}</span>
+                    <span class="text-xs text-gray-400 font-medium">{{
+                      timeAgo(post.created_at)
+                    }}</span>
                   </div>
                 </div>
               </div>
@@ -249,9 +260,7 @@
                 {{ post.title }}
               </h2>
 
-              <p
-                class="mt-1.5 text-sm text-gray-600 leading-relaxed line-clamp-3 font-medium"
-              >
+              <p class="mt-1.5 text-sm text-gray-600 leading-relaxed line-clamp-3 font-medium">
                 {{ post.content }}
               </p>
             </div>
@@ -271,15 +280,21 @@
                   @click.stop
                 >
                   <Heart class="w-4 h-4 transition-transform duration-200 hover:scale-110" />
-                  <span class="text-xs font-bold">{{ post.reactions?.length ?? post.reactions_count ?? 0 }}</span>
+                  <span class="text-xs font-bold">{{
+                    post.reactions?.length ?? post.reactions_count ?? 0
+                  }}</span>
                 </button>
                 <button
                   type="button"
                   class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm text-gray-400 hover:bg-teal-50 hover:text-teal-500 hover:scale-105 active:scale-95 transition-all duration-200"
                   @click.stop
                 >
-                  <MessageCircle class="w-4 h-4 transition-transform duration-200 hover:scale-110" />
-                  <span class="text-xs font-bold">{{ post.comments?.length ?? post.comments_count ?? 0 }}</span>
+                  <MessageCircle
+                    class="w-4 h-4 transition-transform duration-200 hover:scale-110"
+                  />
+                  <span class="text-xs font-bold">{{
+                    post.comments?.length ?? post.comments_count ?? 0
+                  }}</span>
                 </button>
               </div>
               <button
@@ -290,49 +305,103 @@
                 <Share2 class="w-4 h-4 transition-transform duration-200 hover:rotate-12" />
               </button>
             </div>
-
           </div>
         </TransitionGroup>
-
       </main>
 
       <!-- RIGHT PANEL -->
-      <aside class="hidden lg:flex w-56 xl:w-64 shrink-0 flex-col gap-4 py-5 pr-4 md:pr-6 animate-fade-up">
-
+      <aside
+        class="hidden lg:flex w-56 xl:w-64 shrink-0 flex-col gap-4 py-5 pr-4 md:pr-6 animate-fade-up"
+      >
         <div class="flex items-center gap-2">
-          <!-- <Zap class="w-4 h-4 text-yellow-400 fill-yellow-400 animate-pulse" /> -->
-          <p class="text-xs font-black uppercase tracking-widest text-gray-400">Quick Info</p>
+          <p class="text-xs font-black uppercase tracking-widest text-gray-400">Feed at a glance</p>
         </div>
 
         <!-- Live posts count -->
-        <div class="bg-white rounded-[18px] p-5 shadow-sm ring-1 ring-slate-200/70 flex flex-col gap-3 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300">
-          <p class="text-xs font-black text-teal-600 uppercase tracking-wide">Nearby Posts</p>
+        <div
+          class="bg-white rounded-[18px] p-5 shadow-sm ring-1 ring-slate-200/70 flex flex-col gap-3 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300"
+        >
+          <div class="flex items-center justify-between gap-3">
+            <p class="text-xs font-black text-teal-600 uppercase tracking-wide">Nearby Posts</p>
+            <span
+              class="flex h-8 w-8 items-center justify-center rounded-xl bg-teal-50 text-teal-600"
+            >
+              <MapPin class="h-4 w-4" />
+            </span>
+          </div>
           <div class="flex items-end gap-2">
             <p class="text-3xl font-black text-gray-800">{{ posts.length }}</p>
-            <p class="text-xs text-gray-400 mb-1 font-semibold">posts loaded</p>
+            <p class="text-xs text-gray-400 mb-1 font-semibold">
+              {{ posts.length === 1 ? 'post in range' : 'posts in range' }}
+            </p>
           </div>
-          <div class="w-full bg-gray-100 rounded-full h-1.5">
-            <div
-              class="bg-teal-500 h-1.5 rounded-full transition-all duration-700 ease-out"
-              :style="{ width: `${Math.min(posts.length * 5, 100)}%` }"
-            ></div>
+          <div class="flex items-start gap-2 border-t border-slate-100 pt-3">
+            <ShieldCheck class="mt-0.5 h-3.5 w-3.5 shrink-0 text-teal-500" />
+            <p class="text-xs font-medium leading-5 text-slate-400">
+              {{
+                posts.length
+                  ? 'Matched to your current location and each post radius.'
+                  : 'No location-matched posts are available yet.'
+              }}
+            </p>
           </div>
         </div>
 
         <!-- Active posts count -->
-        <div class="bg-white rounded-[18px] p-5 shadow-sm ring-1 ring-slate-200/70 flex flex-col gap-2 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300">
-          <p class="text-xs font-black text-orange-500 uppercase tracking-wide">Active Posts</p>
-          <p class="text-2xl font-black text-gray-800">{{ activePosts }}</p>
-          <p class="text-xs text-gray-400 font-medium">Still within expiry time</p>
+        <div
+          class="bg-white rounded-[18px] p-5 shadow-sm ring-1 ring-slate-200/70 flex flex-col gap-3 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300"
+        >
+          <div class="flex items-center justify-between gap-3">
+            <p class="text-xs font-black text-orange-500 uppercase tracking-wide">Active Now</p>
+            <span
+              class="flex h-8 w-8 items-center justify-center rounded-xl bg-orange-50 text-orange-500"
+            >
+              <Clock class="h-4 w-4" />
+            </span>
+          </div>
+          <div class="flex items-end gap-2">
+            <p class="text-3xl font-black text-gray-800">{{ activePosts }}</p>
+            <p class="mb-1 text-xs font-semibold text-gray-400">
+              {{ activePosts === 1 ? 'post available' : 'posts available' }}
+            </p>
+          </div>
+          <p class="border-t border-slate-100 pt-3 text-xs font-medium leading-5 text-gray-400">
+            {{
+              activePosts
+                ? 'Open these posts before their sharing time expires.'
+                : 'New nearby posts will appear here when shared.'
+            }}
+          </p>
         </div>
 
-        <!-- Sort mode -->
-        <div class="bg-white rounded-[18px] p-5 shadow-sm ring-1 ring-slate-200/70 flex flex-col gap-2 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300">
-          <p class="text-xs font-black text-blue-500 uppercase tracking-wide">Sorted By</p>
-          <p class="text-sm font-black text-gray-800">
-            {{ sortMode === 'active' ? 'Most Active' : 'Latest Posts' }}
-          </p>
-          <p class="text-xs text-gray-400 font-medium">Switch using the buttons above</p>
+        <!-- Community engagement -->
+        <div
+          class="bg-white rounded-[18px] p-5 shadow-sm ring-1 ring-slate-200/70 flex flex-col gap-3 hover:shadow-md hover:-translate-y-0.5 transition-all duration-300"
+        >
+          <div class="flex items-center justify-between gap-3">
+            <p class="text-xs font-black text-blue-500 uppercase tracking-wide">
+              Community Activity
+            </p>
+            <span
+              class="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-50 text-blue-500"
+            >
+              <MessageCircle class="h-4 w-4" />
+            </span>
+          </div>
+          <div class="flex items-end gap-2">
+            <p class="text-3xl font-black text-gray-800">{{ totalInteractions }}</p>
+            <p class="mb-1 text-xs font-semibold text-gray-400">interactions</p>
+          </div>
+          <div class="grid grid-cols-2 gap-2 border-t border-slate-100 pt-3">
+            <div class="flex items-center gap-1.5 text-xs font-semibold text-slate-500">
+              <Heart class="h-3.5 w-3.5 text-rose-400" />
+              {{ totalReactions }} reactions
+            </div>
+            <div class="flex items-center gap-1.5 text-xs font-semibold text-slate-500">
+              <MessageCircle class="h-3.5 w-3.5 text-blue-400" />
+              {{ totalComments }} replies
+            </div>
+          </div>
         </div>
 
         <!-- Create post CTA -->
@@ -341,10 +410,13 @@
           class="bg-teal-600 hover:bg-teal-700 text-white rounded-[18px] p-5 flex flex-col gap-2 no-underline transition-all duration-300 shadow-sm shadow-teal-200 hover:shadow-teal-300 hover:shadow-lg group hover:-translate-y-1"
         >
           <Plus class="w-5 h-5 group-hover:rotate-90 transition-transform duration-300" />
-          <p class="text-sm font-black">Share something nearby</p>
-          <p class="text-xs text-teal-200 font-medium">Let your neighbors know!</p>
+          <p class="text-sm font-black">
+            {{ posts.length ? 'Share an update nearby' : 'Start the conversation' }}
+          </p>
+          <p class="text-xs leading-5 text-teal-100 font-medium">
+            Choose exactly how far your post can be seen.
+          </p>
         </RouterLink>
-
       </aside>
     </div>
 
@@ -364,8 +436,16 @@ import PostImageViewer from '@/components/PostImageViewer.vue'
 import { postApi, userApi, type ApiPost } from '@/services/api'
 import { useGeolocation } from '@/composables/useGeolocation'
 import {
-  MapPin, MapPinned, MessageCircle, Plus, Heart,
-  Share2, Clock, AlertCircle, RefreshCw, ShieldCheck
+  MapPin,
+  MapPinned,
+  MessageCircle,
+  Plus,
+  Heart,
+  Share2,
+  Clock,
+  AlertCircle,
+  RefreshCw,
+  ShieldCheck,
 } from 'lucide-vue-next'
 
 const router = useRouter()
@@ -376,9 +456,20 @@ const error = ref('')
 const sortMode = ref<'latest' | 'active'>('latest')
 let locationPermission: PermissionStatus | null = null
 
-const activePosts = computed(() =>
-  posts.value.filter(p => !isExpired(p.expires_at)).length
+const activePosts = computed(() => posts.value.filter((p) => !isExpired(p.expires_at)).length)
+const totalReactions = computed(() =>
+  posts.value.reduce(
+    (total, post) => total + (post.reactions?.length ?? post.reactions_count ?? 0),
+    0,
+  ),
 )
+const totalComments = computed(() =>
+  posts.value.reduce(
+    (total, post) => total + (post.comments?.length ?? post.comments_count ?? 0),
+    0,
+  ),
+)
+const totalInteractions = computed(() => totalReactions.value + totalComments.value)
 
 function navigateToPost(postId: number) {
   router.push(`/posts/${postId}`)
@@ -388,11 +479,21 @@ function profileRoute(userId?: number | null) {
   return userId ? `/users/${userId}` : '/profile'
 }
 
-async function loadPosts() {
-  loading.value = true
+interface LoadPostsOptions {
+  forceLocation?: boolean
+  showLoading?: boolean
+}
+
+const RESUME_REFRESH_AGE_MS = 2 * 60_000
+let lastFeedRefreshAt = 0
+let resumeRefreshInFlight = false
+
+async function loadPosts(options: LoadPostsOptions = {}) {
+  const showLoading = options.showLoading ?? true
+  if (showLoading) loading.value = true
   error.value = ''
   try {
-    const position = await geo.request()
+    const position = await geo.request({ forceRefresh: options.forceLocation })
     if (!position) {
       posts.value = []
       error.value =
@@ -402,10 +503,11 @@ async function loadPosts() {
 
     await userApi.updateLocation(position.lat, position.lng).catch(() => undefined)
     posts.value = await postApi.nearby(position.lat, position.lng, sortMode.value)
+    lastFeedRefreshAt = Date.now()
   } catch (err: unknown) {
     error.value = err instanceof Error ? err.message : 'Failed to load posts.'
   } finally {
-    loading.value = false
+    if (showLoading) loading.value = false
   }
 }
 
@@ -429,20 +531,18 @@ function timeAgo(value: string) {
 }
 
 function timeLeft(value: string) {
-  
-  const targetDate = new Date(value).getTime();
-  if (isNaN(targetDate)) return 'Expired';
-  
-  const diffMs = targetDate - Date.now();
-  if (diffMs <= 0) return 'Expired';
-  
-  const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-  const hours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-  
-  
-  if (days > 30) return '30d+ left'; 
-  if (days > 0) return `${days}d left`;
-  return `${hours}h left`;
+  const targetDate = new Date(value).getTime()
+  if (isNaN(targetDate)) return 'Expired'
+
+  const diffMs = targetDate - Date.now()
+  if (diffMs <= 0) return 'Expired'
+
+  const days = Math.floor(diffMs / (1000 * 60 * 60 * 24))
+  const hours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
+
+  if (days > 30) return '30d+ left'
+  if (days > 0) return `${days}d left`
+  return `${hours}h left`
 }
 
 async function watchLocationPermission() {
@@ -460,15 +560,52 @@ async function watchLocationPermission() {
   }
 }
 
+async function refreshAfterResume() {
+  if (
+    document.visibilityState !== 'visible' ||
+    resumeRefreshInFlight ||
+    Date.now() - lastFeedRefreshAt < RESUME_REFRESH_AGE_MS
+  ) {
+    return
+  }
+
+  resumeRefreshInFlight = true
+  try {
+    await loadPosts({
+      forceLocation: true,
+      showLoading: posts.value.length === 0,
+    })
+  } finally {
+    resumeRefreshInFlight = false
+  }
+}
+
+function handleVisibilityChange() {
+  if (document.visibilityState === 'visible') {
+    void refreshAfterResume()
+  }
+}
+
+function handlePageShow() {
+  void refreshAfterResume()
+}
+
 onMounted(() => {
+  lastFeedRefreshAt = Date.now()
   void watchLocationPermission()
   void loadPosts()
+  document.addEventListener('visibilitychange', handleVisibilityChange)
+  window.addEventListener('focus', handlePageShow)
+  window.addEventListener('pageshow', handlePageShow)
 })
 
 onBeforeUnmount(() => {
   if (locationPermission) {
     locationPermission.onchange = null
   }
+  document.removeEventListener('visibilitychange', handleVisibilityChange)
+  window.removeEventListener('focus', handlePageShow)
+  window.removeEventListener('pageshow', handlePageShow)
 })
 </script>
 
@@ -480,12 +617,24 @@ onBeforeUnmount(() => {
   animation: fadeUp 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.1s both;
 }
 @keyframes fadeDown {
-  from { opacity: 0; transform: translateY(-12px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 @keyframes fadeUp {
-  from { opacity: 0; transform: translateY(16px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .post-enter-active {

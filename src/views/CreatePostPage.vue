@@ -10,9 +10,7 @@ import MobileBottomNav from '@/components/MobileBottomNav.vue'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import UserAvatar from '@/components/UserAvatar.vue'
 import {
-  Bell,
   CheckCircle2,
-  CircleHelp,
   Clock3,
   ImagePlus,
   MapPinned,
@@ -31,8 +29,6 @@ const durationOptions = ['1h', '3h', '12h', '24h'] as const
 const title = ref('')
 const content = ref('')
 const visibilityRadius = ref(100)
-const allowResponses = ref(true)
-const pinToMap = ref(false)
 const selectedDuration = ref<(typeof durationOptions)[number]>('12h')
 const submitting = ref(false)
 const imageInput = ref<HTMLInputElement | null>(null)
@@ -46,12 +42,32 @@ const geo = useGeolocation()
 const submitError = ref('')
 const confirmDialog = ref<InstanceType<typeof ConfirmDialog> | null>(null)
 
-const isReadyToSubmit = computed(
+const hasTitle = computed(() => title.value.trim().length > 0)
+const hasUsefulDetails = computed(() => content.value.trim().length >= 30)
+const hasRequiredDetails = computed(
   () =>
-    title.value.trim().length > 0 &&
-    content.value.trim().length > 0 &&
-    visibilityRadius.value > 0 &&
-    !submitting.value,
+    title.value.trim().length > 0 && content.value.trim().length > 0 && visibilityRadius.value > 0,
+)
+const isReadyToSubmit = computed(() => hasRequiredDetails.value && !submitting.value)
+const draftProgress = computed(() => {
+  const completed = Number(hasTitle.value) + Number(content.value.trim().length > 0)
+  return Math.round((completed / 2) * 100)
+})
+const expiryLabel = computed(() =>
+  new Date(Date.now() + durationToMs(selectedDuration.value)).toLocaleString([], {
+    weekday: 'short',
+    hour: 'numeric',
+    minute: '2-digit',
+  }),
+)
+const reachDescription = computed(() => {
+  if (visibilityRadius.value <= 50) return 'Best for your building or immediate surroundings.'
+  if (visibilityRadius.value <= 100) return 'Best for close neighbors on nearby streets.'
+  if (visibilityRadius.value <= 200) return 'Best for a wider neighborhood update.'
+  return 'A broader local reach. Use this only when the update applies to the wider area.'
+})
+const locationSummary = computed(() =>
+  geo.coords.value ? 'Location ready' : 'Confirmed when you publish',
 )
 
 const username = computed(() => auth.user?.username || 'neighbor')
@@ -125,8 +141,6 @@ function resetDraft() {
   title.value = ''
   content.value = ''
   visibilityRadius.value = 100
-  allowResponses.value = true
-  pinToMap.value = false
   selectedDuration.value = '12h'
   submitError.value = ''
   clearSelectedImage()
@@ -156,7 +170,7 @@ async function submitPost() {
     const position = await getPostLocation()
     if (!position) {
       submitError.value =
-        'Location is required to create a nearby post. Try opening Nearby Users once, then create the post again.'
+        'Location is required to create a nearby post. Enable location access in your browser, then try again.'
       return
     }
 
@@ -298,7 +312,7 @@ onBeforeUnmount(() => {
               <button v-else type="button" class="upload-zone" @click="openImagePicker">
                 <span class="upload-icon"><UploadCloud /></span>
                 <strong>Choose an image</strong>
-                <span>PNG, JPG or WebP from your device</span>
+                <span>PNG, JPG or WebP · Maximum 5 MB</span>
               </button>
             </section>
 
@@ -318,7 +332,6 @@ onBeforeUnmount(() => {
                       <strong>Visibility radius</strong>
                       <span>People within {{ visibilityRadius }}m</span>
                     </div>
-                    <CircleHelp />
                   </div>
 
                   <input
@@ -342,6 +355,7 @@ onBeforeUnmount(() => {
                       {{ option }}m
                     </button>
                   </div>
+                  <p class="setting-footnote">{{ reachDescription }}</p>
                 </article>
 
                 <article class="setting-card">
@@ -349,9 +363,8 @@ onBeforeUnmount(() => {
                     <span class="setting-icon"><Clock3 /></span>
                     <div>
                       <strong>Post lifetime</strong>
-                      <span>Disappears after {{ selectedDuration }}</span>
+                      <span>Available until {{ expiryLabel }}</span>
                     </div>
-                    <CircleHelp />
                   </div>
 
                   <div class="option-group duration-options">
@@ -374,37 +387,38 @@ onBeforeUnmount(() => {
                 <div class="preference-row">
                   <span class="preference-icon"><MessageSquareMore /></span>
                   <div>
-                    <strong>Allow responses</strong>
-                    <span>Let neighbors reply to this post.</span>
+                    <strong>Community replies</strong>
+                    <span>Neighbors can respond and continue the conversation.</span>
                   </div>
-                  <button
-                    type="button"
-                    role="switch"
-                    :aria-checked="allowResponses"
-                    class="toggle"
-                    :class="{ active: allowResponses }"
-                    @click="allowResponses = !allowResponses"
-                  >
-                    <span></span>
-                  </button>
+                  <span class="summary-status">Enabled</span>
                 </div>
 
                 <div class="preference-row">
                   <span class="preference-icon"><MapPinned /></span>
                   <div>
-                    <strong>Show on nearby map</strong>
-                    <span>Use an approximate area, never your exact position.</span>
+                    <strong>Location verification</strong>
+                    <span>Your coordinates filter visibility but are never shown publicly.</span>
                   </div>
-                  <button
-                    type="button"
-                    role="switch"
-                    :aria-checked="pinToMap"
-                    class="toggle"
-                    :class="{ active: pinToMap }"
-                    @click="pinToMap = !pinToMap"
-                  >
-                    <span></span>
-                  </button>
+                  <span class="summary-status" :class="{ ready: geo.coords.value }">
+                    {{ locationSummary }}
+                  </span>
+                </div>
+
+                <div class="preference-row">
+                  <span class="preference-icon"><ImagePlus /></span>
+                  <div>
+                    <strong>Post image</strong>
+                    <span>
+                      {{
+                        selectedImageFile
+                          ? 'Your selected image will upload with this post.'
+                          : 'Optional. Your post can be published without an image.'
+                      }}
+                    </span>
+                  </div>
+                  <span class="summary-status" :class="{ ready: selectedImageFile }">
+                    {{ selectedImageFile ? 'Attached' : 'Optional' }}
+                  </span>
                 </div>
               </div>
             </section>
@@ -414,7 +428,13 @@ onBeforeUnmount(() => {
 
               <div class="draft-status">
                 <CheckCircle2 />
-                <span>Your draft stays on this device until you publish or leave.</span>
+                <span>
+                  {{
+                    hasRequiredDetails
+                      ? 'Required details are complete. Location is checked when you publish.'
+                      : 'Add a title and message to enable publishing.'
+                  }}
+                </span>
               </div>
 
               <div class="form-actions">
@@ -441,25 +461,41 @@ onBeforeUnmount(() => {
               </div>
 
               <div class="etiquette-list">
-                <article>
-                  <span>01</span>
+                <article :class="{ complete: hasTitle }">
+                  <span>{{ hasTitle ? '✓' : '01' }}</span>
                   <div>
-                    <strong>Keep it relevant</strong>
-                    <p>Focus on something people nearby can understand or act on.</p>
+                    <strong>{{
+                      hasTitle ? 'Clear title added' : 'Start with a clear title'
+                    }}</strong>
+                    <p>
+                      {{
+                        hasTitle
+                          ? 'People can quickly understand what your update is about.'
+                          : 'Describe the main point in a short, specific sentence.'
+                      }}
+                    </p>
                   </div>
                 </article>
-                <article>
-                  <span>02</span>
+                <article :class="{ complete: hasUsefulDetails }">
+                  <span>{{ hasUsefulDetails ? '✓' : '02' }}</span>
                   <div>
-                    <strong>Protect privacy</strong>
-                    <p>Avoid sharing exact addresses or another person's private information.</p>
+                    <strong>
+                      {{ hasUsefulDetails ? 'Useful context included' : 'Add useful details' }}
+                    </strong>
+                    <p>
+                      {{
+                        hasUsefulDetails
+                          ? 'Your message gives nearby readers enough context to respond.'
+                          : 'Include timing, an approximate area, and what response would help.'
+                      }}
+                    </p>
                   </div>
                 </article>
                 <article>
                   <span>03</span>
                   <div>
-                    <strong>Add useful context</strong>
-                    <p>Include timing, an approximate area, and what response would help.</p>
+                    <strong>Protect personal privacy</strong>
+                    <p>Avoid exact addresses and another person's private information.</p>
                   </div>
                 </article>
               </div>
@@ -482,20 +518,27 @@ onBeforeUnmount(() => {
 
               <div class="reach-summary">
                 <MapPinned />
-                <p>
-                  Your post will be available to eligible nearby users inside the selected radius.
-                </p>
+                <p>{{ reachDescription }}</p>
               </div>
             </section>
 
             <section class="temporary-card">
-              <span class="temporary-icon"><Bell /></span>
-              <div>
-                <strong>Designed to be temporary</strong>
+              <span class="temporary-icon"><CheckCircle2 /></span>
+              <div class="readiness-copy">
+                <div class="readiness-heading">
+                  <strong>Draft readiness</strong>
+                  <span>{{ draftProgress }}%</span>
+                </div>
                 <p>
-                  This post will automatically expire after {{ selectedDuration }}, keeping the
-                  community feed current.
+                  {{
+                    hasRequiredDetails
+                      ? `Ready to publish. It will expire ${expiryLabel}.`
+                      : 'Complete the required title and message before publishing.'
+                  }}
                 </p>
+                <div class="readiness-track" aria-hidden="true">
+                  <span :style="{ width: `${draftProgress}%` }"></span>
+                </div>
               </div>
             </section>
           </aside>
@@ -1079,34 +1122,21 @@ onBeforeUnmount(() => {
   gap: 2px;
 }
 
-.toggle {
-  width: 42px;
-  height: 24px;
+.summary-status {
   flex: 0 0 auto;
-  border: 0;
   border-radius: 999px;
-  background: #cfdbe2;
-  padding: 3px;
-  cursor: pointer;
-  transition: background 0.18s ease;
+  background: #edf2f5;
+  color: #6d8291;
+  padding: 6px 9px;
+  font-size: 0.64rem;
+  font-weight: 800;
+  line-height: 1;
+  text-align: center;
 }
 
-.toggle span {
-  width: 18px;
-  height: 18px;
-  display: block;
-  border-radius: 50%;
-  background: #fff;
-  box-shadow: 0 2px 5px rgba(31, 65, 84, 0.2);
-  transition: transform 0.18s ease;
-}
-
-.toggle.active {
-  background: #23848a;
-}
-
-.toggle.active span {
-  transform: translateX(18px);
+.summary-status.ready {
+  background: #e6f6f3;
+  color: #18766e;
 }
 
 .form-footer {
@@ -1228,9 +1258,22 @@ onBeforeUnmount(() => {
 }
 
 .etiquette-list article > span {
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  flex: 0 0 22px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: #edf7f6;
   color: #2b858b;
   font-size: 0.68rem;
   font-weight: 850;
+}
+
+.etiquette-list article.complete > span {
+  background: #dff3ef;
+  color: #17776f;
 }
 
 .etiquette-list strong {
@@ -1341,6 +1384,40 @@ onBeforeUnmount(() => {
   line-height: 1.55;
 }
 
+.readiness-copy {
+  min-width: 0;
+  flex: 1;
+}
+
+.readiness-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.readiness-heading span {
+  color: #9a7131;
+  font-size: 0.7rem;
+  font-weight: 850;
+}
+
+.readiness-track {
+  height: 5px;
+  margin-top: 11px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #eee3cf;
+}
+
+.readiness-track span {
+  height: 100%;
+  display: block;
+  border-radius: inherit;
+  background: #c49445;
+  transition: width 0.25s ease;
+}
+
 .discard-button:hover {
   border-color: #c7d5de;
   background: #f8fafb;
@@ -1352,7 +1429,6 @@ onBeforeUnmount(() => {
 
 .upload-zone:focus-visible,
 .option-group button:focus-visible,
-.toggle:focus-visible,
 .discard-button:focus-visible,
 .publish-button:focus-visible,
 .image-details button:focus-visible {
@@ -1519,11 +1595,15 @@ onBeforeUnmount(() => {
   }
 
   .preference-row {
-    align-items: flex-start;
+    display: grid;
+    grid-template-columns: 32px minmax(0, 1fr);
+    align-items: start;
   }
 
-  .toggle {
-    margin-top: 3px;
+  .summary-status {
+    grid-column: 2;
+    width: fit-content;
+    margin-top: 4px;
   }
 
   .form-actions {

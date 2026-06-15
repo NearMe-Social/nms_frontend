@@ -1,971 +1,828 @@
-<template>
-  <Navbar />
-  <div class="flex min-w-0">
-    <AppSidebar class="hidden md:flex" />
-    <div class="edit-profile-page">
-      <div class="page-header">
-        <h1 class="page-title">Edit Profile</h1>
-        <p class="page-subtitle">Personalize your presence in the editorial community.</p>
-      </div>
-
-      <div class="edit-profile-container">
-        <form @submit.prevent="handleSaveChanges" class="profile-form">
-          <div class="form-layout">
-            <aside class="form-sidebar">
-              <div class="profile-photo-card">
-                <div class="photo-section">
-                  <UserAvatar
-                    :src="photoPreview"
-                    :username="formData.username || authStore.user?.username"
-                    :alt="`${formData.username || 'User'} profile`"
-                    class="photo-preview avatar-preview"
-                  />
-                </div>
-                <button type="button" class="photo-change-btn" @click="triggerFileInput">
-                  <UploadCloudIcon :size="16" />
-                  Change Photo
-                </button>
-                <input
-                  ref="fileInput"
-                  type="file"
-                  accept="image/*"
-                  style="display: none"
-                  @change="handlePhotoUpload"
-                />
-                <p class="photo-hint">PNG, JPG up to 5MB</p>
-              </div>
-            </aside>
-
-            <div class="form-content">
-              <div class="form-section">
-                <div class="section-header">
-                  <UserIcon :size="18" />
-                  <h2 class="section-title">Public Identity</h2>
-                </div>
-
-                <div class="form-row">
-                  <div class="form-group">
-                    <label for="firstName" class="form-label">First Name</label>
-                    <input
-                      id="firstName"
-                      v-model="formData.first_name"
-                      type="text"
-                      class="form-input"
-                      placeholder="First Name"
-                    />
-                  </div>
-                  <div class="form-group">
-                    <label for="lastName" class="form-label">Last Name</label>
-                    <input
-                      id="lastName"
-                      v-model="formData.last_name"
-                      type="text"
-                      class="form-input"
-                      placeholder="Last Name"
-                    />
-                  </div>
-                </div>
-
-                <div class="form-group" style="margin-top: 16px;">
-                  <label for="username" class="form-label">Username</label>
-                  <input
-                    id="username"
-                    v-model="formData.username"
-                    type="text"
-                    class="form-input"
-                    placeholder="@username"
-                    disabled
-                  />
-                </div>
-
-                <div class="form-group" style="margin-top: 16px;">
-                  <label for="bio" class="form-label">Professional Bio</label>
-                  <textarea
-                    id="bio"
-                    v-model="formData.bio"
-                    class="form-textarea"
-                    placeholder="Tell people about yourself..."
-                    rows="3"
-                  ></textarea>
-                  <div class="char-count">{{ formData.bio?.length || 0 }} / 500 characters</div>
-                </div>
-              </div>
-
-              <div class="form-section">
-                <div class="section-header">
-                  <MapPinIcon :size="18" />
-                  <h2 class="section-title">Presence</h2>
-                </div>
-
-                <div class="form-row">
-                  <div class="form-group">
-                    <label for="location" class="form-label">Location</label>
-                    <input
-                      id="location"
-                      v-model="formData.location"
-                      type="text"
-                      class="form-input"
-                      placeholder="City, Country"
-                    />
-                  </div>
-
-                  <div class="form-group">
-                    <label for="website" class="form-label">Website / Portfolio</label>
-                    <input
-                      id="website"
-                      v-model="formData.website"
-                      type="url"
-                      class="form-input"
-                      placeholder="https://yourwebsite.com"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div class="form-section">
-                <div class="section-header">
-                  <LinkIcon :size="18" />
-                  <h2 class="section-title">Social Ties</h2>
-                </div>
-
-                <div class="social-grid">
-                  <div class="social-item">
-                    <div class="social-platform">
-                      <div class="platform-name">
-                        <TelegramIcon :size="18" />
-                        <span>Telegram</span>
-                      </div>
-                      <span class="optional-tag">(optional)</span>
-                    </div>
-                    <input
-                      v-model="formData.telegram_handle"
-                      type="text"
-                      class="form-input form-input-sm"
-                      placeholder="@username"
-                    />
-                    <div v-if="formData.telegram_handle" class="social-status connected">
-                      <CheckIcon :size="12" />
-                      Connected
-                    </div>
-                    <div v-else class="social-status disconnected">Not connected</div>
-                  </div>
-
-                  <div class="social-item">
-                    <div class="social-platform">
-                      <div class="platform-name">
-                        <InstagramIcon :size="18" />
-                        <span>Instagram</span>
-                      </div>
-                      <span class="optional-tag">(optional)</span>
-                    </div>
-                    <input
-                      v-model="formData.instagram_handle"
-                      type="text"
-                      class="form-input form-input-sm"
-                      placeholder="@username"
-                    />
-                    <div v-if="formData.instagram_handle" class="social-status connected">
-                      <CheckIcon :size="12" />
-                      Connected
-                    </div>
-                    <div v-else class="social-status disconnected">Not connected</div>
-                  </div>
-
-                  <div class="social-item">
-                    <div class="social-platform">
-                      <div class="platform-name">
-                        <LinkedinIcon :size="18" />
-                        <span>LinkedIn</span>
-                      </div>
-                      <span class="optional-tag">(optional)</span>
-                    </div>
-                    <input
-                      v-model="formData.linkedin_url"
-                      type="url"
-                      class="form-input form-input-sm"
-                      placeholder="linkedin.com/in/..."
-                    />
-                    <div v-if="formData.linkedin_url" class="social-status connected">
-                      <CheckIcon :size="12" />
-                      Connected
-                    </div>
-                    <div v-else class="social-status disconnected">Not connected</div>
-                  </div>
-                </div>
-              </div>
-
-              <div class="form-section">
-                <div class="section-header">
-                  <TagIcon :size="18" />
-                  <h2 class="section-title">Editorial Focus</h2>
-                </div>
-
-                <div class="form-group">
-                  <label class="form-label">Topics & Interests</label>
-                  <div class="tags-input-wrapper">
-                    <div class="tags-list">
-                      <div v-for="(tag, index) in formData.tags" :key="index" class="tag-item">
-                        {{ tag }}
-                        <button type="button" class="tag-remove" @click="removeTag(index)">
-                          <XIcon :size="12" />
-                        </button>
-                      </div>
-                    </div>
-                    <input
-                      v-model="tagInput"
-                      type="text"
-                      class="form-input tags-input"
-                      placeholder="Add topic (press Enter)"
-                      @keydown.enter.prevent="addTag"
-                    />
-                  </div>
-                  <div class="tags-hint">Press Enter to add tags. Max 8 topics.</div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="form-actions">
-            <button type="button" class="btn-cancel" @click="handleCancel">Cancel</button>
-            <button type="submit" class="btn-save" :disabled="isSaving">
-              <span v-if="isSaving" class="btn-loading">
-                <LoaderIcon :size="16" class="spinner" />
-                Saving...
-              </span>
-              <span v-else>
-                <CheckIcon :size="16" />
-                Save Changes
-              </span>
-            </button>
-          </div>
-
-          <div v-if="successMessage" class="alert alert-success">
-            <CheckIcon :size="16" />
-            {{ successMessage }}
-          </div>
-          <div v-if="errorMessage" class="alert alert-error">
-            <AlertCircleIcon :size="16" />
-            {{ errorMessage }}
-          </div>
-        </form>
-
-        <div class="form-footer">
-          <p class="footer-note">
-            Your profile changes will be immediately visible across The Commons. Some data may be
-            cached for up to 24 hours.
-          </p>
-        </div>
-      </div>
-    </div>
-  </div>
-</template>
-
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { useAuthStore } from '@/stores/auth'
-import { userApi, type UpdateProfilePayload } from '@/services/api'
-import UserAvatar from '@/components/UserAvatar.vue'
-import Navbar from '@/components/Navbar.vue'
+import { AtSign, Camera, Check, Info, LoaderCircle, Mail, UserRound } from 'lucide-vue-next'
 import AppSidebar from '@/components/AppSidebar.vue'
-import {
-  User as UserIcon,
-  MapPin as MapPinIcon,
-  Link as LinkIcon,
-  Tag as TagIcon,
-  UploadCloud as UploadCloudIcon,
-  X as XIcon,
-  Check as CheckIcon,
-  AlertCircle as AlertCircleIcon,
-  Loader2 as LoaderIcon,
-  Send as TelegramIcon,
-  Instagram as InstagramIcon,
-  Linkedin as LinkedinIcon,
-} from 'lucide-vue-next'
+import MobileBottomNav from '@/components/MobileBottomNav.vue'
+import Navbar from '@/components/Navbar.vue'
+import UserAvatar from '@/components/UserAvatar.vue'
+import { userApi, type UpdateProfilePayload } from '@/services/api'
+import { useAuthStore } from '@/stores/auth'
+
+const MAX_PROFILE_IMAGE_SIZE = 5 * 1024 * 1024
+const SUPPORTED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp'])
+const USERNAME_PATTERN = /^[a-zA-Z0-9_]+(?:\.[a-zA-Z0-9_]+)*$/
 
 const router = useRouter()
-const authStore = useAuthStore()
-
-// Form state
-const formData = ref({
+const auth = useAuthStore()
+const form = ref({
   first_name: '',
   last_name: '',
   username: '',
   email: '',
   bio: '',
-  location: '',
-  website: '',
-  telegram_handle: '',
-  instagram_handle: '',
-  linkedin_url: '',
-  tags: [] as string[],
-  profile_image: '',
 })
-
-const tagInput = ref('')
-const photoPreview = ref<string | null>(null)
+const initialForm = ref({ ...form.value })
+const photoPreview = ref<string | null>(auth.user?.profile_image ?? null)
 const fileInput = ref<HTMLInputElement | null>(null)
-const isSaving = ref(false)
-const isLoading = ref(true)
+const loading = ref(true)
+const saving = ref(false)
+const uploadingPhoto = ref(false)
 const successMessage = ref('')
 const errorMessage = ref('')
+const usernameError = ref('')
 
-// Load profile data on mount
+const displayName = computed(() => {
+  const name = `${form.value.first_name} ${form.value.last_name}`.trim()
+  return name || form.value.username || 'Nearme Neighbor'
+})
+const hasChanges = computed(
+  () =>
+    form.value.first_name.trim() !== initialForm.value.first_name ||
+    form.value.last_name.trim() !== initialForm.value.last_name ||
+    form.value.username.trim() !== initialForm.value.username ||
+    form.value.bio.trim() !== initialForm.value.bio,
+)
+const canSave = computed(
+  () =>
+    hasChanges.value &&
+    !saving.value &&
+    !uploadingPhoto.value &&
+    form.value.first_name.trim().length > 0 &&
+    form.value.last_name.trim().length > 0 &&
+    form.value.username.trim().length >= 3 &&
+    !usernameError.value,
+)
+
 onMounted(async () => {
   try {
-    isLoading.value = true
     const profile = await userApi.getProfile()
-
-    // Populate form data
-    formData.value = {
+    form.value = {
       first_name: profile.first_name || '',
       last_name: profile.last_name || '',
       username: profile.username || '',
       email: profile.email || '',
       bio: profile.bio || '',
-      location: profile.location || '',
-      website: profile.website || '',
-      telegram_handle: (profile as any).telegram_handle || profile.twitter_handle || '',
-      instagram_handle: profile.instagram_handle || '',
-      linkedin_url: profile.linkedin_url || '',
-      tags: profile.tags || [],
-      profile_image: profile.profile_image || '',
     }
-
-    // Set photo preview if exists
-    if (profile.profile_image) {
-      photoPreview.value = profile.profile_image
-    }
-
-    // MOCK DATA: Load extra fields from local storage if they exist
-    const savedMockData = localStorage.getItem('temp_profile_mock')
-    if (savedMockData) {
-      const parsedMock = JSON.parse(savedMockData)
-      formData.value = { ...formData.value, ...parsedMock }
-    }
-
-  } catch (error) {
-    console.error('Error loading profile:', error)
+    initialForm.value = { ...form.value }
+    photoPreview.value = profile.profile_image || null
+  } catch (error: unknown) {
+    errorMessage.value = error instanceof Error ? error.message : 'Could not load your profile.'
   } finally {
-    isLoading.value = false
+    loading.value = false
   }
 })
 
-const addTag = () => {
-  if (tagInput.value.trim() && formData.value.tags.length < 8) {
-    const tag = tagInput.value.trim().toLowerCase()
-    if (!formData.value.tags.includes(tag)) {
-      formData.value.tags.push(tag)
-    }
-    tagInput.value = ''
+function validateUsername() {
+  const value = form.value.username.trim()
+  usernameError.value = ''
+
+  if (value.length < 3) {
+    usernameError.value = 'Username must be at least 3 characters.'
+  } else if (value.length > 20) {
+    usernameError.value = 'Username must be 20 characters or fewer.'
+  } else if (!USERNAME_PATTERN.test(value)) {
+    usernameError.value = 'Use letters, numbers, underscores, and single dots between characters.'
   }
 }
 
-const removeTag = (index: number) => {
-  formData.value.tags.splice(index, 1)
-}
-
-const triggerFileInput = () => {
+function openPhotoPicker() {
   fileInput.value?.click()
 }
 
-const handlePhotoUpload = async (event: Event) => {
-  const target = event.target as HTMLInputElement
-  const file = target.files?.[0]
-
+async function uploadPhoto(event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  input.value = ''
   if (!file) return
 
-  // Validate file size (5MB max)
-  if (file.size > 5 * 1024 * 1024) {
-    errorMessage.value = 'File size must be less than 5MB'
+  successMessage.value = ''
+  errorMessage.value = ''
+
+  if (!SUPPORTED_IMAGE_TYPES.has(file.type)) {
+    errorMessage.value = 'Choose a JPG, PNG, or WebP image.'
     return
   }
 
-  try {
-    // Create preview
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      photoPreview.value = e.target?.result as string
-    }
-    reader.readAsDataURL(file)
-
-    // Upload to server
-    const response = await userApi.uploadProfileImage(file)
-    formData.value.profile_image = response.url
-    photoPreview.value = response.url
-    authStore.updateProfile(response.user)
-    successMessage.value = 'Photo uploaded successfully'
-  } catch (error) {
-    errorMessage.value = 'Failed to upload photo'
-    console.error('Photo upload error:', error)
+  if (file.size > MAX_PROFILE_IMAGE_SIZE) {
+    errorMessage.value = 'Profile pictures must be 5 MB or smaller.'
+    return
   }
-}
 
-const handleSaveChanges = async () => {
-  if (isSaving.value) return
-
+  uploadingPhoto.value = true
   try {
-    isSaving.value = true
-    errorMessage.value = ''
-    successMessage.value = ''
-
-    // 1. Save the supported fields to the real backend
-    const updatePayload: any = {
-      username: formData.value.username,
-      bio: formData.value.bio,
-    }
-
-    if (formData.value.profile_image) {
-      updatePayload.profile_image = formData.value.profile_image
-    }
-
-    const updatedProfile = await userApi.updateProfile(updatePayload)
-    authStore.updateProfile(updatedProfile)
-
-    // 2. MOCK DATA: Save the unsupported fields to LocalStorage for now
-    const mockExtraData = {
-      first_name: formData.value.first_name,
-      last_name: formData.value.last_name,
-      location: formData.value.location,
-      website: formData.value.website,
-      telegram_handle: formData.value.telegram_handle,
-      instagram_handle: formData.value.instagram_handle,
-      linkedin_url: formData.value.linkedin_url,
-      tags: formData.value.tags,
-    }
-    localStorage.setItem('temp_profile_mock', JSON.stringify(mockExtraData))
-
-    successMessage.value = 'Profile updated successfully!'
-
-    setTimeout(() => {
-      router.push('/profile')
-    }, 2000)
-  } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : 'Failed to save profile'
-    console.error('Save profile error:', error)
+    const uploaded = await userApi.uploadProfileImage(file)
+    photoPreview.value = uploaded.url
+    auth.updateProfile(uploaded.user)
+    successMessage.value = 'Profile photo updated.'
+  } catch (error: unknown) {
+    errorMessage.value =
+      error instanceof Error ? error.message : 'Profile photo could not be uploaded.'
   } finally {
-    isSaving.value = false
+    uploadingPhoto.value = false
   }
 }
 
-const handleCancel = () => {
+async function saveProfile() {
+  validateUsername()
+  if (!canSave.value) return
+
+  saving.value = true
+  successMessage.value = ''
+  errorMessage.value = ''
+
+  const payload: UpdateProfilePayload = {
+    first_name: form.value.first_name.trim(),
+    last_name: form.value.last_name.trim(),
+    username: form.value.username.trim(),
+    bio: form.value.bio.trim(),
+  }
+
+  try {
+    const updated = await userApi.updateProfile(payload)
+    auth.updateProfile(updated)
+    form.value = {
+      first_name: updated.first_name || '',
+      last_name: updated.last_name || '',
+      username: updated.username || '',
+      email: updated.email || form.value.email,
+      bio: updated.bio || '',
+    }
+    initialForm.value = { ...form.value }
+    successMessage.value = 'Profile changes saved.'
+  } catch (error: unknown) {
+    errorMessage.value = error instanceof Error ? error.message : 'Profile could not be saved.'
+  } finally {
+    saving.value = false
+  }
+}
+
+function cancelEditing() {
+  if (hasChanges.value) {
+    form.value = { ...initialForm.value }
+    usernameError.value = ''
+    successMessage.value = ''
+    errorMessage.value = ''
+    return
+  }
+
   router.back()
 }
 </script>
 
+<template>
+  <div class="edit-profile-page">
+    <Navbar />
+
+    <div class="profile-shell">
+      <AppSidebar class="hidden md:flex" />
+
+      <main class="workspace">
+        <header class="page-heading">
+          <div>
+            <p class="eyebrow">Public identity</p>
+            <h1>Edit profile</h1>
+            <p>Keep your name, username, photo, and introduction recognizable across Nearme.</p>
+          </div>
+          <span class="sync-badge"><Check /> Updates sync across the app</span>
+        </header>
+
+        <div v-if="loading" class="state-card">
+          <LoaderCircle class="spinner" /> Loading your profile...
+        </div>
+
+        <form v-else class="editor-layout" @submit.prevent="saveProfile">
+          <aside class="photo-card">
+            <div class="photo-wrap">
+              <UserAvatar
+                :src="photoPreview"
+                :username="form.username || auth.user?.username"
+                :alt="`${displayName} profile`"
+                class="profile-photo"
+              />
+              <button
+                type="button"
+                class="photo-overlay"
+                :disabled="uploadingPhoto"
+                aria-label="Choose a new profile photo"
+                @click="openPhotoPicker"
+              >
+                <LoaderCircle v-if="uploadingPhoto" class="spinner" />
+                <Camera v-else />
+                <span>{{ uploadingPhoto ? 'Uploading...' : 'Change photo' }}</span>
+              </button>
+            </div>
+            <input
+              ref="fileInput"
+              class="visually-hidden"
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              @change="uploadPhoto"
+            />
+
+            <div class="photo-identity">
+              <strong>{{ displayName }}</strong>
+              <span>@{{ form.username || 'username' }}</span>
+            </div>
+            <p>JPG, PNG, or WebP. Maximum 5 MB.</p>
+          </aside>
+
+          <section class="form-panel">
+            <div class="panel-heading">
+              <span class="panel-icon"><UserRound /></span>
+              <div>
+                <p class="panel-label">Profile details</p>
+                <h2>How neighbors recognize you</h2>
+              </div>
+            </div>
+
+            <div class="form-grid">
+              <label>
+                <span>First name</span>
+                <input
+                  v-model="form.first_name"
+                  type="text"
+                  maxlength="50"
+                  autocomplete="given-name"
+                  required
+                />
+              </label>
+
+              <label>
+                <span>Last name</span>
+                <input
+                  v-model="form.last_name"
+                  type="text"
+                  maxlength="50"
+                  autocomplete="family-name"
+                  required
+                />
+              </label>
+            </div>
+
+            <label>
+              <span>Username</span>
+              <div class="input-with-icon" :class="{ invalid: usernameError }">
+                <AtSign />
+                <input
+                  v-model="form.username"
+                  type="text"
+                  minlength="3"
+                  maxlength="20"
+                  autocomplete="username"
+                  required
+                  @input="validateUsername"
+                />
+              </div>
+              <small v-if="usernameError" class="field-error">{{ usernameError }}</small>
+              <small v-else>Letters, numbers, underscores, and dots are supported.</small>
+            </label>
+
+            <label>
+              <span>Email address</span>
+              <div class="input-with-icon readonly">
+                <Mail />
+                <input :value="form.email" type="email" disabled />
+              </div>
+              <small>Your login email cannot be changed from the profile editor.</small>
+            </label>
+
+            <label>
+              <span>Bio</span>
+              <textarea
+                v-model="form.bio"
+                rows="5"
+                maxlength="160"
+                placeholder="Share a short introduction for your local community."
+              ></textarea>
+              <small class="bio-count">{{ form.bio.length }} / 160</small>
+            </label>
+
+            <div class="profile-note">
+              <Info />
+              <p>
+                These fields are saved to your account and appear consistently on your profile,
+                posts, search results, and nearby identity.
+              </p>
+            </div>
+
+            <p v-if="successMessage" class="alert alert-success"><Check /> {{ successMessage }}</p>
+            <p v-if="errorMessage" class="alert alert-error">{{ errorMessage }}</p>
+
+            <div class="form-actions">
+              <button type="button" class="cancel-button" @click="cancelEditing">
+                {{ hasChanges ? 'Reset changes' : 'Back' }}
+              </button>
+              <button type="submit" class="save-button" :disabled="!canSave">
+                <LoaderCircle v-if="saving" class="spinner" />
+                <Check v-else />
+                {{ saving ? 'Saving...' : 'Save profile' }}
+              </button>
+            </div>
+          </section>
+        </form>
+      </main>
+    </div>
+
+    <MobileBottomNav />
+  </div>
+</template>
+
 <style scoped>
 .edit-profile-page {
+  min-height: 100vh;
+  background: #f4f7fb;
+  color: #20384a;
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+}
+
+.profile-shell {
   display: flex;
-  flex-direction: column;
+  min-width: 0;
+}
+
+.workspace {
   width: 100%;
   min-width: 0;
   flex: 1;
-  min-height: 100vh;
-  background: #f4f7fb;
-  color: #1f4054;
-  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
-  padding: 24px clamp(16px, 3vw, 32px) 40px;
+  padding: 28px clamp(18px, 3vw, 38px) 64px;
 }
 
-.page-header {
-  border: 1px solid #e3ebf2;
-  border-radius: 18px;
-  background: #fff;
-  padding: 24px;
-  box-shadow: 0 1px 3px rgba(15, 45, 70, 0.04);
-}
-
-.page-title {
-  margin: 0;
-  color: #0f172a;
-  font-size: clamp(1.875rem, 2.6vw, 2.25rem);
-  font-weight: 850;
-  letter-spacing: 0;
-  line-height: 1.1;
-}
-
-.page-subtitle {
-  margin: 8px 0 0;
-  color: #7890a2;
-  font-size: 0.9rem;
-  font-weight: 600;
-  line-height: 1.6;
-}
-
-.edit-profile-container {
-  max-width: 1100px;
-  margin: 0 auto;
-  padding: 24px 0 0;
-  width: 100%;
-}
-
-.profile-form {
+.page-heading {
+  margin-bottom: 22px;
   display: flex;
-  flex-direction: column;
-  gap: 32px;
-}
-
-.form-layout {
-  display: grid;
-  grid-template-columns: 280px 1fr;
-  gap: 32px;
-}
-
-@media (max-width: 968px) {
-  .form-layout {
-    grid-template-columns: 1fr;
-  }
-}
-
-/* Sidebar */
-.form-sidebar {
-  position: relative;
-}
-
-.profile-photo-card {
-  border: 1px solid #e3ebf2;
-  border-radius: 18px;
-  background: #fff;
-  padding: 24px;
-  box-shadow: 0 1px 3px rgba(15, 45, 70, 0.04);
-  position: sticky;
-  top: 20px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 16px;
-}
-
-.photo-section {
-  width: 100%;
-  aspect-ratio: 1;
-  border-radius: 14px;
-  overflow: hidden;
-  background: #f0f5f8;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid #dce7ee;
-}
-
-.avatar-preview {
-  width: 100%;
-  height: 100%;
-  border-radius: 0;
-  font-size: clamp(3rem, 8vw, 5rem);
-}
-
-.preview-img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.photo-placeholder {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #7890a2;
-}
-
-.photo-change-btn {
-  width: 100%;
-  padding: 11px 16px;
-  background: #0f8a7c;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  transition: all 0.2s ease;
-  font-family: inherit;
-}
-
-.photo-change-btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(15, 138, 124, 0.3);
-}
-
-.photo-hint {
-  font-size: 12px;
-  color: #7890a2;
-  margin: 0;
-  text-align: center;
-}
-
-/* Form Content */
-.form-content {
-  display: flex;
-  flex-direction: column;
+  align-items: flex-end;
+  justify-content: space-between;
   gap: 24px;
 }
 
-.form-section {
-  border: 1px solid #e3ebf2;
-  border-radius: 18px;
-  background: #fff;
-  padding: 24px;
-  box-shadow: 0 1px 3px rgba(15, 45, 70, 0.04);
+.eyebrow,
+.panel-label {
+  margin: 0;
+  color: #168278;
+  font-size: 0.68rem;
+  font-weight: 850;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
 }
 
-.section-header {
+.page-heading h1 {
+  margin: 7px 0 0;
+  color: #0f172a;
+  font-size: clamp(2rem, 3vw, 2.65rem);
+  font-weight: 850;
+  letter-spacing: -0.04em;
+  line-height: 1.05;
+}
+
+.page-heading > div > p:last-child {
+  margin: 10px 0 0;
+  color: #718096;
+  font-size: 0.92rem;
+  line-height: 1.6;
+}
+
+.sync-badge {
+  padding: 9px 13px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid #d5ebe9;
+  border-radius: 999px;
+  background: #f0faf8;
+  color: #246e74;
+  font-size: 0.74rem;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+.sync-badge svg,
+.save-button svg,
+.profile-note svg,
+.alert svg {
+  width: 16px;
+  height: 16px;
+}
+
+.state-card {
+  padding: 24px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  border: 1px solid #e1eaf1;
+  border-radius: 18px;
+  background: #fff;
+  color: #718899;
+  font-size: 0.82rem;
+}
+
+.editor-layout {
+  max-width: 1030px;
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  align-items: start;
+  gap: 22px;
+}
+
+.photo-card,
+.form-panel {
+  border: 1px solid #e1eaf1;
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: 0 10px 30px rgba(42, 67, 83, 0.05);
+}
+
+.photo-card {
+  position: sticky;
+  top: 82px;
+  padding: 20px;
+  text-align: center;
+}
+
+.photo-wrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: 18px;
+  background: #edf4f6;
+}
+
+.profile-photo {
+  width: 100%;
+  height: 100%;
+  border-radius: 0;
+  font-size: 4rem;
+}
+
+.photo-overlay {
+  position: absolute;
+  inset: auto 12px 12px;
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 12px;
+  background: rgba(16, 50, 65, 0.82);
+  color: #fff;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 800;
+  backdrop-filter: blur(8px);
+}
+
+.photo-overlay svg {
+  width: 17px;
+  height: 17px;
+}
+
+.photo-overlay:disabled {
+  cursor: wait;
+  opacity: 0.75;
+}
+
+.photo-identity {
+  margin-top: 16px;
+  display: grid;
+  gap: 3px;
+}
+
+.photo-identity strong {
+  color: #244759;
+  font-size: 0.94rem;
+}
+
+.photo-identity span,
+.photo-card > p {
+  color: #738a9a;
+  font-size: 0.72rem;
+}
+
+.photo-identity span {
+  color: #168278;
+  font-weight: 700;
+}
+
+.photo-card > p {
+  margin: 12px 0 0;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.form-panel {
+  padding: 24px;
+}
+
+.panel-heading {
+  margin-bottom: 24px;
+  padding-bottom: 16px;
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-bottom: 20px;
-  padding-bottom: 14px;
-  border-bottom: 1px solid #eef3f7;
-  color: #0e6378;
+  border-bottom: 1px solid #e9eff3;
 }
 
-.section-title {
-  margin: 0;
-  color: #17364a;
+.panel-icon {
+  width: 40px;
+  height: 40px;
+  flex: 0 0 40px;
+  display: grid;
+  place-items: center;
+  border-radius: 13px;
+  background: #eaf7f5;
+  color: #187970;
+}
+
+.panel-icon svg {
+  width: 19px;
+  height: 19px;
+}
+
+.panel-heading h2 {
+  margin: 4px 0 0;
+  color: #193a4c;
   font-size: 1rem;
   font-weight: 850;
 }
 
-/* Form Groups */
-.form-group {
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.form-panel > label,
+.form-grid label {
+  display: block;
   margin-bottom: 18px;
 }
 
-.form-group:last-child {
-  margin-bottom: 0;
-}
-
-.form-label {
+.form-panel label > span {
+  margin-bottom: 7px;
   display: block;
-  font-size: 12px;
-  font-weight: 850;
-  color: #4f687d;
-  margin-bottom: 8px;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+  color: #3d596b;
+  font-size: 0.75rem;
+  font-weight: 800;
 }
 
-.form-input,
-.form-textarea {
+.form-panel input,
+.form-panel textarea,
+.input-with-icon {
   width: 100%;
-  padding: 11px 13px;
-  border: 1px solid #dce7ee;
-  border-radius: 10px;
-  font-family: inherit;
-  font-size: 14px;
-  color: #17364a;
-  background: #fff;
-  transition: all 0.2s ease;
+  border: 1px solid #dce6ed;
+  border-radius: 12px;
+  background: #f8fafb;
+  color: #233f51;
+  font: inherit;
+  font-size: 0.86rem;
 }
 
-.form-input::placeholder,
-.form-textarea::placeholder {
-  color: #94a3b8;
+.form-panel input {
+  min-height: 48px;
+  padding: 0 13px;
+  outline: 0;
 }
 
-.form-input:hover,
-.form-textarea:hover {
-  border-color: #b1c0d6;
-  background: #f8fbff;
-}
-
-.form-input:focus,
-.form-textarea:focus {
-  outline: none;
-  border-color: #0f8a7c;
-  box-shadow: 0 0 0 3px rgba(15, 138, 124, 0.08);
-}
-
-.form-input:disabled {
-  background: #f0f5f8;
-  color: #7890a2;
-  cursor: not-allowed;
-}
-
-.form-textarea {
+.form-panel textarea {
+  min-height: 130px;
+  padding: 13px;
+  outline: 0;
   resize: vertical;
-  min-height: 80px;
+  line-height: 1.6;
 }
 
-.char-count {
-  font-size: 11px;
-  color: #7890a2;
-  margin-top: 6px;
-}
-
-.form-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-}
-
-@media (max-width: 768px) {
-  .form-row {
-    grid-template-columns: 1fr;
-  }
-}
-
-/* Social Grid */
-.social-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 16px;
-}
-
-@media (max-width: 768px) {
-  .social-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-.social-item {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.social-platform {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 6px;
-}
-
-.platform-name {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  font-weight: 850;
-  color: #4f687d;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-}
-
-.optional-tag {
-  font-size: 10px;
-  font-weight: 600;
-  color: #94a3b8;
-  text-transform: lowercase;
-  letter-spacing: 0;
-}
-
-.form-input-sm {
-  font-size: 13px;
-  padding: 10px 12px;
-}
-
-.social-status {
-  font-size: 11px;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 5px 8px;
-  border-radius: 6px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
-}
-
-.social-status.connected {
-  color: #0f766e;
-  background: #e8f7f4;
-}
-
-.social-status.disconnected {
-  color: #7890a2;
-  background: #f0f5f8;
-}
-
-/* Tags Input */
-.tags-input-wrapper {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  padding: 11px;
-  border: 1px solid #dce7ee;
-  border-radius: 10px;
+.form-panel input:focus,
+.form-panel textarea:focus,
+.input-with-icon:focus-within {
+  border-color: #59aaa4;
   background: #fff;
-  align-content: flex-start;
-  transition: all 0.2s ease;
+  box-shadow: 0 0 0 3px rgba(19, 134, 125, 0.09);
 }
 
-.tags-input-wrapper:focus-within {
-  border-color: #0f8a7c;
-  box-shadow: 0 0 0 3px rgba(15, 138, 124, 0.08);
-}
-
-.tags-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.tag-item {
+.input-with-icon {
+  padding-left: 12px;
   display: flex;
   align-items: center;
-  gap: 5px;
-  padding: 5px 9px;
-  background: #0f8a7c;
-  color: white;
-  border-radius: 999px;
-  font-size: 11px;
-  font-weight: 600;
 }
 
-.tag-remove {
-  background: none;
-  border: none;
-  color: white;
-  cursor: pointer;
-  padding: 0;
-  display: flex;
-  align-items: center;
-  opacity: 0.9;
-  transition: opacity 0.2s;
+.input-with-icon svg {
+  width: 17px;
+  height: 17px;
+  flex: 0 0 auto;
+  color: #8496a3;
 }
 
-.tag-remove:hover {
-  opacity: 1;
+.input-with-icon input {
+  border: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
-.tags-input {
-  border: none !important;
-  box-shadow: none !important;
-  padding: 0 !important;
-  flex: 1;
-  min-width: 100px;
-  font-size: 14px;
+.input-with-icon.invalid {
+  border-color: #e9a6a6;
 }
 
-.tags-input:focus {
-  border: none !important;
-  box-shadow: none !important;
+.input-with-icon.readonly {
+  background: #f0f4f6;
 }
 
-.tags-hint {
-  font-size: 11px;
-  color: #7890a2;
-  margin-top: 6px;
-}
-
-/* Action Buttons */
-.form-actions {
-  display: flex;
-  gap: 12px;
-  justify-content: flex-end;
-  padding: 20px 24px;
-  border: 1px solid #e3ebf2;
-  border-radius: 18px;
-  background: #fff;
-  box-shadow: 0 1px 3px rgba(15, 45, 70, 0.04);
-  margin-top: 12px;
-}
-
-.btn-cancel,
-.btn-save {
-  padding: 11px 24px;
-  border: none;
-  border-radius: 999px;
-  font-size: 13px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  font-family: inherit;
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.btn-cancel {
-  background: #f8fbff;
-  color: #4f687d;
-  border: 1px solid #dce7ee;
-}
-
-.btn-cancel:hover {
-  background: #e8ecf1;
-  border-color: #d1d7de;
-}
-
-.btn-save {
-  background: #0f8a7c;
-  color: white;
-}
-
-.btn-save:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 16px rgba(15, 138, 124, 0.25);
-}
-
-.btn-save:disabled {
-  opacity: 0.6;
+.form-panel input:disabled {
   cursor: not-allowed;
+  color: #738a9a;
 }
 
-.btn-loading {
+.form-panel small {
+  margin-top: 6px;
+  display: block;
+  color: #8294a2;
+  font-size: 0.68rem;
+  line-height: 1.45;
+}
+
+.form-panel .field-error {
+  color: #b84e4e;
+}
+
+.bio-count {
+  text-align: right;
+}
+
+.profile-note {
+  padding: 12px 13px;
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  border: 1px solid #dcecea;
+  border-radius: 12px;
+  background: #f3f9f9;
+  color: #34747a;
+}
+
+.profile-note svg {
+  flex: 0 0 auto;
+  margin-top: 1px;
+}
+
+.profile-note p {
+  margin: 0;
+  color: #66808f;
+  font-size: 0.72rem;
+  line-height: 1.55;
+}
+
+.alert {
+  margin: 14px 0 0;
+  padding: 10px 12px;
   display: flex;
   align-items: center;
+  gap: 8px;
+  border-radius: 11px;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.alert-success {
+  border: 1px solid #cceae4;
+  background: #effaf7;
+  color: #14766f;
+}
+
+.alert-error {
+  border: 1px solid #f1cccc;
+  background: #fff5f5;
+  color: #b84e4e;
+}
+
+.form-actions {
+  margin-top: 22px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.cancel-button,
+.save-button {
+  min-height: 43px;
+  padding: 0 17px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   gap: 7px;
+  border-radius: 11px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.cancel-button {
+  border: 1px solid #dce6ed;
+  background: #f8fafb;
+  color: #526d7f;
+}
+
+.save-button {
+  min-width: 135px;
+  border: 0;
+  background: #13867d;
+  color: #fff;
+  box-shadow: 0 8px 18px rgba(19, 134, 125, 0.18);
+}
+
+.save-button:disabled {
+  cursor: not-allowed;
+  background: #d7e1e6;
+  color: #91a1ac;
+  box-shadow: none;
 }
 
 .spinner {
-  animation: spin 1s linear infinite;
+  animation: spin 0.8s linear infinite;
 }
 
 @keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
   to {
     transform: rotate(360deg);
   }
 }
 
-/* Alerts */
-.alert {
-  padding: 13px 16px;
-  border-radius: 8px;
-  font-size: 13px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-top: 16px;
-  font-weight: 500;
+@media (max-width: 900px) {
+  .editor-layout {
+    grid-template-columns: 220px minmax(0, 1fr);
+  }
 }
 
-.alert-success {
-  background: rgba(0, 201, 177, 0.12);
-  color: #00a896;
-  border: 1px solid rgba(0, 201, 177, 0.25);
+@media (max-width: 767px) {
+  .edit-profile-page {
+    padding-bottom: calc(84px + env(safe-area-inset-bottom));
+  }
+
+  .workspace {
+    padding: 20px 14px 32px;
+  }
+
+  .page-heading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .sync-badge {
+    font-size: 0.68rem;
+  }
+
+  .editor-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .photo-card {
+    position: static;
+  }
+
+  .photo-wrap {
+    max-width: 240px;
+    margin-inline: auto;
+  }
 }
 
-.alert-error {
-  background: rgba(239, 68, 68, 0.12);
-  color: #dc2626;
-  border: 1px solid rgba(239, 68, 68, 0.25);
+@media (max-width: 520px) {
+  .workspace {
+    padding-inline: 12px;
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+
+  .form-panel {
+    padding: 18px;
+    border-radius: 17px;
+  }
+
+  .form-actions {
+    flex-direction: column-reverse;
+  }
+
+  .cancel-button,
+  .save-button {
+    width: 100%;
+  }
 }
 
-/* Footer */
-.form-footer {
-  text-align: center;
-  padding: 20px 24px;
-  background: #e8f7f4;
-  border-radius: 14px;
-  border: 1px solid #ccebe5;
-  margin-top: 24px;
-}
-
-.footer-note {
-  font-size: 12px;
-  color: #4f687d;
-  margin: 0;
-  line-height: 1.6;
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation-duration: 1.6s;
+  }
 }
 </style>

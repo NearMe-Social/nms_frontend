@@ -76,7 +76,9 @@
                   :key="conversation.id"
                   type="button"
                   class="conversation-card"
-                  :class="{ active: activeConversation && conversation.id === activeConversation.id }"
+                  :class="{
+                    active: activeConversation && conversation.id === activeConversation.id,
+                  }"
                   @click="selectConversation(conversation.id)"
                 >
                   <div class="avatar-wrap">
@@ -95,7 +97,9 @@
                     </div>
                     <div class="conversation-preview">
                       <p>{{ conversation.preview }}</p>
-                      <span v-if="conversation.unread" class="unread-count">{{ conversation.unread }}</span>
+                      <span v-if="conversation.unread" class="unread-count">{{
+                        conversation.unread
+                      }}</span>
                     </div>
                   </div>
                 </button>
@@ -351,11 +355,15 @@ const groupedMessages = computed(() => {
     } else if (messageDate.getTime() === yesterday.getTime()) {
       label = 'Yesterday'
     } else {
-      label = messageDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+      label = messageDate.toLocaleDateString(undefined, {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+      })
     }
 
     const dateKey = messageDate.toISOString().split('T')[0]
-    let group = groups.find(g => g.date === dateKey)
+    let group = groups.find((g) => g.date === dateKey)
     if (!group) {
       group = { date: dateKey, label, messages: [] }
       groups.push(group)
@@ -373,13 +381,9 @@ const activeConversation = computed(
 )
 const showConversationPanel = computed(
   () =>
-    !isMobileOrTablet.value ||
-    showConversationList.value ||
-    activeConversationId.value === null,
+    !isMobileOrTablet.value || showConversationList.value || activeConversationId.value === null,
 )
-const showActiveChat = computed(
-  () => !isMobileOrTablet.value || !showConversationList.value,
-)
+const showActiveChat = computed(() => !isMobileOrTablet.value || !showConversationList.value)
 const targetMessageId = computed(() => {
   const messageId = Number(route.query.messageId)
   return Number.isInteger(messageId) && messageId > 0 ? messageId : null
@@ -424,7 +428,7 @@ async function selectConversation(id: number) {
   messages.value = []
   typingConversationId.value = null
 
-  const conversation = conversations.value.find(c => c.id === id)
+  const conversation = conversations.value.find((c) => c.id === id)
   if (conversation?.unread) {
     conversation.unread = 0
   }
@@ -543,13 +547,16 @@ function toConversation(conversation: ApiConversation): Conversation {
   )[0]
 
   const name = user?.username || 'Neighbor'
+  const participantId = user?.user_id ?? otherParticipant?.user_id ?? null
+  const online = participantId ? chatSocket.onlineUserIds.includes(participantId) : false
+
   return {
     id: conversation.conversation_id,
-    participantId: user?.user_id ?? otherParticipant?.user_id ?? null,
+    participantId,
     name,
     avatar: user?.profile_image || null,
-    online: false,
-    presence: 'Offline',
+    online,
+    presence: online ? 'Active now' : 'Offline',
     preview: latestMessage?.content || 'No messages yet',
     time: latestMessage
       ? formatDateForPreview(new Date(latestMessage.created_at))
@@ -576,6 +583,7 @@ async function loadConversations() {
   try {
     const data = await conversationApi.list()
     conversations.value = data.map(toConversation)
+    refreshConversationPresence()
 
     const targetConversationId = Number(route.query.conversationId)
     const targetUserId = Number(route.query.userId)
@@ -613,6 +621,7 @@ async function openConversationWith(userId: number) {
   const created = await conversationApi.create([userId])
   const conversation = toConversation(created)
   conversations.value = [conversation, ...conversations.value]
+  refreshConversationPresence()
   await selectConversation(conversation.id)
 }
 
@@ -622,29 +631,20 @@ async function loadMessages(conversationId: number) {
 
   try {
     const page = await messageApi.list(conversationId, 0, 50)
-    if (
-      requestId !== messageRequestId ||
-      conversationId !== activeConversationId.value
-    ) {
+    if (requestId !== messageRequestId || conversationId !== activeConversationId.value) {
       return
     }
 
     messages.value = page.data.map(toChatMessage)
     await messageApi.markSeen(conversationId)
-    if (
-      requestId !== messageRequestId ||
-      conversationId !== activeConversationId.value
-    ) {
+    if (requestId !== messageRequestId || conversationId !== activeConversationId.value) {
       return
     }
 
     chatSocket.markConversationRead(conversationId)
     emitSeen(conversationId)
   } catch (err: unknown) {
-    if (
-      requestId !== messageRequestId ||
-      conversationId !== activeConversationId.value
-    ) {
+    if (requestId !== messageRequestId || conversationId !== activeConversationId.value) {
       return
     }
 
@@ -665,7 +665,7 @@ function upsertMessage(message: ApiMessage) {
       void refreshConversationsSilently()
     } else {
       // Increment unread count if not active conversation
-      const conv = conversations.value.find(c => c.id === message.conversation_id)
+      const conv = conversations.value.find((c) => c.id === message.conversation_id)
       if (conv && conv.id !== activeConversationId.value) {
         conv.unread = (conv.unread || 0) + 1
       }
@@ -703,6 +703,7 @@ async function refreshConversationsSilently() {
   try {
     const data = await conversationApi.list()
     conversations.value = data.map(toConversation)
+    refreshConversationPresence()
   } catch (err: unknown) {
     error.value = err instanceof Error ? err.message : 'Failed to refresh conversations.'
   }
@@ -737,6 +738,7 @@ function registerSocketListeners() {
   socketListenerStops = [
     chatSocket.on('connect', () => {
       if (activeConversationId.value) joinConversation(activeConversationId.value)
+      refreshConversationPresence()
     }),
     chatSocket.on('typingStarted', (event: { conversationId: number; userId: number }) => {
       if (event.userId === currentUserId()) return
@@ -760,6 +762,24 @@ function registerSocketListeners() {
   if (chatSocket.connected && activeConversationId.value) {
     joinConversation(activeConversationId.value)
   }
+}
+
+function refreshConversationPresence() {
+  chatSocket.refreshPresence(
+    conversations.value.flatMap((conversation) =>
+      conversation.participantId ? [conversation.participantId] : [],
+    ),
+  )
+}
+
+function syncConversationPresence() {
+  const onlineUserIds = new Set(chatSocket.onlineUserIds)
+
+  conversations.value.forEach((conversation) => {
+    conversation.online =
+      conversation.participantId !== null && onlineUserIds.has(conversation.participantId)
+    conversation.presence = conversation.online ? 'Active now' : 'Offline'
+  })
 }
 
 function joinConversation(conversationId: number) {
@@ -808,15 +828,28 @@ watch(
     }
   },
 )
+
+watch(
+  () => chatSocket.onlineUserIds,
+  () => {
+    syncConversationPresence()
+  },
+  { deep: true },
+)
 </script>
 
 <style scoped>
-
 .chat-page {
   min-height: 100vh;
   background: #f4f7fb;
   color: #1a3a4f;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family:
+    'Inter',
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    Roboto,
+    sans-serif;
 }
 
 .chat-shell {
@@ -1017,8 +1050,12 @@ h2 {
 }
 
 @keyframes shimmer {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
 }
 
 .state-message {
@@ -1437,12 +1474,24 @@ h2 {
   animation: typingPulse 1.2s infinite ease-in-out;
 }
 
-.typing-bubble span:nth-child(2) { animation-delay: 0.15s; }
-.typing-bubble span:nth-child(3) { animation-delay: 0.3s; }
+.typing-bubble span:nth-child(2) {
+  animation-delay: 0.15s;
+}
+.typing-bubble span:nth-child(3) {
+  animation-delay: 0.3s;
+}
 
 @keyframes typingPulse {
-  0%, 60%, 100% { opacity: 0.4; transform: translateY(0); }
-  30% { opacity: 1; transform: translateY(-4px); }
+  0%,
+  60%,
+  100% {
+    opacity: 0.4;
+    transform: translateY(0);
+  }
+  30% {
+    opacity: 1;
+    transform: translateY(-4px);
+  }
 }
 
 .composer {
@@ -1518,7 +1567,9 @@ h2 {
 
 .slide-enter-active,
 .slide-leave-active {
-  transition: transform 0.3s ease, opacity 0.3s ease;
+  transition:
+    transform 0.3s ease,
+    opacity 0.3s ease;
 }
 
 .slide-enter-from,
@@ -1529,7 +1580,9 @@ h2 {
 
 .fade-slide-enter-active,
 .fade-slide-leave-active {
-  transition: opacity 0.2s ease, transform 0.2s ease;
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
 }
 
 .fade-slide-enter-from,

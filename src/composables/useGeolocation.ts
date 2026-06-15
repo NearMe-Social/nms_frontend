@@ -14,10 +14,16 @@ interface StoredGeoCoords extends GeoCoords {
 const LAST_KNOWN_LOCATION_KEY = 'nms_last_known_location'
 const MAX_LOCATION_AGE_MS = 2 * 60_000
 const POSITION_OPTIONS: PositionOptions = {
-  timeout: 30_000,
+  timeout: 12_000,
   maximumAge: MAX_LOCATION_AGE_MS,
   enableHighAccuracy: false,
 }
+const RETRY_POSITION_OPTIONS: PositionOptions = {
+  timeout: 18_000,
+  maximumAge: 0,
+  enableHighAccuracy: false,
+}
+const LOCATION_RETRY_DELAY_MS = 400
 const WATCH_REQUEST_OPTIONS: PositionOptions = {
   maximumAge: 30_000,
   enableHighAccuracy: false,
@@ -72,6 +78,11 @@ const errorMessage = ref<string | null>(null)
 let capturedAt = 0
 let pendingRequest: Promise<GeoCoords | null> | null = null
 let watchId: number | null = null
+let requestGeneration = 0
+
+export interface GeoRequestOptions {
+  forceRefresh?: boolean
+}
 
 function setPosition(pos: GeolocationPosition): GeoCoords {
   coords.value = { lat: pos.coords.latitude, lng: pos.coords.longitude }
@@ -105,19 +116,72 @@ function startSharedWatch() {
   )
 }
 
+export function stopGeolocationTracking(clearStoredLocation = false) {
+  requestGeneration++
+
+  if (watchId !== null && navigator.geolocation?.clearWatch) {
+    navigator.geolocation.clearWatch(watchId)
+  }
+
+  watchId = null
+  coords.value = null
+  capturedAt = 0
+  status.value = 'idle'
+  errorMessage.value = null
+
+  if (clearStoredLocation) {
+    localStorage.removeItem(LAST_KNOWN_LOCATION_KEY)
+  }
+}
+
 export function useGeolocation() {
-  function request(): Promise<GeoCoords | null> {
-    if (
-      coords.value &&
-      (watchId !== null || Date.now() - capturedAt <= MAX_LOCATION_AGE_MS)
-    ) {
+  function getBrowserPosition(options: PositionOptions): Promise<GeolocationPosition> {
+    return new Promise((resolve, reject) => {
+      navigator.geolocation.getCurrentPosition(resolve, reject, options)
+    })
+  }
+
+  function waitBeforeRetry(): Promise<void> {
+    return new Promise((resolve) => window.setTimeout(resolve, LOCATION_RETRY_DELAY_MS))
+  }
+
+  function applyLocationError(err: GeolocationPositionError): GeoCoords | null {
+    const recentLocation = getFreshStoredLocation()
+    if (recentLocation) {
+      coords.value = { lat: recentLocation.lat, lng: recentLocation.lng }
+      capturedAt = recentLocation.capturedAt
+      status.value = 'granted'
+      errorMessage.value = null
+      return coords.value
+    }
+
+    if (err.code === err.PERMISSION_DENIED) {
+      status.value = 'denied'
+      errorMessage.value = 'Location access was denied. Enable it in browser settings.'
+    } else if (err.code === err.POSITION_UNAVAILABLE) {
+      status.value = 'unavailable'
+      errorMessage.value = 'Your location could not be determined right now.'
+    } else {
+      status.value = 'error'
+      errorMessage.value =
+        'Location is taking longer than expected. Check that device location is enabled and try again.'
+    }
+
+    return null
+  }
+
+  function request(options: GeoRequestOptions = {}): Promise<GeoCoords | null> {
+    const hasFreshCoordinates =
+      coords.value !== null && Date.now() - capturedAt <= MAX_LOCATION_AGE_MS
+
+    if (!options.forceRefresh && hasFreshCoordinates) {
       status.value = 'granted'
       errorMessage.value = null
       startSharedWatch()
       return Promise.resolve(coords.value)
     }
 
-    if (pendingRequest) return pendingRequest
+    if (pendingRequest && !options.forceRefresh) return pendingRequest
 
     if (!navigator.geolocation) {
       status.value = 'unavailable'
@@ -133,49 +197,40 @@ export function useGeolocation() {
 
     status.value = 'requesting'
     errorMessage.value = null
+    const generation = ++requestGeneration
 
-    pendingRequest = new Promise((resolve) => {
-      const finishWithPosition = (pos: GeolocationPosition) => {
-        const position = setPosition(pos)
+    const requestPromise = (async (): Promise<GeoCoords | null> => {
+      try {
+        let position: GeolocationPosition
+
+        try {
+          position = await getBrowserPosition(POSITION_OPTIONS)
+        } catch (error: unknown) {
+          const firstError = error as GeolocationPositionError
+          if (firstError.code !== firstError.TIMEOUT) throw firstError
+
+          await waitBeforeRetry()
+          if (generation !== requestGeneration) return null
+          position = await getBrowserPosition(RETRY_POSITION_OPTIONS)
+        }
+
+        if (generation !== requestGeneration) return null
+
+        const currentPosition = setPosition(position)
         startSharedWatch()
-        resolve(position)
+        return currentPosition
+      } catch (error: unknown) {
+        if (generation !== requestGeneration) return null
+        return applyLocationError(error as GeolocationPositionError)
       }
-
-      const finishWithError = (err: GeolocationPositionError) => {
-        const recentLocation = getFreshStoredLocation()
-        if (recentLocation) {
-          coords.value = { lat: recentLocation.lat, lng: recentLocation.lng }
-          capturedAt = recentLocation.capturedAt
-          status.value = 'granted'
-          errorMessage.value = null
-          resolve(coords.value)
-          return
-        }
-
-        if (err.code === err.PERMISSION_DENIED) {
-          status.value = 'denied'
-          errorMessage.value = 'Location access was denied. Enable it in browser settings.'
-        } else if (err.code === err.POSITION_UNAVAILABLE) {
-          status.value = 'unavailable'
-          errorMessage.value = 'Your location could not be determined right now.'
-        } else {
-          status.value = 'error'
-          errorMessage.value =
-            'Location is taking longer than expected. Check that device location is enabled and try again.'
-        }
-        resolve(null)
+    })().finally(() => {
+      if (pendingRequest === requestPromise) {
+        pendingRequest = null
       }
-
-      navigator.geolocation.getCurrentPosition(
-        finishWithPosition,
-        finishWithError,
-        POSITION_OPTIONS,
-      )
-    }).finally(() => {
-      pendingRequest = null
     })
 
-    return pendingRequest
+    pendingRequest = requestPromise
+    return requestPromise
   }
 
   return {

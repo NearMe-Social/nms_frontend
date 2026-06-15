@@ -39,7 +39,13 @@
                 </span>
                 <span v-if="websiteUrl">
                   <Globe class="icon" />
-                  <a :href="websiteUrl" target="_blank" rel="noopener noreferrer" class="web-link">{{ websiteUrl }}</a>
+                  <a
+                    :href="websiteUrl"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="web-link"
+                    >{{ websiteUrl }}</a
+                  >
                 </span>
                 <span>
                   <ShieldCheck class="icon" />
@@ -120,9 +126,7 @@
 
             <p v-if="activityLoading" class="activity-state">Loading recent posts...</p>
             <p v-else-if="activityError" class="activity-state">{{ activityError }}</p>
-            <p v-else-if="recentPosts.length === 0" class="activity-state">
-              No visible posts yet.
-            </p>
+            <p v-else-if="recentPosts.length === 0" class="activity-state">No visible posts yet.</p>
 
             <div v-else class="activity-list">
               <RouterLink
@@ -165,7 +169,7 @@ import {
   Globe,
   Send,
   Instagram,
-  Linkedin
+  Linkedin,
 } from 'lucide-vue-next'
 import Navbar from '@/components/Navbar.vue'
 import AppSidebar from '@/components/AppSidebar.vue'
@@ -234,13 +238,13 @@ const socialLinks = computed(() => {
     links.push({
       icon: Send,
       url: `https://t.me/${profile.value.telegram_handle.replace('@', '')}`,
-      label: profile.value.telegram_handle
+      label: profile.value.telegram_handle,
     })
   } else if (profile.value?.twitter_handle) {
     links.push({
       icon: Send,
       url: `https://t.me/${profile.value.twitter_handle.replace('@', '')}`,
-      label: profile.value.twitter_handle
+      label: profile.value.twitter_handle,
     })
   }
 
@@ -248,7 +252,7 @@ const socialLinks = computed(() => {
     links.push({
       icon: Instagram,
       url: `https://instagram.com/${profile.value.instagram_handle.replace('@', '')}`,
-      label: profile.value.instagram_handle
+      label: profile.value.instagram_handle,
     })
   }
   if (profile.value?.linkedin_url) {
@@ -259,7 +263,7 @@ const socialLinks = computed(() => {
     links.push({
       icon: Linkedin,
       url: url,
-      label: 'LinkedIn'
+      label: 'LinkedIn',
     })
   }
   return links
@@ -324,8 +328,7 @@ async function loadProfilePosts() {
     profilePosts.value = await postApi.byUser(userId, position)
   } catch (err: unknown) {
     profilePosts.value = []
-    activityError.value =
-      err instanceof Error ? err.message : 'Failed to load recent posts.'
+    activityError.value = err instanceof Error ? err.message : 'Failed to load recent posts.'
   } finally {
     activityLoading.value = false
   }
@@ -339,16 +342,6 @@ async function loadProfile() {
     profile.value = isPublicProfile.value
       ? await userApi.getById(routeUserId.value)
       : await userApi.getProfile()
-
-    // MOCK DATA: Apply our local storage fields if viewing our own profile
-    if (isOwnProfile.value) {
-      const savedMockData = localStorage.getItem('temp_profile_mock')
-      if (savedMockData) {
-        const parsedMock = JSON.parse(savedMockData)
-        profile.value = { ...profile.value, ...parsedMock }
-      }
-    }
-
   } catch (err: unknown) {
     error.value = err instanceof Error ? err.message : 'Failed to load profile.'
     profile.value = null
@@ -678,7 +671,9 @@ h2 {
   padding: 12px;
   color: inherit;
   text-decoration: none;
-  transition: background 0.2s ease, transform 0.2s ease;
+  transition:
+    background 0.2s ease,
+    transform 0.2s ease;
 }
 
 .activity-item:hover {
