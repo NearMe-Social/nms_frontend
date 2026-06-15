@@ -11,18 +11,19 @@ import {
   UserRound,
 } from 'lucide-vue-next'
 import { useNearbyStore, type NearbyUser } from '@/stores/nearbyStore'
-import { useGeolocation } from '@/composables/useGeolocation'
+import { useNearbyLocation } from '@/composables/useNearbyLocation'
 import { useAuthStore } from '@/stores/auth'
 import GeoErrorState from '@/components/GeoErrorState.vue'
 import AppSidebar from '@/components/AppSidebar.vue'
 import MobileBottomNav from '@/components/MobileBottomNav.vue'
 import Navbar from '@/components/Navbar.vue'
 import UserAvatar from '@/components/UserAvatar.vue'
+import LocationFallbackNotice from '@/components/LocationFallbackNotice.vue'
 import * as L from 'leaflet'
 
 const nearbyStore = useNearbyStore()
 const auth = useAuthStore()
-const geo = useGeolocation()
+const geo = useNearbyLocation()
 
 const mapElement = ref<HTMLDivElement | null>(null)
 const map = ref<L.Map | null>(null)
@@ -184,7 +185,7 @@ async function refreshNearby(restartPolling = true) {
   const position = geo.coords.value
   if (!position) return
 
-  const shareLocation = privacyMode.value !== 'Hidden From Search'
+  const shareLocation = privacyMode.value !== 'Hidden From Search' && geo.isFresh()
   await nearbyStore.fetchNearby(position.lat, position.lng, radius.value, shareLocation)
 
   if (!map.value) {
@@ -212,6 +213,10 @@ async function init() {
   }
 }
 
+function retryLiveLocation() {
+  void geo.request({ forceRefresh: true })
+}
+
 watch(radius, async () => {
   if (!geo.coords.value) return
   if (userCircle.value) {
@@ -224,6 +229,16 @@ watch(privacyMode, async () => {
   if (!geo.coords.value) return
   await refreshNearby()
 })
+
+watch(
+  () => geo.locationSource.value,
+  (source, previousSource) => {
+    if (previousSource === 'cached' && source === 'live' && geo.coords.value) {
+      updateMap(geo.coords.value)
+      void refreshNearby()
+    }
+  },
+)
 
 onMounted(init)
 onUnmounted(() => nearbyStore.stopPolling())
@@ -251,6 +266,12 @@ onUnmounted(() => nearbyStore.stopPolling())
             <span>{{ formattedTime }}</span>
           </div>
         </section>
+
+        <LocationFallbackNotice
+          v-if="geo.locationSource.value === 'cached'"
+          class="location-fallback"
+          @refresh="retryLiveLocation"
+        />
 
         <section class="identity-card">
           <div class="identity-left">
@@ -486,6 +507,10 @@ onUnmounted(() => nearbyStore.stopPolling())
   justify-content: space-between;
   gap: 24px;
   margin-bottom: 22px;
+}
+
+.location-fallback {
+  margin-bottom: 18px;
 }
 
 .heading-copy {

@@ -52,6 +52,11 @@
           </div>
         </div>
 
+        <LocationFallbackNotice
+          v-if="geo.locationSource.value === 'cached'"
+          @refresh="retryLocation"
+        />
+
         <!-- LOADING SKELETON -->
         <div v-if="loading" class="flex flex-col gap-4 animate-fade-up">
           <div
@@ -102,7 +107,7 @@
                   <button
                     type="button"
                     class="inline-flex items-center gap-2 rounded-xl bg-teal-600 px-4 py-2.5 text-xs font-bold text-white transition hover:bg-teal-700"
-                    @click="loadPosts()"
+                    @click="retryLocation"
                   >
                     <RefreshCw class="h-4 w-4" />
                     I enabled it, retry
@@ -157,7 +162,7 @@
           </div>
           <p class="text-sm font-bold text-rose-600">{{ error }}</p>
           <button
-            @click="loadPosts()"
+            @click="retryLocation"
             class="text-xs font-bold text-teal-600 hover:underline hover:text-teal-700 transition-colors duration-200"
           >
             Try again
@@ -425,7 +430,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import Navbar from '@/components/Navbar.vue'
 import AppSidebar from '@/components/AppSidebar.vue'
@@ -433,8 +438,9 @@ import MobileBottomNav from '@/components/MobileBottomNav.vue'
 import PostOptionsMenu from '@/components/PostOptionsMenu.vue'
 import UserAvatar from '@/components/UserAvatar.vue'
 import PostImageViewer from '@/components/PostImageViewer.vue'
+import LocationFallbackNotice from '@/components/LocationFallbackNotice.vue'
 import { postApi, userApi, type ApiPost } from '@/services/api'
-import { useGeolocation } from '@/composables/useGeolocation'
+import { useNearbyLocation } from '@/composables/useNearbyLocation'
 import {
   MapPin,
   MapPinned,
@@ -449,7 +455,7 @@ import {
 } from 'lucide-vue-next'
 
 const router = useRouter()
-const geo = useGeolocation()
+const geo = useNearbyLocation()
 const posts = ref<ApiPost[]>([])
 const loading = ref(true)
 const error = ref('')
@@ -501,7 +507,9 @@ async function loadPosts(options: LoadPostsOptions = {}) {
       return
     }
 
-    await userApi.updateLocation(position.lat, position.lng).catch(() => undefined)
+    if (geo.isFresh()) {
+      await userApi.updateLocation(position.lat, position.lng).catch(() => undefined)
+    }
     posts.value = await postApi.nearby(position.lat, position.lng, sortMode.value)
     lastFeedRefreshAt = Date.now()
   } catch (err: unknown) {
@@ -514,6 +522,13 @@ async function loadPosts(options: LoadPostsOptions = {}) {
 function setSort(sort: 'latest' | 'active') {
   sortMode.value = sort
   void loadPosts()
+}
+
+function retryLocation() {
+  void loadPosts({
+    forceLocation: true,
+    showLoading: geo.locationSource.value !== 'cached',
+  })
 }
 
 function isExpired(value: string) {
@@ -571,10 +586,7 @@ async function refreshAfterResume() {
 
   resumeRefreshInFlight = true
   try {
-    await loadPosts({
-      forceLocation: true,
-      showLoading: posts.value.length === 0,
-    })
+    await loadPosts({ showLoading: false })
   } finally {
     resumeRefreshInFlight = false
   }
@@ -589,6 +601,15 @@ function handleVisibilityChange() {
 function handlePageShow() {
   void refreshAfterResume()
 }
+
+watch(
+  () => geo.locationSource.value,
+  (source, previousSource) => {
+    if (previousSource === 'cached' && source === 'live') {
+      void loadPosts({ showLoading: false })
+    }
+  },
+)
 
 onMounted(() => {
   lastFeedRefreshAt = Date.now()
