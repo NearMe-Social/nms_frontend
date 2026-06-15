@@ -1,12 +1,11 @@
 <template>
-  <div class="otp-page">
-    <header class="otp-header">
-      <h1>Nearme</h1>
-    </header>
-
-    <main class="otp-main">
-      <section class="otp-card">
-
+  <AuthPageShell
+    eyebrow="Secure verification"
+    title="One quick step, then you're in."
+    description="Verify your email to protect your account and keep the Nearme community trustworthy."
+  >
+    <section class="otp-card">
+      <div class="otp-card__inner">
         <!-- Icon -->
         <div class="otp-icon">
           <Mail :size="32" color="#0c9081" />
@@ -23,7 +22,7 @@
           <input
             v-for="(digit, index) in otpDigits"
             :key="index"
-            :ref="el => inputRefs[index] = el"
+            :ref="(el) => (inputRefs[index] = el)"
             type="text"
             inputmode="numeric"
             maxlength="1"
@@ -40,34 +39,23 @@
         <p v-if="errorMsg" class="error-msg">{{ errorMsg }}</p>
 
         <!-- Verify button -->
-        <button
-          class="verify-btn"
-          :disabled="!isComplete || isLoading"
-          @click="handleVerify"
-        >
+        <button class="verify-btn" :disabled="!isComplete || isLoading" @click="handleVerify">
           {{ isLoading ? 'Verifying...' : 'Verify Code' }}
         </button>
 
         <!-- Resend -->
         <div class="resend-row">
           <span class="resend-text">Didn't receive the code?</span>
-          <button
-            class="resend-btn"
-            :disabled="resendCooldown > 0"
-            @click="handleResend"
-          >
+          <button class="resend-btn" :disabled="resendCooldown > 0" @click="handleResend">
             {{ resendCooldown > 0 ? 'Resend in ' + resendCooldown + 's' : 'Resend Code' }}
           </button>
         </div>
 
         <!-- Back to login -->
-        <button class="back-btn" @click="router.push('/login')">
-          ← Back to Login
-        </button>
-
-      </section>
-    </main>
-  </div>
+        <button class="back-btn" @click="router.push('/login')">← Back to Login</button>
+      </div>
+    </section>
+  </AuthPageShell>
 </template>
 
 <script setup lang="ts">
@@ -75,6 +63,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { getPostAuthPath, useAuthStore } from '@/stores/auth'
 import { authApi } from '@/services/api'
+import AuthPageShell from '@/components/AuthPageShell.vue'
 import { Mail } from 'lucide-vue-next'
 
 const router = useRouter()
@@ -92,7 +81,7 @@ const isLoading = ref(false)
 const resendCooldown = ref(0)
 let cooldownTimer: ReturnType<typeof setInterval> | null = null
 
-const isComplete = computed(() => otpDigits.value.every(d => d !== ''))
+const isComplete = computed(() => otpDigits.value.every((d) => d !== ''))
 const otpValue = computed(() => otpDigits.value.join(''))
 
 onMounted(async () => {
@@ -206,30 +195,20 @@ async function handleResend() {
 </script>
 
 <style scoped>
-.otp-page {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  font-family: 'Poppins', 'Inter', sans-serif;
-}
-
-.otp-header {
-  padding: 18px 40px;
-  font-size: 1.5rem;
-  letter-spacing: 0.5px;
-}
-
-.otp-main {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 40px 16px 56px;
-}
-
 .otp-card {
-  width: min(380px, 100%);
-  padding: 36px 32px 40px;
+  width: min(470px, 100%);
+  margin-left: auto;
+  padding: clamp(30px, 4vw, 44px);
+  border: 1px solid rgba(134, 160, 176, 0.22);
+  border-radius: 28px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow:
+    0 28px 70px rgba(28, 64, 82, 0.13),
+    0 2px 8px rgba(28, 64, 82, 0.04);
+  backdrop-filter: blur(18px);
+}
+
+.otp-card__inner {
   text-align: center;
   display: flex;
   flex-direction: column;
@@ -237,10 +216,11 @@ async function handleResend() {
 }
 
 .otp-icon {
-  width: 64px;
-  height: 64px;
-  background: #e6f7f5;
-  border-radius: 50%;
+  width: 62px;
+  height: 62px;
+  background: #e8f7f5;
+  border: 1px solid #d0ece8;
+  border-radius: 19px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -248,34 +228,42 @@ async function handleResend() {
 }
 
 .card-title {
-  font-size: 1.5rem;
-  color: #2c1d25;
+  font-size: clamp(1.65rem, 3vw, 2rem);
+  color: #17283d;
+  letter-spacing: -0.035em;
   margin-bottom: 8px;
 }
 
 .card-subtitle {
   font-size: 0.9rem;
-  color: #6f6473;
+  color: #718094;
   margin-bottom: 32px;
   line-height: 1.6;
 }
 
+.card-subtitle strong {
+  color: #33475b;
+  font-weight: 750;
+}
+
 .otp-inputs {
+  width: 100%;
   display: flex;
-  gap: 10px;
+  justify-content: center;
+  gap: 8px;
   margin-bottom: 24px;
 }
 
 .otp-input {
-  width: 48px;
-  height: 56px;
-  border: 2px solid #d6d1ca;
-  border-radius: 14px;
-  background: #f5f2ef;
+  width: min(50px, 13%);
+  aspect-ratio: 0.86;
+  border: 1px solid #dce5ea;
+  border-radius: 13px;
+  background: #f8fafb;
   text-align: center;
   font-size: 1.4rem;
   font-weight: 700;
-  color: #2b1d22;
+  color: #23364a;
   outline: none;
   transition: all 0.2s ease;
   caret-color: transparent;
@@ -289,7 +277,7 @@ async function handleResend() {
 
 .otp-input.filled {
   border-color: #0c9081;
-  background: #e6f7f5;
+  background: #edf9f7;
 }
 
 .otp-input.error {
@@ -299,20 +287,31 @@ async function handleResend() {
 }
 
 @keyframes shake {
-  0%, 100% { transform: translateX(0); }
-  20% { transform: translateX(-6px); }
-  40% { transform: translateX(6px); }
-  60% { transform: translateX(-4px); }
-  80% { transform: translateX(4px); }
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20% {
+    transform: translateX(-6px);
+  }
+  40% {
+    transform: translateX(6px);
+  }
+  60% {
+    transform: translateX(-4px);
+  }
+  80% {
+    transform: translateX(4px);
+  }
 }
 
 .error-msg {
   font-size: 0.88rem;
-  color: #c0392b;
-  background: #fdf0ef;
-  border: 1px solid #f5c6c2;
-  border-radius: 10px;
-  padding: 8px 12px;
+  color: #b42318;
+  background: #fff5f5;
+  border: 1px solid #fecaca;
+  border-radius: 12px;
+  padding: 10px 12px;
   margin-bottom: 16px;
   width: 100%;
 }
@@ -320,14 +319,14 @@ async function handleResend() {
 .verify-btn {
   width: 100%;
   border: none;
-  border-radius: 18px;
+  border-radius: 14px;
   padding: 14px;
   cursor: pointer;
-  font-weight: 600;
-  font-size: 1rem;
+  font-weight: 750;
+  font-size: 0.95rem;
   color: #fff;
-  background: linear-gradient(140deg, #c7a038, #6c4f15);
-  box-shadow: 0 12px 20px rgba(108, 79, 21, 0.25);
+  background: linear-gradient(135deg, #0d9b8a, #08766c);
+  box-shadow: 0 13px 28px rgba(12, 144, 129, 0.24);
   transition: opacity 0.2s;
   margin-bottom: 20px;
 }
@@ -340,13 +339,15 @@ async function handleResend() {
 .resend-row {
   display: flex;
   align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
   gap: 6px;
   margin-bottom: 16px;
 }
 
 .resend-text {
   font-size: 0.88rem;
-  color: #6f6473;
+  color: #718094;
 }
 
 .resend-btn {
@@ -368,7 +369,7 @@ async function handleResend() {
   border: none;
   background: none;
   font-size: 0.85rem;
-  color: #9a8d96;
+  color: #82909e;
   cursor: pointer;
   transition: color 0.2s;
 }
@@ -377,13 +378,20 @@ async function handleResend() {
   color: #0c9081;
 }
 
-@media (max-width: 480px) {
+@media (max-width: 900px) {
   .otp-card {
-    padding: 28px 20px 32px;
+    margin-inline: auto;
   }
+}
+
+@media (max-width: 560px) {
+  .otp-card {
+    padding: 28px 20px;
+    border-radius: 22px;
+  }
+
   .otp-input {
-    width: 42px;
-    height: 50px;
+    width: min(43px, 14%);
     font-size: 1.2rem;
   }
 }

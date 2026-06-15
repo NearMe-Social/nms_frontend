@@ -1,1210 +1,989 @@
-<template>
-  <div>
-    <Navbar />
-    <div class="flex min-w-0">
-      <AppSidebar class="hidden md:flex" />
-      <div class="settings-page">
-        <div class="page-header">
-          <h1 class="page-title">Settings</h1>
-          <p class="page-subtitle">Manage your account, security and privacy preferences.</p>
-        </div>
-
-        <div class="settings-layout">
-          <!-- Sub sidebar -->
-          <aside class="settings-sidebar">
-            <nav class="sidebar-nav">
-              <button
-                v-for="tab in tabs"
-                :key="tab.key"
-                class="sidebar-tab"
-                :class="{ active: activeTab === tab.key, disabled: !tab.enabled }"
-                :disabled="!tab.enabled"
-                @click="tab.enabled && (activeTab = tab.key)"
-              >
-                <component :is="tab.icon" :size="17" />
-                <span>{{ tab.label }}</span>
-                <span v-if="!tab.enabled" class="coming-soon">Soon</span>
-              </button>
-            </nav>
-          </aside>
-
-          <!-- Main content -->
-          <div class="settings-content">
-            <!-- ── PROFILE TAB ── -->
-            <div v-if="activeTab === 'profile'" class="profile-tab">
-              <div class="profile-header-card">
-                <div class="profile-avatar-area">
-                  <div class="avatar-wrapper">
-                    <UserAvatar
-                      :src="photoPreview"
-                      :username="profileForm.username || authStore.user?.username"
-                      alt="Profile picture"
-                      class="avatar-display"
-                    />
-                    <button type="button" class="avatar-edit-btn" @click="triggerFileInput">
-                      <UploadCloudIcon :size="14" />
-                    </button>
-                  </div>
-                  <input
-                    ref="fileInput"
-                    type="file"
-                    accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
-                    style="display: none"
-                    @change="handlePhotoUpload"
-                  />
-                </div>
-                <div class="profile-header-info">
-                  <p class="profile-display-name">
-                    {{ profileForm.first_name || 'Your Name' }} {{ profileForm.last_name }}
-                  </p>
-                  <p class="profile-username">@{{ profileForm.username || 'username' }}</p>
-                  <p class="profile-email">{{ profileForm.email }}</p>
-                </div>
-                <button type="button" class="btn-change-photo-sm" @click="triggerFileInput">
-                  <UploadCloudIcon :size="14" /> Change Photo
-                </button>
-              </div>
-
-              <form @submit.prevent="handleSaveProfile" class="profile-form">
-                <section class="settings-section">
-                  <div class="section-header">
-                    <UserIcon :size="18" />
-                    <h2 class="section-title">Public Identity</h2>
-                  </div>
-                  <div class="form-row">
-                    <div class="form-group">
-                      <label class="form-label">Full Name</label>
-                      <input
-                        v-model="profileForm.first_name"
-                        type="text"
-                        class="form-input"
-                        placeholder="Your full name"
-                      />
-                    </div>
-                    <div class="form-group">
-                      <label class="form-label">Username</label>
-                      <input
-                        v-model="profileForm.username"
-                        type="text"
-                        class="form-input"
-                        placeholder="@username"
-                        disabled
-                      />
-                    </div>
-                  </div>
-                  <div class="form-group">
-                    <label class="form-label">Bio</label>
-                    <textarea
-                      v-model="profileForm.bio"
-                      class="form-textarea"
-                      rows="3"
-                      placeholder="Tell people about yourself..."
-                    />
-                    <div class="char-count">{{ profileForm.bio?.length || 0 }} / 500</div>
-                  </div>
-                </section>
-
-                <section class="settings-section">
-                  <div class="section-header">
-                    <MapPinIcon :size="18" />
-                    <h2 class="section-title">Presence</h2>
-                  </div>
-                  <div class="form-row">
-                    <div class="form-group">
-                      <label class="form-label">Location</label>
-                      <input
-                        v-model="profileForm.location"
-                        type="text"
-                        class="form-input"
-                        placeholder="City, Country"
-                      />
-                    </div>
-                    <div class="form-group">
-                      <label class="form-label">Website</label>
-                      <input
-                        v-model="profileForm.website"
-                        type="url"
-                        class="form-input"
-                        placeholder="https://yoursite.com"
-                      />
-                    </div>
-                  </div>
-                </section>
-
-                <div class="form-actions">
-                  <button type="button" class="btn-cancel" @click="$router.back()">Cancel</button>
-                  <button type="submit" class="btn-save" :disabled="isSavingProfile">
-                    <span v-if="isSavingProfile" class="btn-loading"
-                      ><LoaderIcon :size="16" class="spinner" /> Saving...</span
-                    >
-                    <span v-else class="btn-content"><CheckIcon :size="16" /> Save Changes</span>
-                  </button>
-                </div>
-
-                <div v-if="profileSuccess" class="alert alert-success">
-                  <CheckIcon :size="16" /> {{ profileSuccess }}
-                </div>
-                <div v-if="profileError" class="alert alert-error">
-                  <AlertCircleIcon :size="16" /> {{ profileError }}
-                </div>
-              </form>
-            </div>
-
-            <!-- ── SECURITY & PRIVACY TAB ── -->
-            <div v-else-if="activeTab === 'security'">
-              <section class="settings-section">
-                <div class="section-header">
-                  <LockIcon :size="18" />
-                  <h2 class="section-title">Change Password</h2>
-                </div>
-                <form @submit.prevent="handleChangePassword" class="form-content">
-                  <div class="form-group">
-                    <label class="form-label">Current Password</label>
-                    <div class="input-wrapper">
-                      <input
-                        v-model="passwordForm.current"
-                        :type="showCurrent ? 'text' : 'password'"
-                        class="form-input"
-                        placeholder="Enter current password"
-                      />
-                      <button type="button" class="eye-btn" @click="showCurrent = !showCurrent">
-                        <EyeOffIcon v-if="showCurrent" :size="16" /><EyeIcon v-else :size="16" />
-                      </button>
-                    </div>
-                  </div>
-                  <div class="form-row">
-                    <div class="form-group">
-                      <label class="form-label">New Password</label>
-                      <div class="input-wrapper">
-                        <input
-                          v-model="passwordForm.new"
-                          :type="showNew ? 'text' : 'password'"
-                          class="form-input"
-                          placeholder="Min. 8 characters"
-                        />
-                        <button type="button" class="eye-btn" @click="showNew = !showNew">
-                          <EyeOffIcon v-if="showNew" :size="16" /><EyeIcon v-else :size="16" />
-                        </button>
-                      </div>
-                      <div class="strength-bar-wrap" v-if="passwordForm.new">
-                        <div class="strength-bar">
-                          <div
-                            class="strength-fill"
-                            :style="{ width: strength.pct + '%' }"
-                            :class="strength.color"
-                          ></div>
-                        </div>
-                        <span class="strength-label" :class="strength.textColor">{{
-                          strength.label
-                        }}</span>
-                      </div>
-                    </div>
-                    <div class="form-group">
-                      <label class="form-label">Confirm New Password</label>
-                      <div class="input-wrapper">
-                        <input
-                          v-model="passwordForm.confirm"
-                          :type="showConfirm ? 'text' : 'password'"
-                          class="form-input"
-                          :class="{
-                            'input-error':
-                              passwordForm.confirm && passwordForm.new !== passwordForm.confirm,
-                          }"
-                          placeholder="Repeat new password"
-                        />
-                        <button type="button" class="eye-btn" @click="showConfirm = !showConfirm">
-                          <EyeOffIcon v-if="showConfirm" :size="16" /><EyeIcon v-else :size="16" />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                  <div class="form-actions">
-                    <button type="submit" class="btn-save" :disabled="pwSaving">
-                      <span v-if="pwSaving" class="btn-loading"
-                        ><LoaderIcon :size="16" class="spinner" /> Saving...</span
-                      >
-                      <span v-else class="btn-content"
-                        ><CheckIcon :size="16" /> Update Password</span
-                      >
-                    </button>
-                  </div>
-                  <div v-if="pwSuccess" class="alert alert-success">
-                    <CheckIcon :size="16" /> {{ pwSuccess }}
-                  </div>
-                  <div v-if="pwError" class="alert alert-error">
-                    <AlertCircleIcon :size="16" /> {{ pwError }}
-                  </div>
-                </form>
-              </section>
-
-              <section class="settings-section">
-                <div class="section-header">
-                  <ShieldIcon :size="18" />
-                  <h2 class="section-title">Privacy</h2>
-                </div>
-                <div class="toggle-list">
-                  <div class="toggle-item" v-for="item in privacyToggles" :key="item.key">
-                    <div class="toggle-info">
-                      <p class="toggle-title">{{ item.label }}</p>
-                      <p class="toggle-desc">{{ item.desc }}</p>
-                    </div>
-                    <button
-                      type="button"
-                      class="toggle-btn"
-                      :class="{ on: item.value }"
-                      @click="item.value = !item.value"
-                    >
-                      <span class="toggle-knob"></span>
-                    </button>
-                  </div>
-                </div>
-                <div class="form-actions mt-4">
-                  <button type="button" class="btn-save" @click="savePrivacy">
-                    <CheckIcon :size="16" /> Save Privacy Settings
-                  </button>
-                </div>
-              </section>
-
-              <section class="settings-section">
-                <div class="section-header">
-                  <UserXIcon :size="18" />
-                  <h2 class="section-title">Blocked Users</h2>
-                </div>
-                <p class="section-desc">
-                  Users you have blocked cannot see your posts or message you.
-                </p>
-                <div class="blocked-list">
-                  <div v-for="u in blockedUsers" :key="u.id" class="blocked-item">
-                    <div class="blocked-avatar">{{ initials(u.username) }}</div>
-                    <div class="blocked-info">
-                      <p class="blocked-name">{{ u.username }}</p>
-                      <p class="blocked-since">Blocked {{ u.since }}</p>
-                    </div>
-                    <button class="btn-unblock" @click="unblock(u.id)">Unblock</button>
-                  </div>
-                  <p v-if="blockedUsers.length === 0" class="empty-blocked">
-                    You haven't blocked anyone.
-                  </p>
-                </div>
-              </section>
-
-              <section class="settings-section danger-section">
-                <div class="section-header">
-                  <AlertTriangleIcon :size="18" />
-                  <h2 class="section-title">Danger Zone</h2>
-                </div>
-                <div class="danger-item">
-                  <div>
-                    <p class="danger-title">Delete Account</p>
-                    <p class="danger-desc">
-                      Permanently delete your account and all associated data. This action cannot be
-                      undone.
-                    </p>
-                  </div>
-                  <button class="btn-danger" @click="showDeleteModal = true">Delete Account</button>
-                </div>
-              </section>
-            </div>
-
-            <!-- ── PREFERENCES TAB ── -->
-            <div v-else-if="activeTab === 'preferences'" class="placeholder-tab">
-              <div class="placeholder-icon"><SlidersIcon :size="40" /></div>
-              <p class="placeholder-title">Preferences</p>
-              <p class="placeholder-desc">
-                Theme, language, and notification preferences coming soon.
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Delete modal -->
-    <div v-if="showDeleteModal" class="modal-overlay" @click.self="showDeleteModal = false">
-      <div class="modal">
-        <h3 class="modal-title">Delete Account</h3>
-        <p class="modal-desc">
-          This will permanently delete your account. Type <strong>DELETE</strong> to confirm.
-        </p>
-        <input v-model="deleteConfirm" type="text" class="form-input" placeholder="Type DELETE" />
-        <div class="modal-actions">
-          <button class="btn-cancel" @click="showDeleteModal = false">Cancel</button>
-          <button
-            class="btn-danger"
-            :disabled="deleteConfirm !== 'DELETE'"
-            @click="handleDeleteAccount"
-          >
-            Delete
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-</template>
-
 <script setup lang="ts">
-defineOptions({ name: 'UserSettingsPage' })
-
-import { ref, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
-import { useAuthStore } from '@/stores/auth'
-import { userApi, type UpdateProfilePayload } from '@/services/api'
-import Navbar from '@/components/Navbar.vue'
-import AppSidebar from '@/components/AppSidebar.vue'
-import UserAvatar from '@/components/UserAvatar.vue'
+import { computed, onMounted, ref } from 'vue'
+import { RouterLink, useRouter } from 'vue-router'
 import {
-  User as UserIcon,
-  MapPin as MapPinIcon,
-  Lock as LockIcon,
-  Shield as ShieldIcon,
-  UserX as UserXIcon,
-  AlertTriangle as AlertTriangleIcon,
-  Sliders as SlidersIcon,
-  Eye as EyeIcon,
-  EyeOff as EyeOffIcon,
-  Check as CheckIcon,
-  AlertCircle as AlertCircleIcon,
-  Loader2 as LoaderIcon,
-  UploadCloud as UploadCloudIcon,
+  ArrowRight,
+  Check,
+  Eye,
+  EyeOff,
+  KeyRound,
+  LoaderCircle,
+  LogOut,
+  MapPinOff,
+  Pencil,
+  ShieldCheck,
+  UserRound,
 } from 'lucide-vue-next'
+import AppSidebar from '@/components/AppSidebar.vue'
+import MobileBottomNav from '@/components/MobileBottomNav.vue'
+import Navbar from '@/components/Navbar.vue'
+import UserAvatar from '@/components/UserAvatar.vue'
+import { authApi, userApi, type UserProfile } from '@/services/api'
+import { stopGeolocationTracking } from '@/composables/useGeolocation'
+import { useAuthStore } from '@/stores/auth'
+
+defineOptions({ name: 'UserSettings' })
+
+type SettingsTab = 'account' | 'security' | 'privacy'
 
 const router = useRouter()
-const authStore = useAuthStore()
+const auth = useAuthStore()
+const activeTab = ref<SettingsTab>('account')
+const profile = ref<UserProfile | null>(null)
+const loadingProfile = ref(true)
+const profileError = ref('')
+const passwordForm = ref({ current: '', next: '', confirm: '' })
+const showCurrent = ref(false)
+const showNext = ref(false)
+const showConfirm = ref(false)
+const savingPassword = ref(false)
+const passwordSuccess = ref('')
+const passwordError = ref('')
+const clearingLocation = ref(false)
+const privacySuccess = ref('')
+const privacyError = ref('')
 
 const tabs = [
-  { key: 'profile', label: 'Profile', icon: UserIcon, enabled: true },
-  { key: 'security', label: 'Security & Privacy', icon: ShieldIcon, enabled: true },
-  { key: 'preferences', label: 'Preferences', icon: SlidersIcon, enabled: false },
+  { key: 'account' as const, label: 'Account', icon: UserRound },
+  { key: 'security' as const, label: 'Security', icon: KeyRound },
+  { key: 'privacy' as const, label: 'Location & privacy', icon: ShieldCheck },
 ]
-const activeTab = ref('profile')
 
-const profileForm = ref({
-  first_name: '',
-  last_name: '',
-  username: '',
-  email: '',
-  bio: '',
-  location: '',
-  website: '',
-  profile_image: '',
+const username = computed(() => profile.value?.username || auth.user?.username || 'neighbor')
+const displayName = computed(() => {
+  const firstName = profile.value?.first_name || auth.user?.first_name || ''
+  const lastName = profile.value?.last_name || auth.user?.last_name || ''
+  const name = `${firstName} ${lastName}`.trim()
+
+  return (
+    name ||
+    username.value
+      .split(/[._-]/)
+      .filter(Boolean)
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(' ') ||
+    'Nearme Neighbor'
+  )
 })
-const photoPreview = ref<string | null>(null)
-const fileInput = ref<HTMLInputElement | null>(null)
-const isSavingProfile = ref(false)
-const profileSuccess = ref('')
-const profileError = ref('')
+const profileImage = computed(
+  () => profile.value?.profile_image || auth.user?.profile_image || null,
+)
+const passwordStrength = computed(() => {
+  const password = passwordForm.value.next
+  if (!password) return { score: 0, label: 'Enter a new password' }
+
+  let score = 0
+  if (password.length >= 8) score++
+  if (/[A-Z]/.test(password) && /[a-z]/.test(password)) score++
+  if (/\d/.test(password)) score++
+  if (/[^A-Za-z0-9]/.test(password)) score++
+
+  return {
+    score,
+    label: ['Too short', 'Basic', 'Good', 'Strong'][Math.max(0, score - 1)] || 'Too short',
+  }
+})
+const passwordsMatch = computed(
+  () =>
+    passwordForm.value.confirm.length === 0 ||
+    passwordForm.value.next === passwordForm.value.confirm,
+)
 
 onMounted(async () => {
   try {
-    const profile = await userApi.getProfile()
-    profileForm.value = {
-      first_name: profile.first_name || '',
-      last_name: profile.last_name || '',
-      username: profile.username || '',
-      email: profile.email || '',
-      bio: profile.bio || '',
-      location: profile.location || '',
-      website: profile.website || '',
-      profile_image: profile.profile_image || '',
-    }
-    if (profile.profile_image) photoPreview.value = profile.profile_image
-  } catch {
-    profileForm.value = {
-      first_name: 'Test',
-      last_name: 'User',
-      username: 'testuser',
-      email: 'test@test.com',
-      bio: '',
-      location: '',
-      website: '',
-      profile_image: '',
-    }
+    profile.value = await userApi.getProfile()
+  } catch (error: unknown) {
+    profileError.value = error instanceof Error ? error.message : 'Could not load account details.'
+  } finally {
+    loadingProfile.value = false
   }
 })
 
-function triggerFileInput() {
-  fileInput.value?.click()
-}
+async function changePassword() {
+  passwordSuccess.value = ''
+  passwordError.value = ''
 
-async function handlePhotoUpload(event: Event) {
-  const file = (event.target as HTMLInputElement).files?.[0]
-  if (!file) return
-
-  if (file.size > 5 * 1024 * 1024) {
-    profileError.value = 'File size must be less than 5MB'
+  if (passwordForm.value.next.length < 8) {
+    passwordError.value = 'New password must be at least 8 characters.'
     return
   }
 
-  profileError.value = ''
-  try {
-    const response = await userApi.uploadProfileImage(file)
-    photoPreview.value = response.url
-    profileForm.value.profile_image = response.url
-    authStore.updateProfile(response.user)
-    profileSuccess.value = 'Photo uploaded successfully!'
-  } catch (error) {
-    profileError.value = error instanceof Error ? error.message : 'Failed to upload photo'
-  }
-}
-
-async function handleSaveProfile() {
-  isSavingProfile.value = true
-  profileSuccess.value = ''
-  profileError.value = ''
-  try {
-    const payload: UpdateProfilePayload = {
-      username: profileForm.value.username,
-      bio: profileForm.value.bio,
-    }
-    const updatedProfile = await userApi.updateProfile(payload)
-    authStore.updateProfile(updatedProfile)
-    profileSuccess.value = 'Profile updated successfully!'
-  } catch (err) {
-    profileError.value = err instanceof Error ? err.message : 'Failed to save profile'
-  } finally {
-    isSavingProfile.value = false
-  }
-}
-
-const passwordForm = ref({ current: '', new: '', confirm: '' })
-const showCurrent = ref(false)
-const showNew = ref(false)
-const showConfirm = ref(false)
-const pwSaving = ref(false)
-const pwSuccess = ref('')
-const pwError = ref('')
-
-const strength = computed(() => {
-  const p = passwordForm.value.new
-  if (!p) return { pct: 0, label: '', color: '', textColor: '' }
-  let score = 0
-  if (p.length >= 8) score++
-  if (/[A-Z]/.test(p)) score++
-  if (/[0-9]/.test(p)) score++
-  if (/[^A-Za-z0-9]/.test(p)) score++
-  const map = [
-    { pct: 25, label: 'Weak', color: 'bg-red-400', textColor: 'text-red-500' },
-    { pct: 50, label: 'Fair', color: 'bg-orange-400', textColor: 'text-orange-500' },
-    { pct: 75, label: 'Good', color: 'bg-yellow-400', textColor: 'text-yellow-600' },
-    { pct: 100, label: 'Strong', color: 'bg-green-500', textColor: 'text-green-600' },
-  ]
-  return map[score - 1] ?? map[0]
-})
-
-async function handleChangePassword() {
-  if (passwordForm.value.new !== passwordForm.value.confirm) {
-    pwError.value = 'Passwords do not match'
+  if (passwordForm.value.next !== passwordForm.value.confirm) {
+    passwordError.value = 'New passwords do not match.'
     return
   }
-  pwSaving.value = true
-  pwSuccess.value = ''
-  pwError.value = ''
+
+  savingPassword.value = true
   try {
-    await new Promise((r) => setTimeout(r, 800))
-    pwSuccess.value = 'Password updated successfully!'
-    passwordForm.value = { current: '', new: '', confirm: '' }
-  } catch (err) {
-    pwError.value = err instanceof Error ? err.message : 'Failed to update password'
+    const response = await authApi.changePassword(
+      passwordForm.value.current,
+      passwordForm.value.next,
+    )
+    passwordSuccess.value = response.message
+    passwordForm.value = { current: '', next: '', confirm: '' }
+  } catch (error: unknown) {
+    passwordError.value = error instanceof Error ? error.message : 'Password could not be updated.'
   } finally {
-    pwSaving.value = false
+    savingPassword.value = false
   }
 }
 
-const privacyToggles = ref([
-  {
-    key: 'show_location',
-    label: 'Show approximate location',
-    desc: 'Others can see your general area',
-    value: true,
-  },
-  {
-    key: 'show_online',
-    label: 'Show online status',
-    desc: 'Others can see when you are active',
-    value: true,
-  },
-  {
-    key: 'allow_messages',
-    label: 'Allow messages from anyone',
-    desc: 'Receive messages from non-followers',
-    value: false,
-  },
-])
-function savePrivacy() {
-  console.log('Privacy saved', privacyToggles.value)
+async function clearLocation() {
+  privacySuccess.value = ''
+  privacyError.value = ''
+  clearingLocation.value = true
+
+  try {
+    const response = await userApi.clearLocation()
+    stopGeolocationTracking(true)
+    privacySuccess.value = response.message
+  } catch (error: unknown) {
+    privacyError.value =
+      error instanceof Error ? error.message : 'Saved location could not be cleared.'
+  } finally {
+    clearingLocation.value = false
+  }
 }
 
-const blockedUsers = ref<{ id: number; username: string; since: string }[]>([])
-function unblock(id: number) {
-  blockedUsers.value = blockedUsers.value.filter((u) => u.id !== id)
-}
-function initials(name: string) {
-  return name.slice(0, 2).toUpperCase()
-}
-
-const showDeleteModal = ref(false)
-const deleteConfirm = ref('')
-function handleDeleteAccount() {
-  authStore.logout()
-  router.push('/login')
+async function signOut() {
+  auth.logout()
+  await router.replace('/login')
 }
 </script>
 
+<template>
+  <div class="settings-page">
+    <Navbar />
+
+    <div class="settings-shell">
+      <AppSidebar class="hidden md:flex" />
+
+      <main class="workspace">
+        <header class="page-heading">
+          <div>
+            <p class="eyebrow">Account control</p>
+            <h1>Settings</h1>
+            <p>Manage your Nearme identity, account access, and saved location data.</p>
+          </div>
+          <span class="security-badge"><ShieldCheck /> Privacy-first account controls</span>
+        </header>
+
+        <div class="settings-layout">
+          <aside class="settings-nav" aria-label="Settings sections">
+            <button
+              v-for="tab in tabs"
+              :key="tab.key"
+              type="button"
+              :class="{ active: activeTab === tab.key }"
+              @click="activeTab = tab.key"
+            >
+              <component :is="tab.icon" />
+              <span>{{ tab.label }}</span>
+              <ArrowRight />
+            </button>
+          </aside>
+
+          <section class="settings-content">
+            <template v-if="activeTab === 'account'">
+              <article class="panel profile-panel">
+                <div v-if="loadingProfile" class="state-message">
+                  <LoaderCircle class="spinner" /> Loading account details...
+                </div>
+                <p v-else-if="profileError" class="alert alert-error">{{ profileError }}</p>
+                <template v-else>
+                  <div class="profile-summary">
+                    <UserAvatar
+                      :src="profileImage"
+                      :username="username"
+                      :alt="`${displayName} profile`"
+                      class="profile-avatar"
+                    />
+                    <div>
+                      <p class="panel-label">Your Nearme identity</p>
+                      <h2>{{ displayName }}</h2>
+                      <p class="profile-handle">@{{ username }}</p>
+                      <p class="profile-email">{{ profile?.email || auth.user?.email }}</p>
+                    </div>
+                  </div>
+
+                  <RouterLink to="/profile/edit" class="primary-link">
+                    <Pencil /> Edit profile
+                  </RouterLink>
+                </template>
+              </article>
+
+              <article class="panel">
+                <div class="panel-heading">
+                  <span class="panel-icon"><UserRound /></span>
+                  <div>
+                    <p class="panel-label">Profile ownership</p>
+                    <h2>One editor, consistent everywhere</h2>
+                  </div>
+                </div>
+                <p class="panel-copy">
+                  Your dedicated profile editor controls your name, username, bio, and profile
+                  photo. Changes update the navbar, profile page, posts, and nearby identity.
+                </p>
+                <RouterLink to="/profile" class="secondary-link">
+                  View public profile <ArrowRight />
+                </RouterLink>
+              </article>
+
+              <article class="panel session-panel">
+                <div>
+                  <p class="panel-label">Current session</p>
+                  <h2>Signed in as {{ profile?.email || auth.user?.email }}</h2>
+                  <p class="panel-copy">Sign out on this browser without changing your account.</p>
+                </div>
+                <button type="button" class="secondary-button" @click="signOut">
+                  <LogOut /> Sign out
+                </button>
+              </article>
+            </template>
+
+            <template v-else-if="activeTab === 'security'">
+              <article class="panel">
+                <div class="panel-heading">
+                  <span class="panel-icon"><KeyRound /></span>
+                  <div>
+                    <p class="panel-label">Account access</p>
+                    <h2>Change password</h2>
+                  </div>
+                </div>
+                <p class="panel-copy">
+                  Use your current password to protect this change. Google-only accounts should
+                  continue signing in with Google.
+                </p>
+
+                <form class="password-form" @submit.prevent="changePassword">
+                  <label>
+                    <span>Current password</span>
+                    <div class="password-input">
+                      <input
+                        v-model="passwordForm.current"
+                        :type="showCurrent ? 'text' : 'password'"
+                        autocomplete="current-password"
+                        required
+                      />
+                      <button
+                        type="button"
+                        :aria-label="
+                          showCurrent ? 'Hide current password' : 'Show current password'
+                        "
+                        @click="showCurrent = !showCurrent"
+                      >
+                        <EyeOff v-if="showCurrent" />
+                        <Eye v-else />
+                      </button>
+                    </div>
+                  </label>
+
+                  <div class="password-grid">
+                    <label>
+                      <span>New password</span>
+                      <div class="password-input">
+                        <input
+                          v-model="passwordForm.next"
+                          :type="showNext ? 'text' : 'password'"
+                          autocomplete="new-password"
+                          minlength="8"
+                          required
+                        />
+                        <button
+                          type="button"
+                          :aria-label="showNext ? 'Hide new password' : 'Show new password'"
+                          @click="showNext = !showNext"
+                        >
+                          <EyeOff v-if="showNext" />
+                          <Eye v-else />
+                        </button>
+                      </div>
+                      <div class="strength-row">
+                        <span class="strength-track">
+                          <i :style="{ width: `${passwordStrength.score * 25}%` }"></i>
+                        </span>
+                        <small>{{ passwordStrength.label }}</small>
+                      </div>
+                    </label>
+
+                    <label>
+                      <span>Confirm new password</span>
+                      <div class="password-input" :class="{ invalid: !passwordsMatch }">
+                        <input
+                          v-model="passwordForm.confirm"
+                          :type="showConfirm ? 'text' : 'password'"
+                          autocomplete="new-password"
+                          minlength="8"
+                          required
+                        />
+                        <button
+                          type="button"
+                          :aria-label="showConfirm ? 'Hide confirmation' : 'Show confirmation'"
+                          @click="showConfirm = !showConfirm"
+                        >
+                          <EyeOff v-if="showConfirm" />
+                          <Eye v-else />
+                        </button>
+                      </div>
+                      <small v-if="!passwordsMatch" class="field-error">
+                        Passwords do not match
+                      </small>
+                    </label>
+                  </div>
+
+                  <p v-if="passwordSuccess" class="alert alert-success">
+                    <Check /> {{ passwordSuccess }}
+                  </p>
+                  <p v-if="passwordError" class="alert alert-error">{{ passwordError }}</p>
+
+                  <div class="form-actions">
+                    <button
+                      type="submit"
+                      class="primary-button"
+                      :disabled="savingPassword || !passwordsMatch"
+                    >
+                      <LoaderCircle v-if="savingPassword" class="spinner" />
+                      <KeyRound v-else />
+                      {{ savingPassword ? 'Updating...' : 'Update password' }}
+                    </button>
+                  </div>
+                </form>
+              </article>
+            </template>
+
+            <template v-else>
+              <article class="panel">
+                <div class="panel-heading">
+                  <span class="panel-icon"><ShieldCheck /></span>
+                  <div>
+                    <p class="panel-label">How Nearme protects you</p>
+                    <h2>Approximate discovery by design</h2>
+                  </div>
+                </div>
+
+                <div class="privacy-list">
+                  <div>
+                    <Check />
+                    <p>
+                      <strong>Exact coordinates are not returned with posts.</strong>
+                      People see approximate distance and visibility radius instead.
+                    </p>
+                  </div>
+                  <div>
+                    <Check />
+                    <p>
+                      <strong>Nearby presence expires quickly.</strong>
+                      User discovery only considers recently updated locations.
+                    </p>
+                  </div>
+                  <div>
+                    <Check />
+                    <p>
+                      <strong>Location is requested when a nearby feature needs it.</strong>
+                      The login and registration pages do not start location tracking.
+                    </p>
+                  </div>
+                </div>
+              </article>
+
+              <article class="panel clear-location-panel">
+                <div class="panel-heading">
+                  <span class="panel-icon panel-icon-warn"><MapPinOff /></span>
+                  <div>
+                    <p class="panel-label">Saved location</p>
+                    <h2>Clear location activity</h2>
+                  </div>
+                </div>
+                <p class="panel-copy">
+                  Removes the latest location stored for your account and clears this browser's
+                  cached coordinates. Nearby features will ask again the next time you use them.
+                </p>
+
+                <p v-if="privacySuccess" class="alert alert-success">
+                  <Check /> {{ privacySuccess }}
+                </p>
+                <p v-if="privacyError" class="alert alert-error">{{ privacyError }}</p>
+
+                <button
+                  type="button"
+                  class="warning-button"
+                  :disabled="clearingLocation"
+                  @click="clearLocation"
+                >
+                  <LoaderCircle v-if="clearingLocation" class="spinner" />
+                  <MapPinOff v-else />
+                  {{ clearingLocation ? 'Clearing...' : 'Clear saved location' }}
+                </button>
+              </article>
+            </template>
+          </section>
+        </div>
+      </main>
+    </div>
+
+    <MobileBottomNav />
+  </div>
+</template>
+
 <style scoped>
 .settings-page {
+  min-height: 100vh;
+  background: #f4f7fb;
+  color: #20384a;
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+}
+
+.settings-shell {
   display: flex;
-  flex-direction: column;
+  min-width: 0;
+}
+
+.workspace {
   width: 100%;
   min-width: 0;
   flex: 1;
-  min-height: 100vh;
-  background: #f4f7fb;
-  color: #1f4054;
-  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
-  padding: 24px clamp(16px, 3vw, 32px) 40px;
+  padding: 28px clamp(18px, 3vw, 38px) 64px;
 }
 
-.page-header {
-  border: 1px solid #e3ebf2;
-  border-radius: 18px;
-  background: #fff;
-  padding: 24px;
-  box-shadow: 0 1px 3px rgba(15, 45, 70, 0.04);
-  margin-bottom: 24px;
+.page-heading {
+  margin-bottom: 22px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
 }
-.page-title {
+
+.eyebrow,
+.panel-label {
   margin: 0;
-  color: #0f172a;
-  font-size: clamp(1.5rem, 2.6vw, 2rem);
+  color: #168278;
+  font-size: 0.68rem;
   font-weight: 850;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
 }
-.page-subtitle {
-  margin: 8px 0 0;
-  color: #7890a2;
-  font-size: 0.9rem;
-  font-weight: 600;
+
+.page-heading h1 {
+  margin: 7px 0 0;
+  color: #0f172a;
+  font-size: clamp(2rem, 3vw, 2.65rem);
+  font-weight: 850;
+  letter-spacing: -0.04em;
+  line-height: 1.05;
+}
+
+.page-heading > div > p:last-child {
+  margin: 10px 0 0;
+  color: #718096;
+  font-size: 0.92rem;
+  line-height: 1.6;
+}
+
+.security-badge {
+  padding: 9px 13px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid #d5ebe9;
+  border-radius: 999px;
+  background: #f0faf8;
+  color: #246e74;
+  font-size: 0.74rem;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+.security-badge svg,
+.primary-link svg,
+.secondary-link svg,
+.secondary-button svg,
+.primary-button svg,
+.warning-button svg,
+.alert svg {
+  width: 16px;
+  height: 16px;
 }
 
 .settings-layout {
-  display: flex;
-  gap: 24px;
-  align-items: flex-start;
+  display: grid;
+  grid-template-columns: 230px minmax(0, 780px);
+  align-items: start;
+  gap: 22px;
 }
 
-.settings-sidebar {
-  width: 210px;
-  flex-shrink: 0;
-  background: #fff;
-  border: 1px solid #e3ebf2;
-  border-radius: 18px;
-  padding: 12px;
-  box-shadow: 0 1px 3px rgba(15, 45, 70, 0.04);
+.settings-nav {
   position: sticky;
-  top: 20px;
+  top: 82px;
+  padding: 9px;
+  display: grid;
+  gap: 5px;
+  border: 1px solid #e1eaf1;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 8px 28px rgba(42, 67, 83, 0.045);
 }
-.sidebar-nav {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-.sidebar-tab {
-  display: flex;
+
+.settings-nav button {
+  min-height: 46px;
+  padding: 0 12px;
+  display: grid;
+  grid-template-columns: 19px 1fr 15px;
   align-items: center;
   gap: 10px;
-  padding: 10px 12px;
-  border-radius: 10px;
-  border: none;
+  border: 0;
+  border-radius: 12px;
   background: transparent;
-  color: #4f687d;
-  font-size: 13px;
-  font-weight: 600;
+  color: #60798a;
   cursor: pointer;
-  width: 100%;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 750;
   text-align: left;
-  transition: all 0.2s;
-  font-family: inherit;
 }
-.sidebar-tab:hover:not(.disabled) {
-  background: #f0f5f8;
-  color: #17364a;
+
+.settings-nav button svg {
+  width: 17px;
+  height: 17px;
 }
-.sidebar-tab.active {
-  background: #e8f7f4;
-  color: #0f8a7c;
+
+.settings-nav button svg:last-child {
+  width: 14px;
+  color: #a7b4be;
 }
-.sidebar-tab.disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
-}
-.coming-soon {
-  margin-left: auto;
-  font-size: 10px;
-  font-weight: 700;
-  background: #f0f5f8;
-  color: #7890a2;
-  padding: 2px 6px;
-  border-radius: 6px;
-  text-transform: uppercase;
+
+.settings-nav button:hover,
+.settings-nav button.active {
+  background: #edf8f6;
+  color: #14766f;
 }
 
 .settings-content {
-  flex: 1;
   min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-/* Profile tab */
-.profile-tab {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-.profile-header-card {
-  background: #fff;
-  border: 1px solid #e3ebf2;
-  border-radius: 18px;
-  padding: 24px;
-  display: flex;
-  align-items: center;
-  gap: 20px;
-  box-shadow: 0 1px 3px rgba(15, 45, 70, 0.04);
-}
-.profile-avatar-area {
-  flex-shrink: 0;
-}
-.avatar-wrapper {
-  position: relative;
-  width: 72px;
-  height: 72px;
-}
-.avatar-display {
-  width: 72px;
-  height: 72px;
-  border-radius: 50%;
-  border: 3px solid #e3ebf2;
-  font-size: 1.75rem;
-}
-.avatar-edit-btn {
-  position: absolute;
-  bottom: 0;
-  right: 0;
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  background: #0f8a7c;
-  border: 2px solid #fff;
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-.avatar-edit-btn:hover {
-  background: #0d7a6d;
-}
-.profile-header-info {
-  flex: 1;
-  min-width: 0;
-}
-.profile-display-name {
-  font-size: 18px;
-  font-weight: 800;
-  color: #17364a;
-  margin: 0 0 2px;
-}
-.profile-username {
-  font-size: 13px;
-  color: #0f8a7c;
-  font-weight: 600;
-  margin: 0 0 2px;
-}
-.profile-email {
-  font-size: 12px;
-  color: #7890a2;
-  margin: 0;
-}
-.btn-change-photo-sm {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 16px;
-  background: #f0f5f8;
-  border: 1px solid #dce7ee;
-  border-radius: 10px;
-  font-size: 13px;
-  font-weight: 600;
-  color: #4f687d;
-  cursor: pointer;
-  white-space: nowrap;
-  font-family: inherit;
-  transition: all 0.2s;
-  flex-shrink: 0;
-}
-.btn-change-photo-sm:hover {
-  background: #e3ebf2;
-  border-color: #0f8a7c;
-  color: #0f8a7c;
-}
-
-.profile-form {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-.settings-section {
-  border: 1px solid #e3ebf2;
-  border-radius: 18px;
-  background: #fff;
-  padding: 24px;
-  box-shadow: 0 1px 3px rgba(15, 45, 70, 0.04);
-}
-.section-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 20px;
-  padding-bottom: 14px;
-  border-bottom: 1px solid #eef3f7;
-  color: #0e6378;
-}
-.section-title {
-  margin: 0;
-  color: #17364a;
-  font-size: 1rem;
-  font-weight: 850;
-}
-.section-desc {
-  font-size: 13px;
-  color: #7890a2;
-  margin-bottom: 16px;
-}
-
-.form-content {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-.form-group {
-  margin-bottom: 16px;
-}
-.form-group:last-child {
-  margin-bottom: 0;
-}
-.form-label {
-  display: block;
-  font-size: 12px;
-  font-weight: 850;
-  color: #4f687d;
-  margin-bottom: 8px;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-}
-.form-input,
-.form-textarea {
-  width: 100%;
-  padding: 11px 13px;
-  border: 1px solid #dce7ee;
-  border-radius: 10px;
-  font-family: inherit;
-  font-size: 14px;
-  color: #17364a;
-  background: #fff;
-  transition: all 0.2s;
-}
-.form-input::placeholder,
-.form-textarea::placeholder {
-  color: #94a3b8;
-}
-.form-input:focus,
-.form-textarea:focus {
-  outline: none;
-  border-color: #0f8a7c;
-  box-shadow: 0 0 0 3px rgba(15, 138, 124, 0.08);
-}
-.form-input:disabled {
-  background: #f0f5f8;
-  color: #7890a2;
-  cursor: not-allowed;
-}
-.form-textarea {
-  resize: vertical;
-  min-height: 80px;
-}
-.char-count {
-  font-size: 11px;
-  color: #7890a2;
-  margin-top: 6px;
-}
-.form-row {
   display: grid;
-  grid-template-columns: 1fr 1fr;
   gap: 16px;
 }
-.input-error {
-  border-color: #ef4444 !important;
-}
-.input-wrapper {
-  position: relative;
-}
-.eye-btn {
-  position: absolute;
-  right: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: #7890a2;
-  padding: 0;
-  display: flex;
+
+.panel {
+  padding: 22px;
+  border: 1px solid #e1eaf1;
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: 0 10px 30px rgba(42, 67, 83, 0.05);
 }
 
-.strength-bar-wrap {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 8px;
-}
-.strength-bar {
-  flex: 1;
-  height: 4px;
-  background: #eef3f7;
-  border-radius: 4px;
-  overflow: hidden;
-}
-.strength-fill {
-  height: 100%;
-  border-radius: 4px;
-  transition: width 0.3s;
-}
-.strength-label {
-  font-size: 11px;
-  font-weight: 700;
-  min-width: 40px;
-}
-
-.toggle-list {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-.toggle-item {
+.profile-panel,
+.session-panel {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
-  padding: 14px 0;
-  border-bottom: 1px solid #eef3f7;
+  gap: 20px;
 }
-.toggle-item:last-child {
-  border-bottom: none;
-  padding-bottom: 0;
+
+.profile-summary {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 15px;
 }
-.toggle-title {
-  font-size: 14px;
+
+.profile-avatar {
+  width: 76px;
+  height: 76px;
+  flex: 0 0 76px;
+  border: 4px solid #fff;
+  border-radius: 22px;
+  box-shadow:
+    0 0 0 1px #dbe8ed,
+    0 9px 22px rgba(33, 73, 91, 0.12);
+  font-size: 1.7rem;
+}
+
+.profile-summary h2,
+.panel-heading h2,
+.session-panel h2 {
+  margin: 4px 0 0;
+  color: #193a4c;
+  font-size: 1.02rem;
+  font-weight: 850;
+}
+
+.profile-handle,
+.profile-email {
+  margin: 3px 0 0;
+  color: #698293;
+  font-size: 0.77rem;
+}
+
+.profile-handle {
+  color: #168278;
   font-weight: 700;
-  color: #17364a;
-  margin: 0 0 3px;
 }
-.toggle-desc {
-  font-size: 12px;
-  color: #7890a2;
-  margin: 0;
-}
-.toggle-btn {
-  width: 44px;
-  height: 24px;
-  border-radius: 12px;
-  background: #dce7ee;
-  border: none;
+
+.primary-link,
+.secondary-link,
+.primary-button,
+.secondary-button,
+.warning-button {
+  min-height: 42px;
+  padding: 0 15px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border-radius: 11px;
   cursor: pointer;
-  position: relative;
-  transition: background 0.3s;
-  flex-shrink: 0;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-decoration: none;
 }
-.toggle-btn.on {
-  background: #0f8a7c;
+
+.primary-link,
+.primary-button {
+  border: 0;
+  background: #13867d;
+  color: #fff;
+  box-shadow: 0 8px 18px rgba(19, 134, 125, 0.18);
 }
-.toggle-knob {
-  position: absolute;
-  top: 3px;
-  left: 3px;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  background: white;
-  transition: transform 0.3s;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+
+.secondary-link,
+.secondary-button {
+  width: fit-content;
+  border: 1px solid #dce6ed;
+  background: #f8fafb;
+  color: #526d7f;
 }
-.toggle-btn.on .toggle-knob {
-  transform: translateX(20px);
+
+.panel-heading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
-.mt-4 {
+
+.panel-icon {
+  width: 40px;
+  height: 40px;
+  flex: 0 0 40px;
+  display: grid;
+  place-items: center;
+  border-radius: 13px;
+  background: #eaf7f5;
+  color: #187970;
+}
+
+.panel-icon svg {
+  width: 19px;
+  height: 19px;
+}
+
+.panel-copy {
+  margin: 14px 0 0;
+  color: #718899;
+  font-size: 0.8rem;
+  line-height: 1.65;
+}
+
+.panel .secondary-link {
   margin-top: 16px;
 }
 
-.blocked-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-.blocked-item {
+.state-message {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px;
-  background: #f8fbff;
-  border-radius: 10px;
-}
-.blocked-avatar {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: #0f8a7c;
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 12px;
-  font-weight: 700;
-  flex-shrink: 0;
-}
-.blocked-info {
-  flex: 1;
-}
-.blocked-name {
-  font-size: 14px;
-  font-weight: 700;
-  color: #17364a;
-  margin: 0 0 2px;
-}
-.blocked-since {
-  font-size: 12px;
-  color: #7890a2;
-  margin: 0;
-}
-.btn-unblock {
-  padding: 6px 14px;
-  background: white;
-  border: 1px solid #dce7ee;
-  border-radius: 8px;
-  font-size: 12px;
-  font-weight: 700;
-  color: #4f687d;
-  cursor: pointer;
-  font-family: inherit;
-}
-.btn-unblock:hover {
-  border-color: #0f8a7c;
-  color: #0f8a7c;
-}
-.empty-blocked {
-  font-size: 13px;
-  color: #7890a2;
-  text-align: center;
-  padding: 20px 0;
+  gap: 8px;
+  color: #718899;
+  font-size: 0.82rem;
 }
 
-.danger-section {
-  border-color: #fee2e2;
-}
-.danger-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-}
-.danger-title {
-  font-size: 14px;
-  font-weight: 700;
-  color: #dc2626;
-  margin: 0 0 4px;
-}
-.danger-desc {
-  font-size: 13px;
-  color: #7890a2;
-  margin: 0;
-}
-.btn-danger {
-  padding: 10px 20px;
-  background: #dc2626;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-size: 13px;
-  font-weight: 700;
-  cursor: pointer;
-  font-family: inherit;
-  transition: all 0.2s;
-}
-.btn-danger:hover:not(:disabled) {
-  background: #b91c1c;
-}
-.btn-danger:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+.password-form {
+  margin-top: 22px;
+  display: grid;
+  gap: 18px;
 }
 
-.placeholder-tab {
+.password-form label {
+  display: block;
+  color: #3d596b;
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.password-form label > span {
+  display: block;
+  margin-bottom: 7px;
+}
+
+.password-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.password-input {
+  min-height: 48px;
+  padding: 0 12px;
   display: flex;
-  flex-direction: column;
   align-items: center;
-  padding: 80px 24px;
-  gap: 12px;
-  text-align: center;
+  border: 1px solid #dce6ed;
+  border-radius: 12px;
+  background: #f8fafb;
+}
+
+.password-input:focus-within {
+  border-color: #59aaa4;
   background: #fff;
-  border-radius: 18px;
-  border: 1px solid #e3ebf2;
+  box-shadow: 0 0 0 3px rgba(19, 134, 125, 0.09);
 }
-.placeholder-icon {
-  color: #dce7ee;
+
+.password-input.invalid {
+  border-color: #e9a6a6;
 }
-.placeholder-title {
-  font-size: 18px;
-  font-weight: 700;
-  color: #17364a;
-  margin: 0;
+
+.password-input input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #233f51;
+  font: inherit;
+  font-size: 0.86rem;
 }
-.placeholder-desc {
-  font-size: 13px;
-  color: #7890a2;
-  margin: 0;
-  max-width: 260px;
-  line-height: 1.6;
+
+.password-input button {
+  padding: 4px;
+  display: inline-flex;
+  border: 0;
+  background: transparent;
+  color: #7f92a0;
+  cursor: pointer;
+}
+
+.password-input button svg {
+  width: 17px;
+  height: 17px;
+}
+
+.strength-row {
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.strength-track {
+  height: 5px;
+  flex: 1;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e9eff3;
+}
+
+.strength-track i {
+  height: 100%;
+  display: block;
+  border-radius: inherit;
+  background: #1a9388;
+  transition: width 0.2s ease;
+}
+
+.strength-row small,
+.field-error {
+  color: #7c91a1;
+  font-size: 0.68rem;
+}
+
+.field-error {
+  margin-top: 6px;
+  display: block;
+  color: #b84e4e;
 }
 
 .form-actions {
   display: flex;
-  gap: 12px;
   justify-content: flex-end;
 }
-.btn-cancel {
-  padding: 10px 20px;
-  background: #f8fbff;
-  color: #4f687d;
-  border: 1px solid #dce7ee;
-  border-radius: 999px;
-  font-size: 13px;
-  font-weight: 700;
-  cursor: pointer;
-  font-family: inherit;
+
+.primary-button:disabled,
+.warning-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
 }
-.btn-save {
-  padding: 10px 24px;
-  background: #0f8a7c;
-  color: white;
-  border: none;
-  border-radius: 999px;
-  font-size: 13px;
-  font-weight: 700;
-  cursor: pointer;
+
+.alert {
+  margin: 0;
+  padding: 10px 12px;
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 7px;
-  font-family: inherit;
-  transition: all 0.2s;
+  gap: 8px;
+  border-radius: 11px;
+  font-size: 0.76rem;
+  font-weight: 700;
 }
-.btn-save:hover:not(:disabled) {
-  box-shadow: 0 4px 12px rgba(15, 138, 124, 0.25);
+
+.alert-success {
+  border: 1px solid #cceae4;
+  background: #effaf7;
+  color: #14766f;
 }
-.btn-save:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
+
+.alert-error {
+  border: 1px solid #f1cccc;
+  background: #fff5f5;
+  color: #b84e4e;
 }
-.btn-content,
-.btn-loading {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  line-height: 1;
+
+.privacy-list {
+  margin-top: 20px;
+  display: grid;
+  gap: 11px;
 }
-.btn-save svg {
-  flex-shrink: 0;
+
+.privacy-list > div {
+  padding: 13px 14px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  border: 1px solid #e5edf2;
+  border-radius: 13px;
+  background: #f8fbfc;
 }
+
+.privacy-list svg {
+  width: 17px;
+  height: 17px;
+  flex: 0 0 auto;
+  margin-top: 2px;
+  color: #178277;
+}
+
+.privacy-list p {
+  margin: 0;
+  color: #718899;
+  font-size: 0.76rem;
+  line-height: 1.55;
+}
+
+.privacy-list strong {
+  display: block;
+  color: #315467;
+}
+
+.clear-location-panel {
+  border-color: #eadfca;
+  background: #fffdf8;
+}
+
+.panel-icon-warn {
+  background: #f8ecd1;
+  color: #9a7131;
+}
+
+.warning-button {
+  margin-top: 18px;
+  border: 1px solid #e4cfa9;
+  background: #fff8ea;
+  color: #866127;
+}
+
 .spinner {
-  animation: spin 1s linear infinite;
+  animation: spin 0.8s linear infinite;
 }
+
 @keyframes spin {
   to {
     transform: rotate(360deg);
   }
 }
 
-.alert {
-  padding: 13px 16px;
-  border-radius: 8px;
-  font-size: 13px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-top: 12px;
-  font-weight: 500;
-}
-.alert-success {
-  background: rgba(0, 201, 177, 0.12);
-  color: #00a896;
-  border: 1px solid rgba(0, 201, 177, 0.25);
-}
-.alert-error {
-  background: rgba(239, 68, 68, 0.12);
-  color: #dc2626;
-  border: 1px solid rgba(239, 68, 68, 0.25);
-}
-
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.4);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 100;
-}
-.modal {
-  background: white;
-  border-radius: 18px;
-  padding: 28px;
-  max-width: 400px;
-  width: 90%;
-}
-.modal-title {
-  font-size: 1.1rem;
-  font-weight: 850;
-  color: #dc2626;
-  margin: 0 0 8px;
-}
-.modal-desc {
-  font-size: 14px;
-  color: #4f687d;
-  margin: 0 0 16px;
-  line-height: 1.6;
-}
-.modal-actions {
-  display: flex;
-  gap: 10px;
-  justify-content: flex-end;
-  margin-top: 16px;
-}
-
-@media (max-width: 768px) {
+@media (max-width: 900px) {
   .settings-layout {
-    flex-direction: column;
-  }
-  .settings-sidebar {
-    width: 100%;
-    position: static;
-  }
-  .form-row {
     grid-template-columns: 1fr;
   }
-  .profile-header-card {
-    flex-wrap: wrap;
+
+  .settings-nav {
+    position: static;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .settings-nav button {
+    grid-template-columns: 19px 1fr;
+  }
+
+  .settings-nav button svg:last-child {
+    display: none;
+  }
+}
+
+@media (max-width: 767px) {
+  .settings-page {
+    padding-bottom: calc(84px + env(safe-area-inset-bottom));
+  }
+
+  .workspace {
+    padding: 20px 14px 32px;
+  }
+
+  .page-heading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .security-badge {
+    font-size: 0.68rem;
+  }
+
+  .settings-nav {
+    grid-template-columns: 1fr;
+  }
+
+  .settings-nav button {
+    grid-template-columns: 19px 1fr 14px;
+  }
+
+  .settings-nav button svg:last-child {
+    display: block;
+  }
+
+  .profile-panel,
+  .session-panel {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .primary-link,
+  .secondary-button {
+    width: 100%;
+  }
+
+  .password-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 420px) {
+  .workspace {
+    padding-inline: 12px;
+  }
+
+  .panel {
+    padding: 18px;
+    border-radius: 17px;
+  }
+
+  .profile-avatar {
+    width: 64px;
+    height: 64px;
+    flex-basis: 64px;
+    border-radius: 18px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation-duration: 1.6s;
   }
 }
 </style>

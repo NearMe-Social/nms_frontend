@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const position = {
   coords: {
@@ -21,6 +21,11 @@ describe('useGeolocation', () => {
   beforeEach(() => {
     vi.resetModules()
     localStorage.clear()
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+    vi.unstubAllGlobals()
   })
 
   it('shares a fresh location between page composable instances', async () => {
@@ -136,11 +141,85 @@ describe('useGeolocation', () => {
     const geo = useGeolocation()
 
     await geo.request()
-    watchSuccess?.(secondPosition)
+    const receiveWatchedPosition = watchSuccess as PositionCallback | null
+    if (receiveWatchedPosition) receiveWatchedPosition(secondPosition)
 
     expect(geo.coords.value).toEqual({
       lat: secondPosition.coords.latitude,
       lng: secondPosition.coords.longitude,
     })
+  })
+
+  it('stops the shared watcher and clears session location data on logout', async () => {
+    const getCurrentPosition = vi.fn((success: PositionCallback) => success(position))
+    const watchPosition = vi.fn(() => 42)
+    const clearWatch = vi.fn()
+    vi.stubGlobal('navigator', {
+      geolocation: { getCurrentPosition, watchPosition, clearWatch },
+    })
+
+    const { stopGeolocationTracking, useGeolocation } = await import('../useGeolocation')
+    const geo = useGeolocation()
+
+    await geo.request()
+    stopGeolocationTracking(true)
+
+    expect(clearWatch).toHaveBeenCalledWith(42)
+    expect(geo.coords.value).toBeNull()
+    expect(geo.status.value).toBe('idle')
+    expect(localStorage.getItem('nms_last_known_location')).toBeNull()
+  })
+
+  it('retries once with a fresh browser reading after a timeout', async () => {
+    vi.useFakeTimers()
+    const getCurrentPosition = vi
+      .fn()
+      .mockImplementationOnce((_success: PositionCallback, error: PositionErrorCallback) =>
+        error(geoError(3)),
+      )
+      .mockImplementationOnce((success: PositionCallback) => success(position))
+
+    vi.stubGlobal('navigator', {
+      geolocation: {
+        getCurrentPosition,
+        watchPosition: vi.fn(() => 42),
+      },
+    })
+
+    const { useGeolocation } = await import('../useGeolocation')
+    const geo = useGeolocation()
+    const request = geo.request()
+
+    await vi.advanceTimersByTimeAsync(400)
+
+    await expect(request).resolves.toEqual({
+      lat: position.coords.latitude,
+      lng: position.coords.longitude,
+    })
+    expect(getCurrentPosition).toHaveBeenCalledTimes(2)
+    expect(geo.status.value).toBe('granted')
+  })
+
+  it('ignores a location response that arrives after tracking is stopped', async () => {
+    let positionSuccess: PositionCallback | null = null
+    const getCurrentPosition = vi.fn((success: PositionCallback) => {
+      positionSuccess = success
+    })
+    const watchPosition = vi.fn(() => 42)
+    vi.stubGlobal('navigator', {
+      geolocation: { getCurrentPosition, watchPosition, clearWatch: vi.fn() },
+    })
+
+    const { stopGeolocationTracking, useGeolocation } = await import('../useGeolocation')
+    const geo = useGeolocation()
+    const request = geo.request()
+
+    stopGeolocationTracking(true)
+    const receiveDelayedPosition = positionSuccess as PositionCallback | null
+    if (receiveDelayedPosition) receiveDelayedPosition(position)
+
+    await expect(request).resolves.toBeNull()
+    expect(geo.coords.value).toBeNull()
+    expect(watchPosition).not.toHaveBeenCalled()
   })
 })

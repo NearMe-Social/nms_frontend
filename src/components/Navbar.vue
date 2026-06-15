@@ -1,8 +1,7 @@
 <template>
   <nav class="top-nav">
     <RouterLink to="/" class="logo">
-      <span class="logo-main">Nearme</span>
-      <span class="logo-sub">Social</span>
+      <BrandLogo class="navbar-brand" />
     </RouterLink>
 
     <div ref="searchArea" class="search-area" :class="{ 'mobile-open': mobileSearchOpen }">
@@ -129,6 +128,7 @@ import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { Bell, FileText, LoaderCircle, LogOut, Search, Settings, X } from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/auth'
 import { searchApi, type ApiPost, type ApiSearchUser } from '@/services/api'
+import BrandLogo from '@/components/BrandLogo.vue'
 import UserAvatar from '@/components/UserAvatar.vue'
 import { useGeolocation } from '@/composables/useGeolocation'
 
@@ -249,24 +249,13 @@ onBeforeUnmount(() => {
 
 .logo {
   display: inline-flex;
-  align-items: baseline;
-  gap: 4px;
+  align-items: center;
   flex: 0 0 auto;
   text-decoration: none;
 }
 
-.logo-main {
-  color: #0f5f71;
-  font-size: 1.2rem;
-  font-weight: 900;
-}
-
-.logo-sub {
-  color: #8b9aaa;
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+.navbar-brand {
+  --brand-symbol-size: 32px;
 }
 
 .search-area {
