@@ -501,6 +501,9 @@ export interface UserProfile {
   profile_image?: string | null
   profile_completed?: boolean
   onboarding_completed?: boolean
+  current_latitude?: number | string | null
+  current_longitude?: number | string | null
+  location_updated_at?: string | null
 }
 
 export interface UpdateProfilePayload {

@@ -1,6 +1,7 @@
-import { ref, readonly } from 'vue'
+import { readonly, ref } from 'vue'
 
 export type GeoStatus = 'idle' | 'requesting' | 'granted' | 'denied' | 'unavailable' | 'error'
+export type GeoLocationSource = 'live' | 'cached' | null
 
 export interface GeoCoords {
   lat: number
@@ -8,14 +9,20 @@ export interface GeoCoords {
 }
 
 interface StoredGeoCoords extends GeoCoords {
-  capturedAt?: number
+  capturedAt: number
 }
 
-const LAST_KNOWN_LOCATION_KEY = 'nms_last_known_location'
-const MAX_LOCATION_AGE_MS = 2 * 60_000
+export interface GeoRequestOptions {
+  forceRefresh?: boolean
+}
+
+const TAB_LOCATION_KEY = 'nms_tab_location'
+const LEGACY_PERSISTENT_LOCATION_KEY = 'nms_last_known_location'
+const FRESH_LOCATION_AGE_MS = 2 * 60_000
+const ACCOUNT_FALLBACK_MAX_AGE_MS = 24 * 60 * 60_000
 const POSITION_OPTIONS: PositionOptions = {
   timeout: 12_000,
-  maximumAge: MAX_LOCATION_AGE_MS,
+  maximumAge: FRESH_LOCATION_AGE_MS,
   enableHighAccuracy: false,
 }
 const RETRY_POSITION_OPTIONS: PositionOptions = {
@@ -23,73 +30,78 @@ const RETRY_POSITION_OPTIONS: PositionOptions = {
   maximumAge: 0,
   enableHighAccuracy: false,
 }
-const LOCATION_RETRY_DELAY_MS = 400
-const WATCH_REQUEST_OPTIONS: PositionOptions = {
+const WATCH_OPTIONS: PositionOptions = {
   maximumAge: 30_000,
   enableHighAccuracy: false,
 }
+const RETRY_DELAY_MS = 400
 
-function saveLastKnownLocation(coords: GeoCoords, positionCapturedAt: number) {
-  localStorage.setItem(
-    LAST_KNOWN_LOCATION_KEY,
-    JSON.stringify({ ...coords, capturedAt: positionCapturedAt }),
-  )
-}
-
-function getLastKnownLocation(): GeoCoords | null {
-  const raw = localStorage.getItem(LAST_KNOWN_LOCATION_KEY)
-  if (!raw) return null
-
-  try {
-    const parsed = JSON.parse(raw) as StoredGeoCoords
-    if (Number.isFinite(parsed.lat) && Number.isFinite(parsed.lng)) {
-      return { lat: parsed.lat, lng: parsed.lng }
-    }
-  } catch {
-    return null
-  }
-
-  return null
-}
-
-function getFreshStoredLocation(): Required<StoredGeoCoords> | null {
-  const raw = localStorage.getItem(LAST_KNOWN_LOCATION_KEY)
-  if (!raw) return null
-
-  try {
-    const parsed = JSON.parse(raw) as StoredGeoCoords
-    const isValid =
-      Number.isFinite(parsed.lat) &&
-      Number.isFinite(parsed.lng) &&
-      Number.isFinite(parsed.capturedAt)
-    const isFresh = Date.now() - (parsed.capturedAt ?? 0) <= MAX_LOCATION_AGE_MS
-
-    return isValid && isFresh
-      ? { lat: parsed.lat, lng: parsed.lng, capturedAt: parsed.capturedAt as number }
-      : null
-  } catch {
-    return null
-  }
-}
+localStorage.removeItem(LEGACY_PERSISTENT_LOCATION_KEY)
 
 const status = ref<GeoStatus>('idle')
 const coords = ref<GeoCoords | null>(null)
 const errorMessage = ref<string | null>(null)
+const locationSource = ref<GeoLocationSource>(null)
 let capturedAt = 0
 let pendingRequest: Promise<GeoCoords | null> | null = null
 let watchId: number | null = null
 let requestGeneration = 0
 
-export interface GeoRequestOptions {
-  forceRefresh?: boolean
+function readTabLocation(): StoredGeoCoords | null {
+  const raw = sessionStorage.getItem(TAB_LOCATION_KEY)
+  if (!raw) return null
+
+  try {
+    const parsed = JSON.parse(raw) as StoredGeoCoords
+    const valid =
+      Number.isFinite(parsed.lat) &&
+      Number.isFinite(parsed.lng) &&
+      Number.isFinite(parsed.capturedAt)
+
+    return valid ? parsed : null
+  } catch {
+    return null
+  }
 }
 
-function setPosition(pos: GeolocationPosition): GeoCoords {
-  coords.value = { lat: pos.coords.latitude, lng: pos.coords.longitude }
-  capturedAt = Number.isFinite(pos.timestamp) ? pos.timestamp : Date.now()
-  saveLastKnownLocation(coords.value, capturedAt)
+function saveTabLocation(position: GeoCoords, positionCapturedAt: number) {
+  sessionStorage.setItem(
+    TAB_LOCATION_KEY,
+    JSON.stringify({ ...position, capturedAt: positionCapturedAt }),
+  )
+}
+
+function setLivePosition(position: GeolocationPosition): GeoCoords {
+  coords.value = {
+    lat: position.coords.latitude,
+    lng: position.coords.longitude,
+  }
+  capturedAt = Number.isFinite(position.timestamp) ? position.timestamp : Date.now()
+  saveTabLocation(coords.value, capturedAt)
+  locationSource.value = Date.now() - capturedAt <= FRESH_LOCATION_AGE_MS ? 'live' : 'cached'
   status.value = 'granted'
   errorMessage.value = null
+  return coords.value
+}
+
+function setStoredPosition(position: StoredGeoCoords): GeoCoords {
+  coords.value = { lat: position.lat, lng: position.lng }
+  capturedAt = position.capturedAt
+  locationSource.value = Date.now() - capturedAt <= FRESH_LOCATION_AGE_MS ? 'live' : 'cached'
+  status.value = 'granted'
+  errorMessage.value = null
+  startSharedWatch()
+  return coords.value
+}
+
+function setCachedPosition(position: StoredGeoCoords): GeoCoords {
+  coords.value = { lat: position.lat, lng: position.lng }
+  capturedAt = position.capturedAt
+  saveTabLocation(coords.value, capturedAt)
+  locationSource.value = 'cached'
+  status.value = 'granted'
+  errorMessage.value = null
+  startSharedWatch()
   return coords.value
 }
 
@@ -104,16 +116,58 @@ function startSharedWatch() {
 
   watchId = navigator.geolocation.watchPosition(
     (position) => {
-      setPosition(position)
+      setLivePosition(position)
     },
-    (err) => {
-      if (!coords.value && err.code === err.PERMISSION_DENIED) {
+    (error) => {
+      if (!coords.value && error.code === error.PERMISSION_DENIED) {
         status.value = 'denied'
         errorMessage.value = 'Location access was denied. Enable it in browser settings.'
       }
     },
-    WATCH_REQUEST_OPTIONS,
+    WATCH_OPTIONS,
   )
+}
+
+async function canUseStoredLocation(): Promise<boolean> {
+  if (!navigator.permissions?.query) return true
+
+  try {
+    const permission = await navigator.permissions.query({ name: 'geolocation' })
+    if (permission.state !== 'denied') return true
+
+    status.value = 'denied'
+    errorMessage.value = 'Location access was denied. Enable it in browser settings.'
+    locationSource.value = null
+    return false
+  } catch {
+    return true
+  }
+}
+
+function applyLocationError(error: GeolocationPositionError): GeoCoords | null {
+  if (error.code === error.PERMISSION_DENIED) {
+    status.value = 'denied'
+    errorMessage.value = 'Location access was denied. Enable it in browser settings.'
+    locationSource.value = null
+    return null
+  }
+
+  if (coords.value) {
+    status.value = 'granted'
+    errorMessage.value = null
+    return coords.value
+  }
+
+  locationSource.value = null
+  if (error.code === error.POSITION_UNAVAILABLE) {
+    status.value = 'unavailable'
+    errorMessage.value = 'Your location could not be determined right now.'
+  } else {
+    status.value = 'error'
+    errorMessage.value =
+      'Location is taking longer than expected. Check that device location is enabled and try again.'
+  }
+  return null
 }
 
 export function stopGeolocationTracking(clearStoredLocation = false) {
@@ -124,13 +178,15 @@ export function stopGeolocationTracking(clearStoredLocation = false) {
   }
 
   watchId = null
+  pendingRequest = null
   coords.value = null
   capturedAt = 0
   status.value = 'idle'
   errorMessage.value = null
+  locationSource.value = null
 
   if (clearStoredLocation) {
-    localStorage.removeItem(LAST_KNOWN_LOCATION_KEY)
+    sessionStorage.removeItem(TAB_LOCATION_KEY)
   }
 }
 
@@ -141,58 +197,43 @@ export function useGeolocation() {
     })
   }
 
-  function waitBeforeRetry(): Promise<void> {
-    return new Promise((resolve) => window.setTimeout(resolve, LOCATION_RETRY_DELAY_MS))
+  function isFresh(): boolean {
+    return (
+      coords.value !== null &&
+      locationSource.value === 'live' &&
+      Date.now() - capturedAt <= FRESH_LOCATION_AGE_MS
+    )
   }
 
-  function applyLocationError(err: GeolocationPositionError): GeoCoords | null {
-    const recentLocation = getFreshStoredLocation()
-    if (recentLocation) {
-      coords.value = { lat: recentLocation.lat, lng: recentLocation.lng }
-      capturedAt = recentLocation.capturedAt
-      status.value = 'granted'
-      errorMessage.value = null
+  async function request(options: GeoRequestOptions = {}): Promise<GeoCoords | null> {
+    if (!options.forceRefresh && isFresh()) {
+      startSharedWatch()
       return coords.value
     }
 
-    if (err.code === err.PERMISSION_DENIED) {
-      status.value = 'denied'
-      errorMessage.value = 'Location access was denied. Enable it in browser settings.'
-    } else if (err.code === err.POSITION_UNAVAILABLE) {
-      status.value = 'unavailable'
-      errorMessage.value = 'Your location could not be determined right now.'
-    } else {
-      status.value = 'error'
-      errorMessage.value =
-        'Location is taking longer than expected. Check that device location is enabled and try again.'
+    if (!options.forceRefresh) {
+      const stored = readTabLocation()
+      if (stored && (await canUseStoredLocation())) {
+        const restored = setStoredPosition(stored)
+        if (locationSource.value === 'cached' && !pendingRequest) {
+          void request({ forceRefresh: true })
+        }
+        return restored
+      }
     }
 
-    return null
-  }
-
-  function request(options: GeoRequestOptions = {}): Promise<GeoCoords | null> {
-    const hasFreshCoordinates =
-      coords.value !== null && Date.now() - capturedAt <= MAX_LOCATION_AGE_MS
-
-    if (!options.forceRefresh && hasFreshCoordinates) {
-      status.value = 'granted'
-      errorMessage.value = null
-      startSharedWatch()
-      return Promise.resolve(coords.value)
-    }
-
-    if (pendingRequest && !options.forceRefresh) return pendingRequest
+    if (pendingRequest) return pendingRequest
 
     if (!navigator.geolocation) {
       status.value = 'unavailable'
       errorMessage.value = 'Geolocation is not supported by your browser.'
-      return Promise.resolve(null)
+      return null
     }
 
     if (window.isSecureContext === false) {
       status.value = 'unavailable'
       errorMessage.value = 'Location requires HTTPS or localhost.'
-      return Promise.resolve(null)
+      return null
     }
 
     status.value = 'requesting'
@@ -209,35 +250,59 @@ export function useGeolocation() {
           const firstError = error as GeolocationPositionError
           if (firstError.code !== firstError.TIMEOUT) throw firstError
 
-          await waitBeforeRetry()
+          await new Promise((resolve) => window.setTimeout(resolve, RETRY_DELAY_MS))
           if (generation !== requestGeneration) return null
           position = await getBrowserPosition(RETRY_POSITION_OPTIONS)
         }
 
         if (generation !== requestGeneration) return null
 
-        const currentPosition = setPosition(position)
+        const livePosition = setLivePosition(position)
         startSharedWatch()
-        return currentPosition
+        return livePosition
       } catch (error: unknown) {
         if (generation !== requestGeneration) return null
         return applyLocationError(error as GeolocationPositionError)
       }
     })().finally(() => {
-      if (pendingRequest === requestPromise) {
-        pendingRequest = null
-      }
+      if (pendingRequest === requestPromise) pendingRequest = null
     })
 
     pendingRequest = requestPromise
     return requestPromise
   }
 
+  function getLastKnownLocation(): GeoCoords | null {
+    const stored = readTabLocation()
+    return stored ? { lat: stored.lat, lng: stored.lng } : null
+  }
+
+  async function restoreAccountLocation(
+    position: GeoCoords,
+    positionCapturedAt: number,
+  ): Promise<boolean> {
+    const ageMs = Date.now() - positionCapturedAt
+    const valid =
+      Number.isFinite(position.lat) &&
+      Number.isFinite(position.lng) &&
+      Number.isFinite(positionCapturedAt) &&
+      ageMs >= 0 &&
+      ageMs <= ACCOUNT_FALLBACK_MAX_AGE_MS
+
+    if (!valid || isFresh() || !(await canUseStoredLocation())) return false
+
+    setCachedPosition({ ...position, capturedAt: positionCapturedAt })
+    return true
+  }
+
   return {
     status: readonly(status),
     coords: readonly(coords),
     errorMessage: readonly(errorMessage),
+    locationSource: readonly(locationSource),
     request,
+    isFresh,
     getLastKnownLocation,
+    restoreAccountLocation,
   }
 }
