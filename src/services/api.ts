@@ -1,4 +1,14 @@
+import { notifySessionExpired } from '@/utils/session'
+
 export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
+
+const AUTH_FAILURE_PATHS = new Set([
+  '/auth/login',
+  '/auth/register',
+  '/auth/send-otp',
+  '/auth/verify-otp',
+  '/auth/change-password',
+])
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = localStorage.getItem('token')
@@ -14,6 +24,10 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const data = await res.json()
 
   if (!res.ok) {
+    if (res.status === 401 && token && !AUTH_FAILURE_PATHS.has(path)) {
+      notifySessionExpired()
+    }
+
     // Backend returns { message: string } on errors
     throw new Error(data.message ?? 'Something went wrong')
   }
@@ -57,7 +71,6 @@ export interface ApiPost {
   expires_at: string
   created_at: string
   updated_at: string
-  image_url?: string | null
   user?: PostUser | null
   comments?: unknown[]
   reactions?: unknown[]
@@ -216,6 +229,16 @@ export const authApi = {
     })
   },
 
+  changePassword(currentPassword: string, newPassword: string): Promise<{ message: string }> {
+    return request<{ message: string }>('/auth/change-password', {
+      method: 'POST',
+      body: JSON.stringify({
+        current_password: currentPassword,
+        new_password: newPassword,
+      }),
+    })
+  },
+
   register(payload: {
     username: string
     first_name: string
@@ -271,11 +294,7 @@ export const postApi = {
     return request<ApiPost[]>(`/posts/user/${userId}?${params.toString()}`)
   },
 
-  nearby(
-    lat: number,
-    lng: number,
-    sort: 'latest' | 'active' = 'latest',
-  ): Promise<ApiPost[]> {
+  nearby(lat: number, lng: number, sort: 'latest' | 'active' = 'latest'): Promise<ApiPost[]> {
     const params = new URLSearchParams({
       lat: String(lat),
       lng: String(lng),
@@ -486,6 +505,8 @@ export interface UserProfile {
 
 export interface UpdateProfilePayload {
   username?: string
+  first_name?: string
+  last_name?: string
   bio?: string
   profile_image?: string
 }
@@ -523,6 +544,12 @@ export const userApi = {
     return request<{ message: string }>('/users/me/location', {
       method: 'PATCH',
       body: JSON.stringify({ lat, lng }),
+    })
+  },
+
+  clearLocation(): Promise<{ message: string }> {
+    return request<{ message: string }>('/users/me/location', {
+      method: 'DELETE',
     })
   },
 

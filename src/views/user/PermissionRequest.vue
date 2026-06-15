@@ -1,8 +1,10 @@
 <template>
-  <div class="permission-page">
-    <Navbar />
-
-    <div class="permission-container">
+  <AuthPageShell
+    eyebrow="Privacy-first discovery"
+    title="Local discovery starts with your location."
+    description="Nearme uses your approximate position to show relevant people and posts while keeping your exact location private."
+  >
+    <div class="permission-stack">
       <section class="permission-card">
         <!-- Icon/Illustration -->
         <div class="icon-wrapper">
@@ -14,8 +16,24 @@
           >
             <!-- Location pin with signal waves -->
             <circle cx="32" cy="32" r="2" fill="#0c9081" />
-            <circle cx="32" cy="32" r="8" fill="none" stroke="#0c9081" stroke-width="0.5" opacity="0.6" />
-            <circle cx="32" cy="32" r="14" fill="none" stroke="#0c9081" stroke-width="0.5" opacity="0.3" />
+            <circle
+              cx="32"
+              cy="32"
+              r="8"
+              fill="none"
+              stroke="#0c9081"
+              stroke-width="0.5"
+              opacity="0.6"
+            />
+            <circle
+              cx="32"
+              cy="32"
+              r="14"
+              fill="none"
+              stroke="#0c9081"
+              stroke-width="0.5"
+              opacity="0.3"
+            />
 
             <!-- Pin shape -->
             <path
@@ -58,7 +76,8 @@
             Enable Location Access
           </button>
           <p class="privacy-note">
-            Your location is only used to find nearby content and people. <a href="/privacy">Learn more</a>
+            Your location is only used to find nearby content and people.
+            <a href="/privacy">Learn more</a>
           </p>
         </div>
 
@@ -74,45 +93,33 @@
         <div v-else-if="status === 'granted'" class="state-container success">
           <div class="success-icon">
             <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path
-                d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"
-                fill="#10b981"
-              />
+              <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z" fill="#10b981" />
             </svg>
           </div>
           <p class="status-text success-text">Location access granted!</p>
-          <button @click="continueToApp" class="permission-btn primary">
-            Continue to App
-          </button>
+          <button @click="continueToApp" class="permission-btn primary">Continue to App</button>
         </div>
 
         <!-- Denied State -->
         <div v-else-if="status === 'denied'" class="state-container error">
           <div class="error-icon">
             <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path
-                d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"
-                fill="#ef4444"
-              />
+              <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z" fill="#ef4444" />
             </svg>
           </div>
           <p class="status-text error-text">Location access was denied</p>
           <p class="error-details">
-            To enable location access, please update your browser settings or try a different browser.
+            To enable location access, please update your browser settings or try a different
+            browser.
           </p>
-          <button @click="requestPermission" class="permission-btn secondary">
-            Try Again
-          </button>
+          <button @click="requestPermission" class="permission-btn secondary">Try Again</button>
         </div>
 
         <!-- Unavailable State -->
         <div v-else-if="status === 'unavailable'" class="state-container error">
           <div class="error-icon">
             <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path
-                d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"
-                fill="#ef4444"
-              />
+              <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z" fill="#ef4444" />
             </svg>
           </div>
           <p class="status-text error-text">Geolocation unavailable</p>
@@ -128,19 +135,14 @@
         <div v-else-if="status === 'error'" class="state-container error">
           <div class="error-icon">
             <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path
-                d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"
-                fill="#ef4444"
-              />
+              <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z" fill="#ef4444" />
             </svg>
           </div>
           <p class="status-text error-text">Something went wrong</p>
           <p class="error-details">
             {{ errorMessage || 'An error occurred while requesting location. Please try again.' }}
           </p>
-          <button @click="requestPermission" class="permission-btn secondary">
-            Try Again
-          </button>
+          <button @click="requestPermission" class="permission-btn secondary">Try Again</button>
         </div>
 
         <p v-if="completionError" class="error-details">
@@ -153,7 +155,7 @@
         <button @click="continueToApp" class="skip-btn">Skip for now</button>
       </div>
     </div>
-  </div>
+  </AuthPageShell>
 </template>
 
 <script setup lang="ts">
@@ -161,7 +163,7 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useGeolocation } from '@/composables/useGeolocation'
 import { MapPin } from 'lucide-vue-next'
-import Navbar from '@/components/Navbar.vue'
+import AuthPageShell from '@/components/AuthPageShell.vue'
 import { userApi } from '@/services/api'
 import { useAuthStore } from '@/stores/auth'
 
@@ -194,63 +196,65 @@ async function continueToApp() {
 </script>
 
 <style scoped>
-.permission-page {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  background: linear-gradient(135deg, #f4f7fb 0%, #e8f5f3 100%);
-  font-family: 'Poppins', 'Inter', sans-serif;
-}
-
-.permission-container {
-  flex: 1;
+.permission-stack {
+  width: min(500px, 100%);
+  margin-left: auto;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  padding: clamp(20px, 5vw, 40px);
-  gap: clamp(20px, 4vw, 32px);
+  gap: 18px;
 }
 
 .permission-card {
-  width: min(480px, 100%);
-  padding: clamp(40px, 6vw, 56px) clamp(24px, 5vw, 40px);
-  background: white;
-  border-radius: 24px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+  width: 100%;
+  padding: clamp(30px, 4vw, 44px);
+  border: 1px solid rgba(134, 160, 176, 0.22);
+  border-radius: 28px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow:
+    0 28px 70px rgba(28, 64, 82, 0.13),
+    0 2px 8px rgba(28, 64, 82, 0.04);
   text-align: center;
+  backdrop-filter: blur(18px);
 }
 
 .icon-wrapper {
-  margin-bottom: clamp(24px, 4vw, 32px);
+  width: 82px;
+  height: 82px;
+  margin: 0 auto 24px;
   display: flex;
+  align-items: center;
   justify-content: center;
+  border: 1px solid #d6ece9;
+  border-radius: 24px;
+  background: #edf8f6;
 }
 
 .permission-icon {
-  width: clamp(80px, 15vw, 120px);
-  height: clamp(80px, 15vw, 120px);
+  width: 62px;
+  height: 62px;
   color: #0c9081;
 }
 
 .permission-title {
-  font-size: clamp(1.5rem, 4vw, 1.875rem);
-  font-weight: 700;
-  color: #1f1720;
+  font-size: clamp(1.65rem, 3vw, 2rem);
+  font-weight: 800;
+  color: #17283d;
   margin: 0 0 12px;
   line-height: 1.2;
+  letter-spacing: -0.035em;
 }
 
 .permission-subtitle {
-  font-size: clamp(0.95rem, 2vw, 1rem);
-  color: #6c6067;
-  margin: 0 0 clamp(24px, 4vw, 32px);
-  line-height: 1.5;
+  font-size: 0.92rem;
+  color: #718094;
+  margin: 0 0 28px;
+  line-height: 1.6;
 }
 
 .permission-features {
   list-style: none;
-  margin: 0 0 clamp(32px, 5vw, 40px);
+  margin: 0 0 30px;
   padding: 0;
   text-align: left;
   display: flex;
@@ -263,7 +267,7 @@ async function continueToApp() {
   align-items: center;
   gap: 12px;
   font-size: 0.95rem;
-  color: #3a2f35;
+  color: #405267;
 }
 
 .feature-icon {
@@ -291,9 +295,9 @@ async function continueToApp() {
   width: 100%;
   padding: 14px 16px;
   border: none;
-  border-radius: 18px;
+  border-radius: 14px;
   font-size: 0.95rem;
-  font-weight: 600;
+  font-weight: 750;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -303,7 +307,7 @@ async function continueToApp() {
 }
 
 .permission-btn.primary {
-  background: linear-gradient(145deg, #0c9081, #087268);
+  background: linear-gradient(135deg, #0d9b8a, #08766c);
   color: white;
   box-shadow: 0 8px 16px rgba(12, 144, 129, 0.3);
 }
@@ -318,13 +322,13 @@ async function continueToApp() {
 }
 
 .permission-btn.secondary {
-  background: #f0f0f0;
-  color: #3a2f35;
-  border: 1px solid #e0d6cd;
+  background: #f5f8f9;
+  color: #405267;
+  border: 1px solid #dce5ea;
 }
 
 .permission-btn.secondary:hover {
-  background: #e8e8e8;
+  background: #edf3f5;
 }
 
 .btn-icon {
@@ -355,7 +359,7 @@ async function continueToApp() {
 
 .status-text {
   font-size: 0.95rem;
-  color: #6c6067;
+  color: #718094;
   margin: 8px 0;
 }
 
@@ -400,14 +404,14 @@ async function continueToApp() {
 
 .error-details {
   font-size: 0.85rem;
-  color: #6c6067;
+  color: #718094;
   margin: 0;
   line-height: 1.5;
 }
 
 .privacy-note {
   font-size: 0.8rem;
-  color: #8b7c83;
+  color: #82909e;
   margin: 0;
   line-height: 1.4;
 }
@@ -427,23 +431,35 @@ async function continueToApp() {
 }
 
 .skip-btn {
-  background: none;
-  border: none;
-  color: #6c6067;
-  font-size: 0.95rem;
+  min-height: 38px;
+  padding: 0 15px;
+  border: 1px solid rgba(134, 160, 176, 0.25);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.65);
+  color: #617284;
+  font-size: 0.84rem;
+  font-weight: 700;
   cursor: pointer;
-  text-decoration: underline;
-  transition: color 0.2s ease;
+  transition:
+    color 0.2s ease,
+    background 0.2s ease;
 }
 
 .skip-btn:hover {
-  color: #3a2f35;
+  color: #26394d;
+  background: #fff;
+}
+
+@media (max-width: 900px) {
+  .permission-stack {
+    margin-inline: auto;
+  }
 }
 
 @media (max-width: 640px) {
   .permission-card {
-    padding: 32px 20px;
-    border-radius: 20px;
+    padding: 28px 20px;
+    border-radius: 22px;
   }
 
   .permission-title {
@@ -463,12 +479,8 @@ async function continueToApp() {
 }
 
 @media (max-width: 380px) {
-  .permission-page {
-    padding: 16px;
-  }
-
   .permission-card {
-    padding: 28px 16px;
+    padding-inline: 17px;
   }
 
   .permission-title {

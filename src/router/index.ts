@@ -208,17 +208,17 @@ const router = createRouter({
 
 router.beforeEach((to, from, next) => {
   const auth = useAuthStore()
+  const hasValidSession = auth.hasValidSession()
 
   // If already logged in, don't allow user to go back to login/register
-  if ((to.name === 'Login' || to.name === 'Register') && auth.isLoggedIn) {
+  if ((to.name === 'Login' || to.name === 'Register') && hasValidSession) {
     next({ name: 'HomePage' })
     return
   }
 
-  if (auth.isLoggedIn && auth.user?.role !== 'ADMIN') {
+  if (hasValidSession && auth.user?.role !== 'ADMIN') {
     const onboardingPath = getPostAuthPath(auth.user)
-    const isOnboardingPage =
-      to.path === '/select-profile' || to.path === '/permission-request'
+    const isOnboardingPage = to.path === '/select-profile' || to.path === '/permission-request'
 
     if (onboardingPath !== '/' && to.path !== onboardingPath) {
       next(onboardingPath)
@@ -233,7 +233,7 @@ router.beforeEach((to, from, next) => {
 
   // Check login first
   // http://localhost:5173/login?redirect=/admin or any admin path redirects here
-  if (to.meta.requiresAuth && !auth.isLoggedIn) {
+  if (to.meta.requiresAuth && !hasValidSession) {
     next({
       name: 'Login',
       query: { redirect: to.fullPath },

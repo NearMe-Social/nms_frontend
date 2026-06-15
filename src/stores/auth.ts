@@ -1,5 +1,11 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import {
+  clearStoredSession,
+  getTokenExpiresAt,
+  isTokenActive,
+  notifySessionExpired,
+} from '@/utils/session'
 
 export interface AuthUser {
   userId?: number
@@ -23,11 +29,64 @@ export function getPostAuthPath(user: AuthUser | null): string {
   return '/'
 }
 
+function readStoredUser(): AuthUser | null {
+  try {
+    return JSON.parse(localStorage.getItem('auth_user') || 'null') as AuthUser | null
+  } catch {
+    clearStoredSession()
+    return null
+  }
+}
+
 export const useAuthStore = defineStore('auth', () => {
-  const token = ref<string | null>(localStorage.getItem('token') || null)
-  const user = ref<AuthUser | null>(JSON.parse(localStorage.getItem('auth_user') || 'null'))
+  const storedToken = localStorage.getItem('token')
+  let initialToken = storedToken && isTokenActive(storedToken) ? storedToken : null
+  const initialUser = initialToken ? readStoredUser() : null
+
+  if ((storedToken && !initialToken) || (initialToken && !initialUser)) {
+    clearStoredSession()
+    initialToken = null
+  }
+
+  const token = ref<string | null>(initialToken)
+  const user = ref<AuthUser | null>(initialToken ? initialUser : null)
+  let expiryTimer: ReturnType<typeof setTimeout> | null = null
 
   const isLoggedIn = computed(() => !!token.value)
+
+  function clearExpiryTimer() {
+    if (expiryTimer) clearTimeout(expiryTimer)
+    expiryTimer = null
+  }
+
+  function scheduleExpiry(newToken: string) {
+    clearExpiryTimer()
+    const expiresAt = getTokenExpiresAt(newToken)
+    if (!expiresAt) return
+
+    const remainingMs = expiresAt - Date.now()
+    if (remainingMs <= 0) {
+      expireSession()
+      return
+    }
+
+    expiryTimer = setTimeout(expireSession, remainingMs)
+  }
+
+  function expireSession() {
+    clearExpiryTimer()
+    token.value = null
+    user.value = null
+    notifySessionExpired()
+  }
+
+  function hasValidSession() {
+    if (!token.value) return false
+    if (isTokenActive(token.value)) return true
+
+    expireSession()
+    return false
+  }
 
   function setAuth(newToken: string, userData: AuthUser) {
     const normalizedUser = {
@@ -39,20 +98,21 @@ export const useAuthStore = defineStore('auth', () => {
     user.value = normalizedUser
     localStorage.setItem('token', newToken)
     localStorage.setItem('auth_user', JSON.stringify(normalizedUser))
+    scheduleExpiry(newToken)
   }
 
   // Keep setToken for backward compatibility
   function setToken(newToken: string) {
     token.value = newToken
     localStorage.setItem('token', newToken)
+    scheduleExpiry(newToken)
   }
 
   function logout() {
+    clearExpiryTimer()
     token.value = null
     user.value = null
-    localStorage.removeItem('token')
-    localStorage.removeItem('auth_user')
-    localStorage.removeItem('nms_token')
+    clearStoredSession()
   }
 
   function updateProfile(profileData: object) {
@@ -74,5 +134,16 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  return { token, user, isLoggedIn, setAuth, setToken, logout, updateProfile }
+  if (initialToken) scheduleExpiry(initialToken)
+
+  return {
+    token,
+    user,
+    isLoggedIn,
+    hasValidSession,
+    setAuth,
+    setToken,
+    logout,
+    updateProfile,
+  }
 })
