@@ -42,6 +42,7 @@ const sortMode = ref<'nearest' | 'farthest'>('nearest')
 const privacyMode = ref<'Visible Nearby' | 'Browse Privately'>(
   isNearbyPresenceEnabled() ? 'Visible Nearby' : 'Browse Privately',
 )
+const manualLocationRefresh = ref(false)
 let backgroundLocationRefreshInFlight = false
 
 const radiusOptions = [50, 100, 200]
@@ -257,8 +258,20 @@ async function init() {
   }
 }
 
-function retryLiveLocation() {
-  void refreshLocationInBackground()
+async function retryLiveLocation() {
+  if (manualLocationRefresh.value) return
+
+  manualLocationRefresh.value = true
+  try {
+    await geo.request({ forceRefresh: true })
+
+    if (geo.coords.value) {
+      updateMap(geo.coords.value)
+      await refreshNearby(false)
+    }
+  } finally {
+    manualLocationRefresh.value = false
+  }
 }
 
 watch(radius, async () => {
@@ -327,6 +340,7 @@ onUnmounted(() => {
         <LocationFallbackNotice
           v-if="geo.locationSource.value === 'cached' || geo.locationSource.value === 'account'"
           class="location-fallback"
+          :refreshing="manualLocationRefresh"
           @refresh="retryLiveLocation"
         />
 
