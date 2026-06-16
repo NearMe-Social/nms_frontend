@@ -19,13 +19,14 @@
 
 <script setup lang="ts">
 import { RouterLink, useRoute } from 'vue-router'
-import { Bell, Home, MapPin, MessageCircle, Plus, User } from 'lucide-vue-next'
+import { Bell, ClipboardList, Home, MapPin, MessageCircle, Plus, User } from 'lucide-vue-next'
 
 const route = useRoute()
 
 const navItems = [
   { to: '/', label: 'Feed', icon: Home },
   { to: '/nearby', label: 'Nearby', icon: MapPin },
+  { to: '/discussions', label: 'My Posts', icon: ClipboardList },
   { to: '/chat', label: 'Chat', icon: MessageCircle },
   { to: '/create-post', label: 'Post', icon: Plus, primary: true },
   { to: '/notifications', label: 'Alerts', icon: Bell },
@@ -64,7 +65,7 @@ function isActive(path: string) {
   gap: 3px;
   color: #8293a2;
   text-decoration: none;
-  font-size: 0.64rem;
+  font-size: 0.58rem;
   font-weight: 700;
 }
 
