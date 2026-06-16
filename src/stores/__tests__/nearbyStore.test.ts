@@ -12,12 +12,12 @@ describe('nearbyStore polling', () => {
     vi.useRealTimers()
   })
 
-  it('runs the supplied fresh-location refresh every 30 seconds', async () => {
+  it('runs the supplied fresh-location refresh every 5 seconds', async () => {
     const store = useNearbyStore()
     const refresh = vi.fn().mockResolvedValue(undefined)
 
     store.startPolling(refresh)
-    await vi.advanceTimersByTimeAsync(30_000)
+    await vi.advanceTimersByTimeAsync(5_000)
 
     expect(refresh).toHaveBeenCalledTimes(1)
     store.stopPolling()

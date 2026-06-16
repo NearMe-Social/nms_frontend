@@ -12,6 +12,8 @@ export interface NearbyUser {
   location_updated_at?: string | null
 }
 
+const NEARBY_REFRESH_INTERVAL_MS = 5_000
+
 export const useNearbyStore = defineStore('nearby', () => {
   const users = ref<NearbyUser[]>([])
   const loading = ref(false)
@@ -83,7 +85,7 @@ export const useNearbyStore = defineStore('nearby', () => {
     stopPolling()
     refreshTimer = setInterval(() => {
       void refresh()
-    }, 30_000)
+    }, NEARBY_REFRESH_INTERVAL_MS)
   }
 
   function stopPolling() {

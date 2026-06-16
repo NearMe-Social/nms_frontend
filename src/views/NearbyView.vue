@@ -19,6 +19,7 @@ import MobileBottomNav from '@/components/MobileBottomNav.vue'
 import Navbar from '@/components/Navbar.vue'
 import UserAvatar from '@/components/UserAvatar.vue'
 import LocationFallbackNotice from '@/components/LocationFallbackNotice.vue'
+import { clearNearbyPresence } from '@/utils/nearbyPresence'
 import * as L from 'leaflet'
 
 const nearbyStore = useNearbyStore()
@@ -32,10 +33,9 @@ const userMarker = ref<L.CircleMarker | null>(null)
 const nearbyMarkers = ref<L.CircleMarker[]>([])
 
 const radius = ref(100)
-const sortMode = ref<'latest' | 'active'>('latest')
-const privacyMode = ref<'Neighbors Only' | 'Approximate Distance Only' | 'Hidden From Search'>(
-  'Neighbors Only',
-)
+const sortMode = ref<'nearest' | 'farthest'>('nearest')
+const privacyMode = ref<'Visible Nearby' | 'Browse Privately'>('Visible Nearby')
+let backgroundLocationRefreshInFlight = false
 
 const radiusOptions = [50, 100, 200]
 
@@ -43,7 +43,7 @@ const filteredUsers = computed(() => {
   const inRadius = nearbyStore.users.filter((user) => user.distance_m <= radius.value)
 
   return [...inRadius].sort((a, b) => {
-    if (sortMode.value === 'latest') return a.distance_m - b.distance_m
+    if (sortMode.value === 'nearest') return a.distance_m - b.distance_m
     return b.distance_m - a.distance_m
   })
 })
@@ -55,9 +55,11 @@ const detectedLabel = computed(() => {
 
 const formattedTime = computed(() => {
   if (!nearbyStore.lastFetchedAt) return 'Waiting for live update'
+
   return `Updated ${nearbyStore.lastFetchedAt.toLocaleTimeString([], {
     hour: '2-digit',
     minute: '2-digit',
+    second: '2-digit',
   })}`
 })
 
@@ -158,7 +160,7 @@ function drawNearbyMarkers() {
   clearNearbyMarkers()
 
   const currentMap = map.value
-  if (privacyMode.value === 'Hidden From Search' || !currentMap) {
+  if (!currentMap) {
     return
   }
 
@@ -185,7 +187,7 @@ async function refreshNearby(restartPolling = true) {
   const position = geo.coords.value
   if (!position) return
 
-  const shareLocation = privacyMode.value !== 'Hidden From Search' && geo.isShareable()
+  const shareLocation = privacyMode.value === 'Visible Nearby' && geo.isShareable()
   await nearbyStore.fetchNearby(position.lat, position.lng, radius.value, shareLocation)
 
   if (!map.value) {
@@ -201,10 +203,42 @@ async function refreshNearby(restartPolling = true) {
 }
 
 async function refreshLocationAndNearby() {
-  await geo.request({
-    forceRefresh: geo.locationSource.value === 'account' || !geo.isShareable(),
-  })
+  const shouldRefreshLocation = geo.locationSource.value === 'account' || !geo.isShareable()
+
+  if (!geo.coords.value) {
+    await geo.request({ forceRefresh: shouldRefreshLocation })
+  }
+
   await refreshNearby(false)
+
+  if (shouldRefreshLocation) {
+    void refreshLocationInBackground()
+  }
+}
+
+async function refreshLocationInBackground() {
+  if (backgroundLocationRefreshInFlight) return
+
+  backgroundLocationRefreshInFlight = true
+  try {
+    const previousSource = geo.locationSource.value
+    const previousLat = geo.coords.value?.lat
+    const previousLng = geo.coords.value?.lng
+
+    await geo.request({ forceRefresh: true })
+
+    const locationChanged =
+      previousSource !== geo.locationSource.value ||
+      previousLat !== geo.coords.value?.lat ||
+      previousLng !== geo.coords.value?.lng
+
+    if (geo.coords.value && locationChanged) {
+      updateMap(geo.coords.value)
+      await refreshNearby(false)
+    }
+  } finally {
+    backgroundLocationRefreshInFlight = false
+  }
 }
 
 async function init() {
@@ -217,7 +251,7 @@ async function init() {
 }
 
 function retryLiveLocation() {
-  void geo.request({ forceRefresh: true })
+  void refreshLocationInBackground()
 }
 
 watch(radius, async () => {
@@ -230,6 +264,11 @@ watch(radius, async () => {
 
 watch(privacyMode, async () => {
   if (!geo.coords.value) return
+
+  if (privacyMode.value === 'Browse Privately') {
+    clearNearbyPresence()
+  }
+
   await refreshNearby()
 })
 
@@ -243,8 +282,12 @@ watch(
   },
 )
 
-onMounted(init)
-onUnmounted(() => nearbyStore.stopPolling())
+onMounted(() => {
+  void init()
+})
+onUnmounted(() => {
+  nearbyStore.stopPolling()
+})
 </script>
 
 <template>
@@ -296,9 +339,8 @@ onUnmounted(() => nearbyStore.stopPolling())
             <div>
               <span>Who can find you</span>
               <select v-model="privacyMode" aria-label="Privacy mode">
-                <option>Neighbors Only</option>
-                <option>Approximate Distance Only</option>
-                <option>Hidden From Search</option>
+                <option>Visible Nearby</option>
+                <option>Browse Privately</option>
               </select>
             </div>
           </div>
@@ -325,15 +367,15 @@ onUnmounted(() => nearbyStore.stopPolling())
             <div class="segmented compact">
               <button
                 type="button"
-                :class="{ selected: sortMode === 'latest' }"
-                @click="sortMode = 'latest'"
+                :class="{ selected: sortMode === 'nearest' }"
+                @click="sortMode = 'nearest'"
               >
                 Nearest
               </button>
               <button
                 type="button"
-                :class="{ selected: sortMode === 'active' }"
-                @click="sortMode = 'active'"
+                :class="{ selected: sortMode === 'farthest' }"
+                @click="sortMode = 'farthest'"
               >
                 Farthest
               </button>
@@ -371,29 +413,35 @@ onUnmounted(() => nearbyStore.stopPolling())
           <article class="status-card">
             <SlidersHorizontal />
             <div>
-              <strong>Visibility Radius</strong>
-              <span>Posts and users are filtered to {{ radius }}m.</span>
+              <strong>Search Radius</strong>
+              <span>Showing people within {{ radius }}m of your current area.</span>
             </div>
           </article>
           <article class="status-card">
             <ShieldCheck />
             <div>
-              <strong>Location Privacy</strong>
-              <span>Exact location is hidden; only approximate distance is shown.</span>
+              <strong>Presence Mode</strong>
+              <span>
+                {{
+                  privacyMode === 'Visible Nearby'
+                    ? 'Others nearby can find you while this page is open.'
+                    : 'You can browse without sharing your presence.'
+                }}
+              </span>
             </div>
           </article>
           <article class="status-card">
             <Flag />
             <div>
-              <strong>Moderation</strong>
-              <span>Report and block controls are available for unsafe behavior.</span>
+              <strong>Auto Refresh</strong>
+              <span>The list checks for nearby people every 5 seconds.</span>
             </div>
           </article>
           <article class="status-card">
             <MessageCircle />
             <div>
-              <strong>Notifications</strong>
-              <span>Replies and nearby posts can trigger alerts.</span>
+              <strong>Safety Tools</strong>
+              <span>Message, report, and privacy controls stay available.</span>
             </div>
           </article>
         </section>
