@@ -1,6 +1,10 @@
 <script setup lang="ts">
 import { MapPinned, RefreshCw } from 'lucide-vue-next'
 
+defineProps<{
+  refreshing?: boolean
+}>()
+
 defineEmits<{
   refresh: []
 }>()
@@ -17,10 +21,11 @@ defineEmits<{
     <button
       type="button"
       class="inline-flex items-center gap-1.5 font-bold text-teal-700 transition hover:text-teal-900"
+      :disabled="refreshing"
       @click="$emit('refresh')"
     >
-      <RefreshCw class="h-3.5 w-3.5" />
-      Refresh location
+      <RefreshCw class="h-3.5 w-3.5" :class="{ 'animate-spin': refreshing }" />
+      {{ refreshing ? 'Refreshing...' : 'Refresh location' }}
     </button>
   </div>
 </template>
