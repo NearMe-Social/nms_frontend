@@ -6,6 +6,7 @@ import { useChatSocketStore } from '@/stores/chatSocket'
 import { stopGeolocationTracking } from '@/composables/useGeolocation'
 import { authApi } from '@/services/api'
 import { SESSION_EXPIRED_EVENT } from '@/utils/session'
+import { clearNearbyPresence } from '@/utils/nearbyPresence'
 
 const auth = useAuthStore()
 const chatSocket = useChatSocketStore()
@@ -23,6 +24,7 @@ async function validateRememberedSession() {
 }
 
 function handleSessionExpired() {
+  clearNearbyPresence()
   auth.logout()
   chatSocket.disconnect()
   stopGeolocationTracking(true)
@@ -32,6 +34,12 @@ function handleSessionExpired() {
       name: 'Login',
       query: { reason: 'session-expired' },
     })
+  }
+}
+
+function handlePageHide() {
+  if (auth.isLoggedIn) {
+    clearNearbyPresence({ keepalive: true })
   }
 }
 
@@ -45,6 +53,7 @@ function handleVisibilityChange() {
 
 onMounted(() => {
   window.addEventListener(SESSION_EXPIRED_EVENT, handleSessionExpired)
+  window.addEventListener('pagehide', handlePageHide)
   document.addEventListener('visibilitychange', handleVisibilityChange)
 
   if (auth.hasValidSession()) {
@@ -57,6 +66,7 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   window.removeEventListener(SESSION_EXPIRED_EVENT, handleSessionExpired)
+  window.removeEventListener('pagehide', handlePageHide)
   document.removeEventListener('visibilitychange', handleVisibilityChange)
 })
 
@@ -66,6 +76,7 @@ watch(
     if (isLoggedIn) {
       chatSocket.connect()
     } else {
+      clearNearbyPresence()
       chatSocket.disconnect()
       stopGeolocationTracking(true)
     }

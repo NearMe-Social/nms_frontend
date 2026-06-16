@@ -21,6 +21,7 @@ import UserAvatar from '@/components/UserAvatar.vue'
 import { authApi, userApi, type UserProfile } from '@/services/api'
 import { stopGeolocationTracking } from '@/composables/useGeolocation'
 import { useAuthStore } from '@/stores/auth'
+import { clearNearbyPresence } from '@/utils/nearbyPresence'
 
 defineOptions({ name: 'UserSettings' })
 
@@ -146,6 +147,7 @@ async function clearLocation() {
 }
 
 async function signOut() {
+  clearNearbyPresence()
   auth.logout()
   await router.replace('/login')
 }

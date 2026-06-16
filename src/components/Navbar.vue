@@ -131,6 +131,7 @@ import { searchApi, type ApiPost, type ApiSearchUser } from '@/services/api'
 import BrandLogo from '@/components/BrandLogo.vue'
 import UserAvatar from '@/components/UserAvatar.vue'
 import { useGeolocation } from '@/composables/useGeolocation'
+import { clearNearbyPresence } from '@/utils/nearbyPresence'
 
 const route = useRoute()
 const router = useRouter()
@@ -220,6 +221,7 @@ function handleDocumentClick(event: MouseEvent) {
 }
 
 function handleLogout() {
+  clearNearbyPresence()
   auth.logout()
   router.replace('/login')
 }

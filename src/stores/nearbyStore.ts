@@ -48,7 +48,7 @@ export const useNearbyStore = defineStore('nearby', () => {
     error.value = null
 
     try {
-      if(shareLocation) {
+      if (shareLocation) {
         await updateMyLocation(lat, lng)
       }
 
