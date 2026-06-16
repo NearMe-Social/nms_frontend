@@ -185,7 +185,7 @@ async function refreshNearby(restartPolling = true) {
   const position = geo.coords.value
   if (!position) return
 
-  const shareLocation = privacyMode.value !== 'Hidden From Search' && geo.isFresh()
+  const shareLocation = privacyMode.value !== 'Hidden From Search' && geo.isShareable()
   await nearbyStore.fetchNearby(position.lat, position.lng, radius.value, shareLocation)
 
   if (!map.value) {
@@ -201,6 +201,9 @@ async function refreshNearby(restartPolling = true) {
 }
 
 async function refreshLocationAndNearby() {
+  await geo.request({
+    forceRefresh: geo.locationSource.value === 'account' || !geo.isShareable(),
+  })
   await refreshNearby(false)
 }
 
@@ -233,7 +236,7 @@ watch(privacyMode, async () => {
 watch(
   () => geo.locationSource.value,
   (source, previousSource) => {
-    if (previousSource === 'cached' && source === 'live' && geo.coords.value) {
+    if (source && previousSource && source !== previousSource && geo.coords.value) {
       updateMap(geo.coords.value)
       void refreshNearby()
     }
@@ -268,7 +271,7 @@ onUnmounted(() => nearbyStore.stopPolling())
         </section>
 
         <LocationFallbackNotice
-          v-if="geo.locationSource.value === 'cached'"
+          v-if="geo.locationSource.value === 'cached' || geo.locationSource.value === 'account'"
           class="location-fallback"
           @refresh="retryLiveLocation"
         />
