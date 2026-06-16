@@ -88,7 +88,10 @@
                       :alt="conversation.name"
                       class="chat-avatar"
                     />
-                    <span :class="conversation.online ? 'online' : 'offline'" />
+                    <span
+                      class="presence-dot"
+                      :class="conversation.online ? 'online' : 'offline'"
+                    />
                   </div>
                   <div class="conversation-copy">
                     <div class="conversation-topline">
@@ -138,7 +141,10 @@
                   :alt="activeConversation.name"
                   class="chat-avatar"
                 />
-                <span :class="activeConversation.online ? 'online' : 'offline'" />
+                <span
+                  class="presence-dot"
+                  :class="activeConversation.online ? 'online' : 'offline'"
+                />
               </div>
 
               <div class="contact-copy">
@@ -1139,6 +1145,12 @@ h2 {
 .avatar-wrap,
 .contact-avatar {
   position: relative;
+  width: 52px;
+  height: 52px;
+  display: inline-flex;
+  flex: 0 0 52px;
+  align-items: center;
+  justify-content: center;
 }
 
 .chat-avatar {
@@ -1150,11 +1162,10 @@ h2 {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
 
-.avatar-wrap span,
-.contact-avatar span {
+.presence-dot {
   position: absolute;
-  right: 2px;
-  bottom: 2px;
+  right: -1px;
+  bottom: -1px;
   width: 14px;
   height: 14px;
   border: 2px solid white;
@@ -1667,6 +1678,13 @@ h2 {
   .chat-avatar {
     width: 48px;
     height: 48px;
+  }
+
+  .avatar-wrap,
+  .contact-avatar {
+    width: 48px;
+    height: 48px;
+    flex-basis: 48px;
   }
 
   .bubble {
