@@ -32,10 +32,7 @@ const visibilityRadius = ref(100)
 const selectedDuration = ref<(typeof durationOptions)[number]>('12h')
 const submitting = ref(false)
 const imageInput = ref<HTMLInputElement | null>(null)
-const selectedImageUrl = ref('')
-const selectedImageName = ref('')
-const selectedImageFile = ref<File | null>(null)
-let activeObjectUrl: string | null = null
+const selectedImages = ref<Array<{ file: File; url: string }>>([])
 const router = useRouter()
 const auth = useAuthStore()
 const geo = useGeolocation()
@@ -89,47 +86,52 @@ function openImagePicker() {
 }
 
 function clearSelectedImage() {
-  if (activeObjectUrl) {
-    URL.revokeObjectURL(activeObjectUrl)
-    activeObjectUrl = null
-  }
-
-  selectedImageUrl.value = ''
-  selectedImageName.value = ''
-  selectedImageFile.value = null
+  selectedImages.value.forEach((image) => URL.revokeObjectURL(image.url))
+  selectedImages.value = []
 
   if (imageInput.value) {
     imageInput.value.value = ''
   }
 }
 
+function removeSelectedImage(index: number) {
+  const image = selectedImages.value[index]
+  if (!image) return
+
+  URL.revokeObjectURL(image.url)
+  selectedImages.value = selectedImages.value.filter((_, imageIndex) => imageIndex !== index)
+}
+
 function handleImageChange(event: Event) {
   const target = event.target as HTMLInputElement
-  const file = target.files?.[0]
+  const files = Array.from(target.files ?? [])
 
-  if (!file) {
-    clearSelectedImage()
+  if (files.length === 0) {
     return
   }
 
-  if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
-    clearSelectedImage()
+  const invalidFile = files.find(
+    (file) => !['image/jpeg', 'image/png', 'image/webp'].includes(file.type),
+  )
+  if (invalidFile) {
     submitError.value = 'Choose a JPEG, PNG, or WebP image.'
+    target.value = ''
     return
   }
 
-  if (file.size > 5 * 1024 * 1024) {
-    clearSelectedImage()
+  const oversizedFile = files.find((file) => file.size > 5 * 1024 * 1024)
+  if (oversizedFile) {
     submitError.value = 'Post image must be smaller than 5 MB.'
+    target.value = ''
     return
   }
 
   clearSelectedImage()
   submitError.value = ''
-  activeObjectUrl = URL.createObjectURL(file)
-  selectedImageUrl.value = activeObjectUrl
-  selectedImageName.value = file.name
-  selectedImageFile.value = file
+  selectedImages.value = files.slice(0, 6).map((file) => ({
+    file,
+    url: URL.createObjectURL(file),
+  }))
 }
 
 function durationToMs(duration: (typeof durationOptions)[number]) {
@@ -147,7 +149,7 @@ function resetDraft() {
 }
 
 function requestDiscard() {
-  if (!title.value && !content.value && !selectedImageUrl.value) {
+  if (!title.value && !content.value && selectedImages.value.length === 0) {
     resetDraft()
     return
   }
@@ -183,7 +185,7 @@ async function submitPost() {
         visibility_radius: visibilityRadius.value,
         expires_at: new Date(Date.now() + durationToMs(selectedDuration.value)).toISOString(),
       },
-      selectedImageFile.value,
+      selectedImages.value.map((image) => image.file),
     )
 
     submitting.value = false
@@ -281,8 +283,8 @@ onBeforeUnmount(() => {
               <div class="section-intro">
                 <div>
                   <span class="section-label">Optional visual</span>
-                  <h2>Add an image preview</h2>
-                  <p>Choose a clear image that supports your update.</p>
+                  <h2>Add image previews</h2>
+                  <p>Choose up to 6 clear images that support your update.</p>
                 </div>
                 <ImagePlus />
               </div>
@@ -291,28 +293,48 @@ onBeforeUnmount(() => {
                 ref="imageInput"
                 type="file"
                 accept="image/jpeg,image/png,image/webp"
+                multiple
                 class="visually-hidden"
                 @change="handleImageChange"
               />
 
-              <div v-if="selectedImageUrl" class="image-preview">
-                <img :src="selectedImageUrl" alt="Selected image preview" />
+              <div v-if="selectedImages.length" class="image-preview">
+                <div class="selected-image-grid">
+                  <article
+                    v-for="(image, index) in selectedImages"
+                    :key="image.url"
+                    class="selected-image-tile"
+                  >
+                    <img :src="image.url" :alt="`Selected image ${index + 1}`" />
+                    <span>Preview</span>
+                    <button
+                      type="button"
+                      :aria-label="`Remove ${image.file.name}`"
+                      @click="removeSelectedImage(index)"
+                    >
+                      <Trash2 />
+                    </button>
+                  </article>
+                </div>
                 <div class="image-details">
                   <div>
-                    <span class="section-label">Selected image</span>
-                    <strong>{{ selectedImageName }}</strong>
+                    <span class="section-label">Selected images</span>
+                    <strong>
+                      {{ selectedImages.length }} image{{ selectedImages.length === 1 ? '' : 's' }}
+                      ready
+                    </strong>
                   </div>
                   <button type="button" @click="clearSelectedImage">
                     <Trash2 />
-                    Remove
+                    Remove all
                   </button>
                 </div>
               </div>
 
               <button v-else type="button" class="upload-zone" @click="openImagePicker">
                 <span class="upload-icon"><UploadCloud /></span>
-                <strong>Choose an image</strong>
-                <span>PNG, JPG or WebP · Maximum 5 MB</span>
+                <strong>Choose images</strong>
+                <span>PNG, JPG or WebP · Up to 6 images · Maximum 5 MB each</span>
               </button>
             </section>
 
@@ -410,14 +432,14 @@ onBeforeUnmount(() => {
                     <strong>Post image</strong>
                     <span>
                       {{
-                        selectedImageFile
-                          ? 'Your selected image will upload with this post.'
-                          : 'Optional. Your post can be published without an image.'
+                        selectedImages.length
+                          ? `${selectedImages.length} image${selectedImages.length === 1 ? '' : 's'} will upload with this post.`
+                          : 'Optional. Your post can be published without images.'
                       }}
                     </span>
                   </div>
-                  <span class="summary-status" :class="{ ready: selectedImageFile }">
-                    {{ selectedImageFile ? 'Attached' : 'Optional' }}
+                  <span class="summary-status" :class="{ ready: selectedImages.length }">
+                    {{ selectedImages.length ? 'Attached' : 'Optional' }}
                   </span>
                 </div>
               </div>
@@ -933,11 +955,62 @@ onBeforeUnmount(() => {
   background: #f8fafc;
 }
 
-.image-preview > img {
+.selected-image-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 3px;
+  padding: 3px;
+}
+
+.selected-image-tile {
+  position: relative;
+  min-height: 155px;
+  overflow: hidden;
+  border-radius: 13px;
+  background: #eaf1f5;
+}
+
+.selected-image-tile img {
   width: 100%;
-  height: 240px;
+  height: 100%;
+  min-height: 155px;
   display: block;
   object-fit: cover;
+  object-position: center center;
+}
+
+.selected-image-tile span {
+  position: absolute;
+  left: 8px;
+  bottom: 8px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.74);
+  padding: 4px 7px;
+  color: #fff;
+  font-size: 0.62rem;
+  font-weight: 850;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.selected-image-tile button {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.74);
+  color: #fff;
+  cursor: pointer;
+}
+
+.selected-image-tile button svg {
+  width: 15px;
+  height: 15px;
 }
 
 .image-details {

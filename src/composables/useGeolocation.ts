@@ -19,6 +19,9 @@ export interface GeoRequestOptions {
 
 const TAB_LOCATION_KEY = 'nms_tab_location'
 const LEGACY_PERSISTENT_LOCATION_KEY = 'nms_last_known_location'
+const GEO_PERMISSION_DENIED = 1
+const GEO_POSITION_UNAVAILABLE = 2
+const GEO_TIMEOUT = 3
 const FRESH_LOCATION_AGE_MS = 2 * 60_000
 const SHAREABLE_LOCATION_AGE_MS = 10 * 60_000
 const ACCOUNT_FALLBACK_MAX_AGE_MS = 24 * 60 * 60_000
@@ -29,6 +32,11 @@ const POSITION_OPTIONS: PositionOptions = {
 }
 const RETRY_POSITION_OPTIONS: PositionOptions = {
   timeout: 18_000,
+  maximumAge: 10 * 60_000,
+  enableHighAccuracy: false,
+}
+const FALLBACK_WATCH_OPTIONS: PositionOptions = {
+  timeout: 20_000,
   maximumAge: 10 * 60_000,
   enableHighAccuracy: false,
 }
@@ -130,7 +138,7 @@ function startSharedWatch() {
       setLivePosition(position)
     },
     (error) => {
-      if (!coords.value && error.code === error.PERMISSION_DENIED) {
+      if (!coords.value && error.code === GEO_PERMISSION_DENIED) {
         status.value = 'denied'
         errorMessage.value = 'Location access was denied. Enable it in browser settings.'
       }
@@ -156,7 +164,7 @@ async function canUseStoredLocation(): Promise<boolean> {
 }
 
 function applyLocationError(error: GeolocationPositionError): GeoCoords | null {
-  if (error.code === error.PERMISSION_DENIED) {
+  if (error.code === GEO_PERMISSION_DENIED) {
     status.value = 'denied'
     errorMessage.value = 'Location access was denied. Enable it in browser settings.'
     locationSource.value = null
@@ -170,7 +178,7 @@ function applyLocationError(error: GeolocationPositionError): GeoCoords | null {
   }
 
   locationSource.value = null
-  if (error.code === error.POSITION_UNAVAILABLE) {
+  if (error.code === GEO_POSITION_UNAVAILABLE) {
     status.value = 'unavailable'
     errorMessage.value = 'Your location could not be determined right now.'
   } else {
@@ -205,6 +213,55 @@ export function useGeolocation() {
   function getBrowserPosition(options: PositionOptions): Promise<GeolocationPosition> {
     return new Promise((resolve, reject) => {
       navigator.geolocation.getCurrentPosition(resolve, reject, options)
+    })
+  }
+
+  function getPositionFromTemporaryWatch(options: PositionOptions): Promise<GeolocationPosition> {
+    return new Promise((resolve, reject) => {
+      if (
+        !navigator.geolocation ||
+        typeof navigator.geolocation.watchPosition !== 'function'
+      ) {
+        reject(new Error('Geolocation watch is not available.'))
+        return
+      }
+
+      let settled = false
+      let fallbackWatchId: number | null = null
+      const timeoutId = window.setTimeout(() => {
+        if (settled) return
+        settled = true
+        if (fallbackWatchId !== null) {
+          navigator.geolocation.clearWatch(fallbackWatchId)
+        }
+        reject(
+          Object.assign(new Error('Location watch timed out.'), {
+            code: GEO_TIMEOUT,
+          }),
+        )
+      }, options.timeout ?? 20_000)
+
+      fallbackWatchId = navigator.geolocation.watchPosition(
+        (position) => {
+          if (settled) return
+          settled = true
+          window.clearTimeout(timeoutId)
+          if (fallbackWatchId !== null) {
+            navigator.geolocation.clearWatch(fallbackWatchId)
+          }
+          resolve(position)
+        },
+        (error) => {
+          if (settled) return
+          settled = true
+          window.clearTimeout(timeoutId)
+          if (fallbackWatchId !== null) {
+            navigator.geolocation.clearWatch(fallbackWatchId)
+          }
+          reject(error)
+        },
+        options,
+      )
     })
   }
 
@@ -272,11 +329,25 @@ export function useGeolocation() {
           position = await getBrowserPosition(POSITION_OPTIONS)
         } catch (error: unknown) {
           const firstError = error as GeolocationPositionError
-          if (firstError.code !== firstError.TIMEOUT) throw firstError
+          if (firstError.code !== GEO_TIMEOUT) throw firstError
 
           await new Promise((resolve) => window.setTimeout(resolve, RETRY_DELAY_MS))
           if (generation !== requestGeneration) return null
-          position = await getBrowserPosition(RETRY_POSITION_OPTIONS)
+          try {
+            position = await getBrowserPosition(RETRY_POSITION_OPTIONS)
+          } catch (retryError: unknown) {
+            const secondError = retryError as GeolocationPositionError
+            if (
+              secondError.code !== GEO_TIMEOUT &&
+              secondError.code !== GEO_POSITION_UNAVAILABLE
+            ) {
+              throw secondError
+            }
+
+            if (generation !== requestGeneration) return null
+            if (coords.value) throw secondError
+            position = await getPositionFromTemporaryWatch(FALLBACK_WATCH_OPTIONS)
+          }
         }
 
         if (generation !== requestGeneration) return null
