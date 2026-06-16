@@ -82,74 +82,20 @@
         <!-- LOCATION PERMISSION STATE -->
         <div
           v-else-if="geo.status.value === 'denied'"
-          class="animate-fade-up overflow-hidden rounded-[18px] bg-white shadow-sm ring-1 ring-slate-200/80"
+          class="animate-fade-up rounded-[18px] bg-white p-8 text-center ring-1 ring-rose-100 flex flex-col items-center gap-3"
         >
-          <div class="grid gap-6 p-6 sm:p-8 lg:grid-cols-[minmax(0,1fr)_minmax(280px,0.75fr)]">
-            <div class="flex items-start gap-4">
-              <span
-                class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-teal-50 text-teal-700"
-              >
-                <MapPinned class="h-6 w-6" />
-              </span>
-              <div>
-                <p class="text-xs font-black uppercase tracking-[0.16em] text-teal-700">
-                  Location needed
-                </p>
-                <h2 class="mt-2 text-xl font-black text-slate-900">
-                  Allow location to see your nearby feed
-                </h2>
-                <p class="mt-2 max-w-xl text-sm font-medium leading-6 text-slate-500">
-                  Posts are hidden until we can confirm that you are inside each post's visibility
-                  radius. Your exact location is never shown to other users.
-                </p>
-
-                <div class="mt-5 flex flex-wrap gap-3">
-                  <button
-                    type="button"
-                    class="inline-flex items-center gap-2 rounded-xl bg-teal-600 px-4 py-2.5 text-xs font-bold text-white transition hover:bg-teal-700"
-                    @click="retryLocation"
-                  >
-                    <RefreshCw class="h-4 w-4" />
-                    I enabled it, retry
-                  </button>
-                  <RouterLink
-                    to="/discussions"
-                    class="inline-flex items-center rounded-xl bg-slate-100 px-4 py-2.5 text-xs font-bold text-slate-600 no-underline transition hover:bg-slate-200"
-                  >
-                    View my posts
-                  </RouterLink>
-                </div>
-              </div>
-            </div>
-
-            <div class="rounded-2xl bg-slate-50 p-5 ring-1 ring-slate-200/70">
-              <p class="text-xs font-black uppercase tracking-[0.14em] text-slate-700">
-                Enable it in Chrome
-              </p>
-              <ol class="mt-4 grid gap-3 text-xs font-medium leading-5 text-slate-500">
-                <li class="flex gap-3">
-                  <span class="step-number">1</span>
-                  Click the site controls icon on the left side of the address bar.
-                </li>
-                <li class="flex gap-3">
-                  <span class="step-number">2</span>
-                  Change <strong class="text-slate-700">Location</strong> to
-                  <strong class="text-slate-700">Allow</strong>.
-                </li>
-                <li class="flex gap-3">
-                  <span class="step-number">3</span>
-                  Return here. The feed will refresh automatically.
-                </li>
-              </ol>
-            </div>
+          <div class="w-12 h-12 bg-red-50 rounded-full flex items-center justify-center">
+            <AlertCircle class="w-6 h-6 text-red-400" />
           </div>
-
-          <div
-            class="flex items-center gap-2 border-t border-slate-100 bg-teal-50/60 px-6 py-3 text-xs font-semibold text-teal-800 sm:px-8"
+          <p class="text-sm font-bold text-rose-600">
+            {{ geo.errorMessage.value || 'Location access was denied. Enable it in browser settings.' }}
+          </p>
+          <button
+            @click="retryLocation"
+            class="text-xs font-bold text-teal-600 hover:underline hover:text-teal-700 transition-colors duration-200"
           >
-            <ShieldCheck class="h-4 w-4 shrink-0" />
-            This prevents posts limited to 50m, 100m, or 200m from appearing outside their area.
-          </div>
+            Try again
+          </button>
         </div>
 
         <!-- ERROR STATE -->
@@ -252,6 +198,9 @@
                 <PostOptionsMenu
                   :post-id="post.post_id"
                   :user-id="post.user?.user_id"
+                  allow-owner-actions
+                  @edit="navigateToPostEdit"
+                  @deleted="removePostFromFeed"
                   @click.stop
                 />
               </div>
@@ -271,8 +220,8 @@
             </div>
 
             <PostImageViewer
-              v-if="post.image_url"
-              :src="post.image_url"
+              v-if="postImageUrls(post).length"
+              :images="postImageUrls(post)"
               :alt="post.title"
               variant="feed"
             />
@@ -443,7 +392,6 @@ import { postApi, userApi, type ApiPost } from '@/services/api'
 import { useNearbyLocation } from '@/composables/useNearbyLocation'
 import {
   MapPin,
-  MapPinned,
   MessageCircle,
   Plus,
   Heart,
@@ -479,6 +427,18 @@ const totalInteractions = computed(() => totalReactions.value + totalComments.va
 
 function navigateToPost(postId: number) {
   router.push(`/posts/${postId}`)
+}
+
+function navigateToPostEdit(postId: number) {
+  router.push({ path: `/posts/${postId}`, query: { edit: '1' } })
+}
+
+function removePostFromFeed(postId: number) {
+  posts.value = posts.value.filter((post) => post.post_id !== postId)
+}
+
+function postImageUrls(post: ApiPost) {
+  return post.image_urls?.length ? post.image_urls : post.image_url ? [post.image_url] : []
 }
 
 function profileRoute(userId?: number | null) {
@@ -685,17 +645,4 @@ onBeforeUnmount(() => {
   overflow: hidden;
 }
 
-.step-number {
-  width: 22px;
-  height: 22px;
-  display: inline-flex;
-  flex: 0 0 22px;
-  align-items: center;
-  justify-content: center;
-  border-radius: 999px;
-  background: #dff3f1;
-  color: #0f766e;
-  font-size: 0.68rem;
-  font-weight: 900;
-}
 </style>

@@ -57,7 +57,13 @@
                   <span class="post-tag">{{ post.status }}</span>
                   <span class="post-time"><Clock3 /> {{ timeAgo(post.created_at) }}</span>
                 </div>
-                <UserOptionsMenu :user-id="post.user?.user_id" />
+                <PostOptionsMenu
+                  :post-id="post.post_id"
+                  :user-id="post.user?.user_id"
+                  allow-owner-actions
+                  @edit="openEditPost"
+                  @deleted="handlePostDeleted"
+                />
               </div>
 
               <div class="author-row">
@@ -96,8 +102,8 @@
               </div>
 
               <PostImageViewer
-                v-if="post.image_url"
-                :src="post.image_url"
+                v-if="postImageUrls.length"
+                :images="postImageUrls"
                 :alt="post.title"
                 class="post-image"
                 variant="detail"
@@ -178,20 +184,117 @@
       </main>
     </div>
 
+    <div v-if="editingPost" class="modal-backdrop" @click.self="closeEditPost">
+      <form class="edit-modal" @submit.prevent="savePostEdit">
+        <div class="modal-heading">
+          <div>
+            <span class="eyebrow">Manage post</span>
+            <h2>Edit this post</h2>
+            <p>Update the message people see around this location.</p>
+          </div>
+          <button type="button" class="modal-close" @click="closeEditPost">×</button>
+        </div>
+
+        <label>
+          <span>Title</span>
+          <input v-model="editTitle" type="text" maxlength="120" />
+        </label>
+
+        <label>
+          <span>Content</span>
+          <textarea v-model="editContent" rows="6" maxlength="1200"></textarea>
+        </label>
+
+        <section class="edit-image-panel">
+          <span>Post pictures</span>
+          <div class="edit-image-content">
+            <div v-if="editImagePreviews.length" class="edit-image-preview-grid">
+              <button
+                v-for="(image, index) in editImagePreviews"
+                :key="`${image}-${index}`"
+                type="button"
+                class="edit-image-preview"
+              >
+                <img :src="image" :alt="`Post image preview ${index + 1}`" />
+                <span class="preview-badge">Preview</span>
+              </button>
+            </div>
+            <div v-else class="edit-image-preview">
+              <ImagePlus />
+            </div>
+            <div class="edit-image-copy">
+              <strong>{{ editImageLabel }}</strong>
+              <p>
+                Use JPEG, PNG, or WebP images under 5 MB each. Choosing new images replaces the
+                current gallery.
+              </p>
+              <button type="button" class="image-action" @click="editImageInput?.click()">
+                <Camera />
+                Choose images
+              </button>
+              <input
+                ref="editImageInput"
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                multiple
+                class="sr-only"
+                @change="handleEditImageChange"
+              />
+            </div>
+          </div>
+        </section>
+
+        <div class="edit-grid">
+          <label>
+            <span>Visibility radius</span>
+            <select v-model.number="editRadius">
+              <option :value="50">50m</option>
+              <option :value="100">100m</option>
+              <option :value="200">200m</option>
+            </select>
+          </label>
+
+          <label>
+            <span>Extend lifetime</span>
+            <select v-model="editDuration">
+              <option
+                v-for="duration in durationOptions"
+                :key="duration.value"
+                :value="duration.value"
+              >
+                {{ duration.label }}
+              </option>
+            </select>
+          </label>
+        </div>
+
+        <p v-if="editError" class="edit-error">{{ editError }}</p>
+
+        <div class="modal-actions">
+          <button type="button" class="secondary-action" @click="closeEditPost">Cancel</button>
+          <button type="submit" class="save-action" :disabled="savingEdit">
+            {{ savingEdit ? 'Saving...' : 'Save changes' }}
+          </button>
+        </div>
+      </form>
+    </div>
+
     <MobileBottomNav />
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import {
   ArrowLeft,
   ArrowRight,
+  Camera,
   CheckCircle2,
   Clock3,
   FileText,
   Heart,
+  ImagePlus,
   MapPin,
   MessageCircle,
   RefreshCw,
@@ -201,7 +304,7 @@ import CommentSection from './CommentSection.vue'
 import Navbar from '@/components/Navbar.vue'
 import AppSidebar from '@/components/AppSidebar.vue'
 import UserAvatar from '@/components/UserAvatar.vue'
-import UserOptionsMenu from '@/components/UserOptionsMenu.vue'
+import PostOptionsMenu from '@/components/PostOptionsMenu.vue'
 import MobileBottomNav from '@/components/MobileBottomNav.vue'
 import PostImageViewer from '@/components/PostImageViewer.vue'
 import { commentApi, postApi, type ApiComment, type ApiPost } from '@/services/api'
@@ -247,6 +350,25 @@ const loading = ref(false)
 const error = ref('')
 const commentSubmitting = ref(false)
 const commentError = ref('')
+const editError = ref('')
+const savingEdit = ref(false)
+const editingPost = ref(false)
+const editTitle = ref('')
+const editContent = ref('')
+const editRadius = ref(100)
+const editDuration = ref('none')
+const editImageFiles = ref<File[]>([])
+const editImagePreviews = ref<string[]>([])
+const editImageInput = ref<HTMLInputElement | null>(null)
+const durationOptions = [
+  { value: 'none', label: 'No extension' },
+  { value: '3h', label: '3h' },
+  { value: '6h', label: '6h' },
+  { value: '12h', label: '12h' },
+  { value: '24h', label: '24h' },
+] as const
+const allowedImageTypes = ['image/jpeg', 'image/png', 'image/webp']
+let editImageObjectUrls: string[] = []
 const commentSectionRef = ref<InstanceType<typeof CommentSection> | null>(null)
 const highlightCommentId = computed(() => {
   const commentId = Number(route.query.commentId)
@@ -261,6 +383,31 @@ const commentCount = computed(() => comments.value.length)
 const reactionsCount = computed(
   () => post.value?.reactions?.length ?? post.value?.reactions_count ?? 0,
 )
+const postImageUrls = computed(() =>
+  post.value?.image_urls?.length
+    ? post.value.image_urls
+    : post.value?.image_url
+      ? [post.value.image_url]
+      : [],
+)
+const currentUserId = computed(() => auth.user?.userId ?? auth.user?.user_id ?? null)
+const isPostOwner = computed(
+  () =>
+    post.value?.user?.user_id !== undefined &&
+    currentUserId.value !== null &&
+    post.value.user.user_id === currentUserId.value,
+)
+const editImageLabel = computed(() => {
+  if (editImageFiles.value.length > 0) {
+    return `${editImageFiles.value.length} new image${editImageFiles.value.length === 1 ? '' : 's'} selected`
+  }
+
+  if (editImagePreviews.value.length > 0) {
+    return `${editImagePreviews.value.length} current image${editImagePreviews.value.length === 1 ? '' : 's'}`
+  }
+
+  return 'Add post pictures'
+})
 const postParagraphs = computed(() =>
   (post.value?.content || '')
     .split(/\n+/)
@@ -335,6 +482,130 @@ function goToProfile(userId?: number | null) {
   router.push(`/users/${userId}`)
 }
 
+function durationToMs(duration: string) {
+  const amount = Number(duration.replace('h', ''))
+  return amount * 60 * 60 * 1000
+}
+
+function contentWithoutImageUrls(content: string, imageUrls: string[]) {
+  if (imageUrls.length === 0) return content
+
+  return imageUrls.reduce((cleanContent, imageUrl) => {
+    const escapedUrl = imageUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    return cleanContent.replace(new RegExp(`\\s*${escapedUrl}\\s*$`), '').trimEnd()
+  }, content)
+}
+
+function openEditPost() {
+  if (!post.value || !isPostOwner.value) return
+
+  clearEditImageSelection()
+  editTitle.value = post.value.title
+  editContent.value = contentWithoutImageUrls(post.value.content, postImageUrls.value)
+  editRadius.value = post.value.visibility_radius
+  editDuration.value = 'none'
+  editImagePreviews.value = postImageUrls.value
+  editError.value = ''
+  editingPost.value = true
+}
+
+function removeEditQuery() {
+  if (route.query.edit === undefined) return
+
+  const nextQuery = { ...route.query }
+  delete nextQuery.edit
+  void router.replace({ query: nextQuery })
+}
+
+function closeEditPost() {
+  if (savingEdit.value) return
+  editingPost.value = false
+  editError.value = ''
+  clearEditImageSelection()
+  removeEditQuery()
+}
+
+function clearEditImageSelection() {
+  editImageObjectUrls.forEach((url) => URL.revokeObjectURL(url))
+  editImageObjectUrls = []
+
+  editImageFiles.value = []
+  editImagePreviews.value = []
+  if (editImageInput.value) {
+    editImageInput.value.value = ''
+  }
+}
+
+function handleEditImageChange(event: Event) {
+  const input = event.target as HTMLInputElement
+  const files = Array.from(input.files ?? [])
+  if (files.length === 0) return
+
+  if (files.some((file) => !allowedImageTypes.includes(file.type))) {
+    editError.value = 'Post image must be a JPEG, PNG, or WebP file.'
+    input.value = ''
+    return
+  }
+
+  if (files.some((file) => file.size > 5 * 1024 * 1024)) {
+    editError.value = 'Post image must be smaller than 5 MB.'
+    input.value = ''
+    return
+  }
+
+  editImageObjectUrls.forEach((url) => URL.revokeObjectURL(url))
+  const selectedFiles = files.slice(0, 6)
+
+  editImageObjectUrls = selectedFiles.map((file) => URL.createObjectURL(file))
+  editImageFiles.value = selectedFiles
+  editImagePreviews.value = editImageObjectUrls
+  editError.value = ''
+}
+
+async function savePostEdit() {
+  if (!post.value || savingEdit.value) return
+
+  const title = editTitle.value.trim()
+  const content = editContent.value.trim()
+  if (!title || !content) {
+    editError.value = 'Title and content are required.'
+    return
+  }
+
+  savingEdit.value = true
+  editError.value = ''
+
+  try {
+    const payload = {
+      title,
+      content,
+      visibility_radius: editRadius.value,
+      ...(editDuration.value === 'none'
+        ? {}
+        : { expires_at: new Date(Date.now() + durationToMs(editDuration.value)).toISOString() }),
+    }
+    const updated = await postApi.update(post.value.post_id, payload, editImageFiles.value)
+
+    post.value = {
+      ...post.value,
+      ...updated,
+      user: updated.user ?? post.value.user,
+      upvoted: post.value.upvoted,
+    }
+    editingPost.value = false
+    clearEditImageSelection()
+    removeEditQuery()
+  } catch (err: unknown) {
+    editError.value = err instanceof Error ? err.message : 'Failed to update post.'
+  } finally {
+    savingEdit.value = false
+  }
+}
+
+function handlePostDeleted() {
+  void router.replace('/discussions')
+}
+
 async function loadPostDetail() {
   const postId = Number(route.params.postId)
 
@@ -359,6 +630,9 @@ async function loadPostDetail() {
       upvoted: false,
     }
     comments.value = commentData.filter(isActiveComment).map(toViewComment)
+    if (route.query.edit === '1' && post.value.user?.user_id === currentUserId.value) {
+      openEditPost()
+    }
   } catch (err: unknown) {
     error.value = err instanceof Error ? err.message : 'Failed to load post discussion.'
     post.value = null
@@ -429,7 +703,14 @@ function timeLeft(value: string) {
 }
 
 onMounted(loadPostDetail)
+onBeforeUnmount(clearEditImageSelection)
 watch(() => route.params.postId, loadPostDetail)
+watch(
+  () => route.query.edit,
+  (editMode) => {
+    if (editMode === '1') openEditPost()
+  },
+)
 </script>
 
 <style scoped>
@@ -714,6 +995,257 @@ watch(() => route.params.postId, loadPostDetail)
   color: #8193a2;
   font-size: 0.72rem;
   font-weight: 750;
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgba(15, 23, 42, 0.36);
+  backdrop-filter: blur(8px);
+}
+
+.edit-modal {
+  width: min(590px, 100%);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  background: #fff;
+  padding: clamp(20px, 4vw, 28px);
+  box-shadow: 0 24px 70px rgba(15, 38, 60, 0.22);
+}
+
+.modal-heading,
+.modal-actions,
+.edit-grid {
+  display: flex;
+}
+
+.modal-heading {
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.modal-heading h2 {
+  margin: 5px 0 0;
+  color: var(--text);
+  font-size: 1.35rem;
+  font-weight: 900;
+  letter-spacing: -0.025em;
+}
+
+.modal-heading p {
+  margin: 6px 0 0;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.modal-close {
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 12px;
+  background: #f3f7f9;
+  color: #61788c;
+  font-size: 1.4rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.edit-modal label {
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.edit-modal label span,
+.edit-image-panel > span {
+  color: #29495d;
+  font-size: 0.72rem;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.edit-modal input,
+.edit-modal textarea,
+.edit-modal select {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: #f8fbfd;
+  padding: 12px 13px;
+  color: var(--text);
+  font: inherit;
+  font-size: 0.9rem;
+  outline: none;
+}
+
+.edit-modal textarea {
+  resize: vertical;
+}
+
+.edit-image-panel {
+  display: grid;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.edit-image-content {
+  display: grid;
+  grid-template-columns: minmax(132px, 180px) minmax(0, 1fr);
+  gap: 14px;
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: #f8fbfd;
+  padding: 12px;
+}
+
+.edit-image-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.edit-image-preview {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border: 0;
+  border-radius: 14px;
+  background: #edf5f7;
+  color: var(--accent);
+  padding: 0;
+}
+
+.edit-image-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center center;
+}
+
+.preview-badge {
+  position: absolute;
+  right: 7px;
+  bottom: 7px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.78);
+  padding: 4px 7px;
+  color: #fff;
+  font-size: 0.62rem;
+  font-weight: 850;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.edit-image-preview svg {
+  width: 28px;
+  height: 28px;
+}
+
+.edit-image-copy strong {
+  display: block;
+  overflow: hidden;
+  color: var(--text);
+  font-size: 0.88rem;
+  font-weight: 850;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.edit-image-copy p {
+  margin: 5px 0 11px;
+  color: var(--text-muted);
+  font-size: 0.76rem;
+  line-height: 1.5;
+}
+
+.image-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--accent-light);
+  padding: 9px 12px;
+  color: var(--accent);
+  font-size: 0.78rem;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.image-action svg {
+  width: 15px;
+  height: 15px;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.edit-grid {
+  gap: 12px;
+}
+
+.edit-grid > label {
+  flex: 1;
+}
+
+.edit-error {
+  margin: 12px 0 0;
+  border-radius: 12px;
+  background: #fff2f2;
+  padding: 10px 12px;
+  color: #b74444;
+  font-size: 0.76rem;
+  font-weight: 750;
+}
+
+.modal-actions {
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.secondary-action,
+.save-action {
+  border: 0;
+  border-radius: 13px;
+  padding: 11px 15px;
+  font-size: 0.78rem;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.secondary-action {
+  background: #eef4f7;
+  color: #60778a;
+}
+
+.save-action {
+  background: var(--accent);
+  color: #fff;
+  box-shadow: 0 10px 24px rgba(15, 129, 121, 0.18);
+}
+
+.save-action:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
 }
 
 .detail-sidebar {

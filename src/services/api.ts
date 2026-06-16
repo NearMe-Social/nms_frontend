@@ -66,6 +66,7 @@ export interface ApiPost {
   title: string
   content: string
   image_url?: string | null
+  image_urls?: string[]
   visibility_radius: number
   status: string
   expires_at: string
@@ -221,6 +222,18 @@ export interface CreatePostPayload {
   expires_at: string
 }
 
+export interface UpdatePostPayload {
+  title?: string
+  content?: string
+  visibility_radius?: number
+  expires_at?: string
+}
+
+function appendPostImages(formData: FormData, images?: File | File[] | null) {
+  const files = Array.isArray(images) ? images : images ? [images] : []
+  files.slice(0, 6).forEach((image) => formData.append('images', image))
+}
+
 export const authApi = {
   login(email: string, password: string): Promise<AuthResponse> {
     return request<AuthResponse>('/auth/login', {
@@ -314,7 +327,7 @@ export const postApi = {
     return request<ApiPost>(`/posts/${postId}${params}`)
   },
 
-  async create(payload: CreatePostPayload, image?: File | null): Promise<ApiPost> {
+  async create(payload: CreatePostPayload, images?: File | File[] | null): Promise<ApiPost> {
     const formData = new FormData()
     formData.append('title', payload.title)
     formData.append('content', payload.content)
@@ -322,7 +335,7 @@ export const postApi = {
     formData.append('longitude', String(payload.longitude))
     formData.append('visibility_radius', String(payload.visibility_radius))
     formData.append('expires_at', payload.expires_at)
-    if (image) formData.append('image', image)
+    appendPostImages(formData, images)
 
     const token = localStorage.getItem('token')
     const response = await fetch(`${API_URL}/posts`, {
@@ -338,6 +351,51 @@ export const postApi = {
     }
 
     return body as ApiPost
+  },
+
+  async update(
+    postId: number,
+    payload: UpdatePostPayload,
+    images?: File | File[] | null,
+  ): Promise<ApiPost> {
+    const imageFiles = Array.isArray(images) ? images : images ? [images] : []
+
+    if (imageFiles.length > 0) {
+      const formData = new FormData()
+      if (payload.title !== undefined) formData.append('title', payload.title)
+      if (payload.content !== undefined) formData.append('content', payload.content)
+      if (payload.visibility_radius !== undefined) {
+        formData.append('visibility_radius', String(payload.visibility_radius))
+      }
+      if (payload.expires_at !== undefined) formData.append('expires_at', payload.expires_at)
+      appendPostImages(formData, imageFiles)
+
+      const token = localStorage.getItem('token')
+      const response = await fetch(`${API_URL}/posts/${postId}`, {
+        method: 'PATCH',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        body: formData,
+      })
+
+      const body = await response.json().catch(() => ({}))
+      if (!response.ok) {
+        const message = Array.isArray(body?.message) ? body.message.join(', ') : body?.message
+        throw new Error(message || `Post update failed: HTTP ${response.status}`)
+      }
+
+      return body as ApiPost
+    }
+
+    return request<ApiPost>(`/posts/${postId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    })
+  },
+
+  remove(postId: number): Promise<{ message: string }> {
+    return request<{ message: string }>(`/posts/${postId}`, {
+      method: 'DELETE',
+    })
   },
 }
 
