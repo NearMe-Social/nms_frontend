@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { RouterLink } from 'vue-router'
+import { RouterLink, useRouter } from 'vue-router'
 import Navbar from '@/components/Navbar.vue'
 import AppSidebar from '@/components/AppSidebar.vue'
 import MobileBottomNav from '@/components/MobileBottomNav.vue'
@@ -24,6 +24,7 @@ type PostFilter = 'all' | 'active' | 'expired'
 
 type MyPost = {
   id: number
+  ownerId?: number
   title: string
   body: string
   visibility: number
@@ -31,7 +32,7 @@ type MyPost = {
   likes: number
   comments: number
   category: string
-  image?: string
+  images: string[]
   active: boolean
 }
 
@@ -42,6 +43,7 @@ const tabs: Array<{ key: PostFilter; label: string }> = [
 ]
 
 const auth = useAuthStore()
+const router = useRouter()
 const activeTab = ref<PostFilter>('all')
 const searchTerm = ref('')
 const posts = ref<ApiPost[]>([])
@@ -55,14 +57,15 @@ const myPosts = computed<MyPost[]>(() => {
     .filter((post) => !userId || post.user?.user_id === userId)
     .map((post) => ({
       id: post.post_id,
+      ownerId: post.user?.user_id,
       title: post.title,
       body: post.content,
-      image: post.image_url || undefined,
       visibility: post.visibility_radius,
       timeLabel: timeAgo(post.created_at),
       likes: post.reactions?.length ?? post.reactions_count ?? 0,
       comments: post.comments?.length ?? post.comments_count ?? 0,
       category: post.status,
+      images: post.image_urls?.length ? post.image_urls : post.image_url ? [post.image_url] : [],
       active: new Date(post.expires_at).getTime() > Date.now(),
     }))
 })
@@ -117,6 +120,14 @@ function timeAgo(value: string) {
 function clearFilters() {
   searchTerm.value = ''
   activeTab.value = 'all'
+}
+
+function openEditPost(postId: number) {
+  router.push({ path: `/posts/${postId}`, query: { edit: '1' } })
+}
+
+function removePostFromList(postId: number) {
+  posts.value = posts.value.filter((post) => post.post_id !== postId)
 }
 
 onMounted(loadPosts)
@@ -230,8 +241,8 @@ onMounted(loadPosts)
         <section v-else class="post-grid">
           <article v-for="post in filteredPosts" :key="post.id" class="post-card">
             <PostImageViewer
-              v-if="post.image"
-              :src="post.image"
+              v-if="post.images.length"
+              :images="post.images"
               :alt="post.title"
               variant="compact"
             />
@@ -244,7 +255,13 @@ onMounted(loadPosts)
                   </span>
                   <span class="category-label">{{ post.category }}</span>
                 </div>
-                <PostOptionsMenu :post-id="post.id" />
+                <PostOptionsMenu
+                  :post-id="post.id"
+                  :user-id="post.ownerId"
+                  allow-owner-actions
+                  @edit="openEditPost"
+                  @deleted="removePostFromList"
+                />
               </div>
 
               <RouterLink :to="`/posts/${post.id}`" class="post-copy">
