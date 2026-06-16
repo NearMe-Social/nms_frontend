@@ -209,7 +209,60 @@ describe('useGeolocation', () => {
       lng: position.coords.longitude,
     })
     expect(getCurrentPosition).toHaveBeenCalledTimes(2)
+    expect(getCurrentPosition).toHaveBeenNthCalledWith(
+      1,
+      expect.any(Function),
+      expect.any(Function),
+      expect.objectContaining({
+        timeout: 20_000,
+        maximumAge: 2 * 60_000,
+      }),
+    )
+    expect(getCurrentPosition).toHaveBeenNthCalledWith(
+      2,
+      expect.any(Function),
+      expect.any(Function),
+      expect.objectContaining({
+        timeout: 18_000,
+        maximumAge: 10 * 60_000,
+      }),
+    )
     expect(geo.status.value).toBe('granted')
+  })
+
+  it('treats a recent browser-cached retry as shareable but not fresh', async () => {
+    vi.useFakeTimers()
+    const cachedPosition = {
+      ...position,
+      timestamp: Date.now() - 5 * 60_000,
+    } as GeolocationPosition
+    const getCurrentPosition = vi
+      .fn()
+      .mockImplementationOnce((_success: PositionCallback, error: PositionErrorCallback) =>
+        error(geoError(3)),
+      )
+      .mockImplementationOnce((success: PositionCallback) => success(cachedPosition))
+
+    vi.stubGlobal('navigator', {
+      geolocation: {
+        getCurrentPosition,
+        watchPosition: vi.fn(() => 42),
+      },
+    })
+
+    const { useGeolocation } = await import('../useGeolocation')
+    const geo = useGeolocation()
+    const request = geo.request()
+
+    await vi.advanceTimersByTimeAsync(400)
+
+    await expect(request).resolves.toEqual({
+      lat: position.coords.latitude,
+      lng: position.coords.longitude,
+    })
+    expect(geo.locationSource.value).toBe('cached')
+    expect(geo.isFresh()).toBe(false)
+    expect(geo.isShareable()).toBe(true)
   })
 
   it('allows Chrome to return a recent browser reading without creating persistent app cache', async () => {

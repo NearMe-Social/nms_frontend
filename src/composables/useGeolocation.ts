@@ -1,7 +1,7 @@
 import { readonly, ref } from 'vue'
 
 export type GeoStatus = 'idle' | 'requesting' | 'granted' | 'denied' | 'unavailable' | 'error'
-export type GeoLocationSource = 'live' | 'cached' | null
+export type GeoLocationSource = 'live' | 'cached' | 'account' | null
 
 export interface GeoCoords {
   lat: number
@@ -10,6 +10,7 @@ export interface GeoCoords {
 
 interface StoredGeoCoords extends GeoCoords {
   capturedAt: number
+  source?: Exclude<GeoLocationSource, null>
 }
 
 export interface GeoRequestOptions {
@@ -19,15 +20,16 @@ export interface GeoRequestOptions {
 const TAB_LOCATION_KEY = 'nms_tab_location'
 const LEGACY_PERSISTENT_LOCATION_KEY = 'nms_last_known_location'
 const FRESH_LOCATION_AGE_MS = 2 * 60_000
+const SHAREABLE_LOCATION_AGE_MS = 10 * 60_000
 const ACCOUNT_FALLBACK_MAX_AGE_MS = 24 * 60 * 60_000
 const POSITION_OPTIONS: PositionOptions = {
-  timeout: 12_000,
+  timeout: 20_000,
   maximumAge: FRESH_LOCATION_AGE_MS,
   enableHighAccuracy: false,
 }
 const RETRY_POSITION_OPTIONS: PositionOptions = {
   timeout: 18_000,
-  maximumAge: 0,
+  maximumAge: 10 * 60_000,
   enableHighAccuracy: false,
 }
 const WATCH_OPTIONS: PositionOptions = {
@@ -64,11 +66,19 @@ function readTabLocation(): StoredGeoCoords | null {
   }
 }
 
-function saveTabLocation(position: GeoCoords, positionCapturedAt: number) {
+function saveTabLocation(
+  position: GeoCoords,
+  positionCapturedAt: number,
+  source: Exclude<GeoLocationSource, null>,
+) {
   sessionStorage.setItem(
     TAB_LOCATION_KEY,
-    JSON.stringify({ ...position, capturedAt: positionCapturedAt }),
+    JSON.stringify({ ...position, capturedAt: positionCapturedAt, source }),
   )
+}
+
+function sourceForCapturedAt(positionCapturedAt: number): Exclude<GeoLocationSource, null> {
+  return Date.now() - positionCapturedAt <= FRESH_LOCATION_AGE_MS ? 'live' : 'cached'
 }
 
 function setLivePosition(position: GeolocationPosition): GeoCoords {
@@ -77,8 +87,9 @@ function setLivePosition(position: GeolocationPosition): GeoCoords {
     lng: position.coords.longitude,
   }
   capturedAt = Number.isFinite(position.timestamp) ? position.timestamp : Date.now()
-  saveTabLocation(coords.value, capturedAt)
-  locationSource.value = Date.now() - capturedAt <= FRESH_LOCATION_AGE_MS ? 'live' : 'cached'
+  const source = sourceForCapturedAt(capturedAt)
+  saveTabLocation(coords.value, capturedAt, source)
+  locationSource.value = source
   status.value = 'granted'
   errorMessage.value = null
   return coords.value
@@ -87,7 +98,7 @@ function setLivePosition(position: GeolocationPosition): GeoCoords {
 function setStoredPosition(position: StoredGeoCoords): GeoCoords {
   coords.value = { lat: position.lat, lng: position.lng }
   capturedAt = position.capturedAt
-  locationSource.value = Date.now() - capturedAt <= FRESH_LOCATION_AGE_MS ? 'live' : 'cached'
+  locationSource.value = position.source === 'account' ? 'account' : sourceForCapturedAt(capturedAt)
   status.value = 'granted'
   errorMessage.value = null
   startSharedWatch()
@@ -97,8 +108,8 @@ function setStoredPosition(position: StoredGeoCoords): GeoCoords {
 function setCachedPosition(position: StoredGeoCoords): GeoCoords {
   coords.value = { lat: position.lat, lng: position.lng }
   capturedAt = position.capturedAt
-  saveTabLocation(coords.value, capturedAt)
-  locationSource.value = 'cached'
+  saveTabLocation(coords.value, capturedAt, 'account')
+  locationSource.value = 'account'
   status.value = 'granted'
   errorMessage.value = null
   startSharedWatch()
@@ -205,6 +216,15 @@ export function useGeolocation() {
     )
   }
 
+  function isShareable(): boolean {
+    return (
+      coords.value !== null &&
+      locationSource.value !== null &&
+      locationSource.value !== 'account' &&
+      Date.now() - capturedAt <= SHAREABLE_LOCATION_AGE_MS
+    )
+  }
+
   async function request(options: GeoRequestOptions = {}): Promise<GeoCoords | null> {
     if (!options.forceRefresh && isFresh()) {
       startSharedWatch()
@@ -215,7 +235,11 @@ export function useGeolocation() {
       const stored = readTabLocation()
       if (stored && (await canUseStoredLocation())) {
         const restored = setStoredPosition(stored)
-        if (locationSource.value === 'cached' && !pendingRequest) {
+        if (
+          locationSource.value !== 'account' &&
+          locationSource.value !== 'live' &&
+          !pendingRequest
+        ) {
           void request({ forceRefresh: true })
         }
         return restored
@@ -302,6 +326,7 @@ export function useGeolocation() {
     locationSource: readonly(locationSource),
     request,
     isFresh,
+    isShareable,
     getLastKnownLocation,
     restoreAccountLocation,
   }

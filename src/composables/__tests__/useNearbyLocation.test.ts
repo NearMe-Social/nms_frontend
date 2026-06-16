@@ -62,8 +62,9 @@ describe('useNearbyLocation', () => {
       lat: 11.55,
       lng: 104.92,
     })
-    expect(geo.locationSource.value).toBe('cached')
+    expect(geo.locationSource.value).toBe('account')
     expect(geo.isFresh()).toBe(false)
+    expect(geo.isShareable()).toBe(false)
     expect(getCurrentPosition).toHaveBeenCalledTimes(1)
   })
 
@@ -100,6 +101,7 @@ describe('useNearbyLocation', () => {
     })
     expect(geo.locationSource.value).toBe('live')
     expect(geo.isFresh()).toBe(true)
+    expect(geo.isShareable()).toBe(true)
   })
 
   it('rejects an account location older than 24 hours', async () => {

@@ -53,7 +53,7 @@
         </div>
 
         <LocationFallbackNotice
-          v-if="geo.locationSource.value === 'cached'"
+          v-if="geo.locationSource.value === 'cached' || geo.locationSource.value === 'account'"
           @refresh="retryLocation"
         />
 
@@ -605,7 +605,7 @@ function handlePageShow() {
 watch(
   () => geo.locationSource.value,
   (source, previousSource) => {
-    if (previousSource === 'cached' && source === 'live') {
+    if (source && previousSource && source !== previousSource) {
       void loadPosts({ showLoading: false })
     }
   },
