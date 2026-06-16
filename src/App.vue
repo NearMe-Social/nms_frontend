@@ -4,9 +4,12 @@ import { RouterView, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useChatSocketStore } from '@/stores/chatSocket'
 import { stopGeolocationTracking } from '@/composables/useGeolocation'
+import {
+  startNearbyPresenceHeartbeat,
+  stopNearbyPresenceHeartbeat,
+} from '@/composables/useNearbyPresenceHeartbeat'
 import { authApi } from '@/services/api'
 import { SESSION_EXPIRED_EVENT } from '@/utils/session'
-import { clearNearbyPresence } from '@/utils/nearbyPresence'
 
 const auth = useAuthStore()
 const chatSocket = useChatSocketStore()
@@ -24,7 +27,7 @@ async function validateRememberedSession() {
 }
 
 function handleSessionExpired() {
-  clearNearbyPresence()
+  stopNearbyPresenceHeartbeat({ clearRemote: true })
   auth.logout()
   chatSocket.disconnect()
   stopGeolocationTracking(true)
@@ -39,13 +42,14 @@ function handleSessionExpired() {
 
 function handlePageHide() {
   if (auth.isLoggedIn) {
-    clearNearbyPresence({ keepalive: true })
+    stopNearbyPresenceHeartbeat({ clearRemote: true, keepalive: true })
   }
 }
 
 function handleVisibilityChange() {
   if (document.visibilityState === 'visible') {
     if (auth.hasValidSession()) {
+      startNearbyPresenceHeartbeat()
       void validateRememberedSession()
     }
   }
@@ -58,6 +62,7 @@ onMounted(() => {
 
   if (auth.hasValidSession()) {
     chatSocket.connect()
+    startNearbyPresenceHeartbeat()
     void validateRememberedSession()
   } else {
     stopGeolocationTracking(true)
@@ -75,8 +80,9 @@ watch(
   (isLoggedIn) => {
     if (isLoggedIn) {
       chatSocket.connect()
+      startNearbyPresenceHeartbeat()
     } else {
-      clearNearbyPresence()
+      stopNearbyPresenceHeartbeat({ clearRemote: true })
       chatSocket.disconnect()
       stopGeolocationTracking(true)
     }

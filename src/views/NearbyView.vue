@@ -19,7 +19,12 @@ import MobileBottomNav from '@/components/MobileBottomNav.vue'
 import Navbar from '@/components/Navbar.vue'
 import UserAvatar from '@/components/UserAvatar.vue'
 import LocationFallbackNotice from '@/components/LocationFallbackNotice.vue'
-import { clearNearbyPresence } from '@/utils/nearbyPresence'
+import {
+  isNearbyPresenceEnabled,
+  setNearbyPresenceEnabled,
+  startNearbyPresenceHeartbeat,
+  stopNearbyPresenceHeartbeat,
+} from '@/composables/useNearbyPresenceHeartbeat'
 import * as L from 'leaflet'
 
 const nearbyStore = useNearbyStore()
@@ -34,7 +39,9 @@ const nearbyMarkers = ref<L.CircleMarker[]>([])
 
 const radius = ref(100)
 const sortMode = ref<'nearest' | 'farthest'>('nearest')
-const privacyMode = ref<'Visible Nearby' | 'Browse Privately'>('Visible Nearby')
+const privacyMode = ref<'Visible Nearby' | 'Browse Privately'>(
+  isNearbyPresenceEnabled() ? 'Visible Nearby' : 'Browse Privately',
+)
 let backgroundLocationRefreshInFlight = false
 
 const radiusOptions = [50, 100, 200]
@@ -263,11 +270,15 @@ watch(radius, async () => {
 })
 
 watch(privacyMode, async () => {
-  if (!geo.coords.value) return
-
   if (privacyMode.value === 'Browse Privately') {
-    clearNearbyPresence()
+    setNearbyPresenceEnabled(false)
+    stopNearbyPresenceHeartbeat({ clearRemote: true })
+  } else {
+    setNearbyPresenceEnabled(true)
+    startNearbyPresenceHeartbeat()
   }
+
+  if (!geo.coords.value) return
 
   await refreshNearby()
 })
