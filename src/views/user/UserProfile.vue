@@ -152,6 +152,8 @@
         </div>
       </main>
     </div>
+
+    <MobileBottomNav />
   </div>
 </template>
 
@@ -173,6 +175,7 @@ import {
 } from 'lucide-vue-next'
 import Navbar from '@/components/Navbar.vue'
 import AppSidebar from '@/components/AppSidebar.vue'
+import MobileBottomNav from '@/components/MobileBottomNav.vue'
 import UserOptionsMenu from '@/components/UserOptionsMenu.vue'
 import UserAvatar from '@/components/UserAvatar.vue'
 import { postApi, userApi, type ApiPost, type UserProfile } from '@/services/api'
@@ -374,6 +377,12 @@ watch(() => route.params.userId, loadProfile)
   min-width: 0;
   flex: 1;
   padding: 24px clamp(16px, 3vw, 32px) 40px;
+}
+
+@media (max-width: 767px) {
+  .workspace {
+    padding-bottom: calc(84px + env(safe-area-inset-bottom));
+  }
 }
 
 .state-card {
