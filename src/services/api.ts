@@ -227,6 +227,7 @@ export interface UpdatePostPayload {
   content?: string
   visibility_radius?: number
   expires_at?: string
+  keep_image_urls?: string[]
 }
 
 function appendPostImages(formData: FormData, images?: File | File[] | null) {
@@ -359,8 +360,9 @@ export const postApi = {
     images?: File | File[] | null,
   ): Promise<ApiPost> {
     const imageFiles = Array.isArray(images) ? images : images ? [images] : []
+    const shouldUseFormData = imageFiles.length > 0 || payload.keep_image_urls !== undefined
 
-    if (imageFiles.length > 0) {
+    if (shouldUseFormData) {
       const formData = new FormData()
       if (payload.title !== undefined) formData.append('title', payload.title)
       if (payload.content !== undefined) formData.append('content', payload.content)
@@ -368,6 +370,9 @@ export const postApi = {
         formData.append('visibility_radius', String(payload.visibility_radius))
       }
       if (payload.expires_at !== undefined) formData.append('expires_at', payload.expires_at)
+      if (payload.keep_image_urls !== undefined) {
+        formData.append('keep_image_urls', JSON.stringify(payload.keep_image_urls))
+      }
       appendPostImages(formData, imageFiles)
 
       const token = localStorage.getItem('token')

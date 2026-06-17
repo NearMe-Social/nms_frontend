@@ -123,7 +123,7 @@ function clearFilters() {
 }
 
 function openEditPost(postId: number) {
-  router.push({ path: `/posts/${postId}`, query: { edit: '1' } })
+  router.push(`/posts/${postId}/edit`)
 }
 
 function removePostFromList(postId: number) {

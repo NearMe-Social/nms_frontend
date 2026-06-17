@@ -478,7 +478,7 @@ function navigateToPost(postId: number) {
 }
 
 function navigateToPostEdit(postId: number) {
-  router.push({ path: `/posts/${postId}`, query: { edit: '1' } })
+  router.push(`/posts/${postId}/edit`)
 }
 
 function removePostFromFeed(postId: number) {
