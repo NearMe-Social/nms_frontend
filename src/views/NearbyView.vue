@@ -408,8 +408,34 @@ onUnmounted(() => {
           </div>
         </section>
 
-        <GeoErrorState
+        <section
           v-if="
+            !geo.coords.value &&
+            (geo.status.value === 'idle' || geo.status.value === 'requesting')
+          "
+          class="location-loading-card"
+          aria-live="polite"
+        >
+          <div class="location-pulse">
+            <MapPin />
+          </div>
+          <div class="location-loading-copy">
+            <span class="section-label">Finding your area</span>
+            <h2>Preparing nearby discovery</h2>
+            <p>
+              Nearme is checking your current area so the map and nearby people stay approximate
+              and private.
+            </p>
+          </div>
+          <div class="location-loading-lines" aria-hidden="true">
+            <span></span>
+            <span></span>
+            <span></span>
+          </div>
+        </section>
+
+        <GeoErrorState
+          v-else-if="
             geo.status.value === 'denied' ||
             geo.status.value === 'unavailable' ||
             geo.status.value === 'error'
@@ -806,6 +832,115 @@ onUnmounted(() => {
   border-radius: 20px;
   background: #fff;
   box-shadow: 0 14px 34px rgba(38, 65, 82, 0.07);
+}
+
+.location-loading-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) minmax(150px, 220px);
+  gap: 18px;
+  align-items: center;
+  width: 100%;
+  margin: 0 auto 22px;
+  border: 1px solid #dde7ee;
+  border-radius: 20px;
+  background:
+    radial-gradient(circle at top left, rgba(15, 138, 124, 0.1), transparent 34%),
+    #fff;
+  padding: 22px;
+  box-shadow: 0 14px 34px rgba(38, 65, 82, 0.07);
+}
+
+.location-pulse {
+  position: relative;
+  display: inline-flex;
+  width: 58px;
+  height: 58px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 18px;
+  background: #edf8f7;
+  color: #0f8179;
+}
+
+.location-pulse::after {
+  position: absolute;
+  inset: -8px;
+  border: 1px solid rgba(15, 129, 121, 0.24);
+  border-radius: 22px;
+  content: '';
+  animation: location-pulse 1.5s ease-out infinite;
+}
+
+.location-pulse svg {
+  width: 27px;
+  height: 27px;
+}
+
+.location-loading-copy {
+  min-width: 0;
+}
+
+.location-loading-copy h2 {
+  margin: 5px 0 0;
+  color: #17384a;
+  font-size: clamp(1.1rem, 2vw, 1.35rem);
+  font-weight: 850;
+  letter-spacing: -0.02em;
+}
+
+.location-loading-copy p {
+  max-width: 620px;
+  margin: 8px 0 0;
+  color: #71879a;
+  font-size: 0.86rem;
+  font-weight: 550;
+  line-height: 1.6;
+}
+
+.location-loading-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.location-loading-lines span {
+  height: 10px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #edf3f7 25%, #f8fcfd 50%, #edf3f7 75%);
+  background-size: 220% 100%;
+  animation: shimmer-line 1.35s ease-in-out infinite;
+}
+
+.location-loading-lines span:nth-child(2) {
+  width: 78%;
+  animation-delay: 0.1s;
+}
+
+.location-loading-lines span:nth-child(3) {
+  width: 52%;
+  animation-delay: 0.2s;
+}
+
+@keyframes location-pulse {
+  0% {
+    opacity: 0.9;
+    transform: scale(0.88);
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(1.18);
+  }
+}
+
+@keyframes shimmer-line {
+  0% {
+    background-position: 220% 0;
+  }
+
+  100% {
+    background-position: -220% 0;
+  }
 }
 
 .map-header {
@@ -1248,6 +1383,23 @@ onUnmounted(() => {
     border-radius: 17px;
   }
 
+  .location-loading-card {
+    grid-template-columns: 1fr;
+    gap: 14px;
+    margin-bottom: 16px;
+    border-radius: 17px;
+    padding: 18px;
+  }
+
+  .location-pulse {
+    width: 54px;
+    height: 54px;
+  }
+
+  .location-loading-lines {
+    display: none;
+  }
+
   .map-header {
     align-items: flex-start;
     padding: 14px 15px;
@@ -1369,6 +1521,8 @@ onUnmounted(() => {
 
 @media (prefers-reduced-motion: reduce) {
   .loading-dot,
+  .location-pulse::after,
+  .location-loading-lines span,
   .person-row {
     animation: none;
     transition: none;
