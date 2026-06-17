@@ -1154,7 +1154,9 @@ h2 {
 }
 
 .chat-avatar {
-  display: block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   width: 52px;
   height: 52px;
   border-radius: 18px;
