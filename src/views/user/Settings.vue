@@ -59,6 +59,7 @@ const blockSuccess = ref('')
 const blockError = ref('')
 const locationPermission = ref<BrowserLocationPermission>('checking')
 let locationPermissionStatus: PermissionStatus | null = null
+let privacyMessageTimeout: number | null = null
 
 const tabs = [
   { key: 'account' as const, label: 'Account', icon: UserRound },
@@ -182,6 +183,9 @@ onBeforeUnmount(() => {
   if (locationPermissionStatus) {
     locationPermissionStatus.onchange = null
   }
+  if (privacyMessageTimeout !== null) {
+    window.clearTimeout(privacyMessageTimeout)
+  }
 })
 
 async function loadProfile() {
@@ -274,8 +278,7 @@ async function checkBrowserPermission() {
 }
 
 async function updateSavedLocation() {
-  privacySuccess.value = ''
-  privacyError.value = ''
+  clearPrivacyMessage()
   updatingLocation.value = true
 
   try {
@@ -293,11 +296,16 @@ async function updateSavedLocation() {
         location_updated_at: new Date().toISOString(),
       }
     }
-    privacySuccess.value = 'Saved location updated successfully.'
+    showPrivacyMessage(
+      'success',
+      'Saved location updated. Nearby pages also refresh location in the background when you use them.',
+    )
     await checkBrowserPermission()
   } catch (error: unknown) {
-    privacyError.value =
-      error instanceof Error ? error.message : 'Saved location could not be updated.'
+    showPrivacyMessage(
+      'error',
+      error instanceof Error ? error.message : 'Saved location could not be updated.',
+    )
   } finally {
     updatingLocation.value = false
   }
@@ -333,8 +341,7 @@ async function changePassword() {
 }
 
 async function clearLocation() {
-  privacySuccess.value = ''
-  privacyError.value = ''
+  clearPrivacyMessage()
   clearingLocation.value = true
 
   try {
@@ -348,13 +355,42 @@ async function clearLocation() {
         location_updated_at: null,
       }
     }
-    privacySuccess.value = response.message
+    showPrivacyMessage(
+      'success',
+      `${response.message} Nearby features will ask for location again when needed.`,
+    )
   } catch (error: unknown) {
-    privacyError.value =
-      error instanceof Error ? error.message : 'Saved location could not be cleared.'
+    showPrivacyMessage(
+      'error',
+      error instanceof Error ? error.message : 'Saved location could not be cleared.',
+    )
   } finally {
     clearingLocation.value = false
   }
+}
+
+function clearPrivacyMessage() {
+  privacySuccess.value = ''
+  privacyError.value = ''
+  if (privacyMessageTimeout !== null) {
+    window.clearTimeout(privacyMessageTimeout)
+    privacyMessageTimeout = null
+  }
+}
+
+function showPrivacyMessage(type: 'success' | 'error', message: string) {
+  clearPrivacyMessage()
+  if (type === 'success') {
+    privacySuccess.value = message
+  } else {
+    privacyError.value = message
+  }
+
+  privacyMessageTimeout = window.setTimeout(() => {
+    privacySuccess.value = ''
+    privacyError.value = ''
+    privacyMessageTimeout = null
+  }, 3000)
 }
 
 async function signOut() {
@@ -620,6 +656,11 @@ async function signOut() {
             </template>
 
             <template v-else>
+              <div class="settings-section-heading">
+                <span>Privacy explanation</span>
+                <p>What other people can see and what Nearme keeps hidden.</p>
+              </div>
+
               <article class="panel">
                 <div class="panel-heading">
                   <span class="panel-icon"><ShieldCheck /></span>
@@ -662,17 +703,25 @@ async function signOut() {
                 </div>
               </article>
 
+              <div class="settings-section-heading">
+                <span>Location controls</span>
+                <p>
+                  Nearby Feed and Nearby Users refresh location in the background. These controls
+                  are only for manually checking, updating, or clearing your saved account location.
+                </p>
+              </div>
+
               <article class="panel location-access-panel">
                 <div class="panel-heading">
                   <span class="panel-icon"><MapPin /></span>
                   <div>
-                    <p class="panel-label">This device</p>
+                    <p class="panel-label">Location</p>
                     <h2>Browser location permission</h2>
                   </div>
                 </div>
                 <p class="panel-copy">
-                  Check whether this browser can share location, then update the saved location used
-                  by nearby people and posts.
+                  Check whether this browser can share location. Use the update button only when you
+                  want to immediately refresh the saved location on your account.
                 </p>
 
                 <div class="location-status">
@@ -706,13 +755,14 @@ async function signOut() {
                 <div class="panel-heading">
                   <span class="panel-icon panel-icon-warn"><MapPinOff /></span>
                   <div>
-                    <p class="panel-label">Saved location</p>
+                    <p class="panel-label">Location</p>
                     <h2>Clear location activity</h2>
                   </div>
                 </div>
                 <p class="panel-copy">
-                  Removes the latest location stored for your account and clears this browser's
-                  cached coordinates. Nearby features will ask again the next time you use them.
+                  Removes the last saved location from your account and clears this browser's cached
+                  coordinates. It does not disable location forever; nearby pages can ask again when
+                  you open them.
                 </p>
 
                 <div class="location-status">
@@ -743,6 +793,11 @@ async function signOut() {
                   {{ clearingLocation ? 'Clearing...' : 'Clear saved location' }}
                 </button>
               </article>
+
+              <div class="settings-section-heading">
+                <span>Privacy controls</span>
+                <p>Review people you blocked and restore access when you choose.</p>
+              </div>
 
               <article class="panel blocked-users-panel">
                 <div class="panel-heading">
@@ -948,6 +1003,28 @@ async function signOut() {
   min-width: 0;
   display: grid;
   gap: 16px;
+}
+
+.settings-section-heading {
+  margin: 8px 2px -2px;
+}
+
+.settings-section-heading span {
+  display: block;
+  color: #0f8179;
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.settings-section-heading p {
+  max-width: 720px;
+  margin: 5px 0 0;
+  color: #718899;
+  font-size: 0.78rem;
+  font-weight: 650;
+  line-height: 1.55;
 }
 
 .panel {
@@ -1389,13 +1466,15 @@ async function signOut() {
 }
 
 .clear-location-panel {
-  border-color: #eadfca;
-  background: #fffdf8;
+  border-color: #d7ebe7;
+  background:
+    radial-gradient(circle at top right, rgba(20, 184, 166, 0.09), transparent 32%),
+    #fff;
 }
 
 .panel-icon-warn {
-  background: #f8ecd1;
-  color: #9a7131;
+  background: #eaf7f5;
+  color: #187970;
 }
 
 .panel-icon-danger {
@@ -1405,9 +1484,14 @@ async function signOut() {
 
 .warning-button {
   margin-top: 18px;
-  border: 1px solid #e4cfa9;
-  background: #fff8ea;
-  color: #866127;
+  border: 1px solid #cfe7e3;
+  background: #f2fbf9;
+  color: #187970;
+}
+
+.warning-button:hover:not(:disabled) {
+  background: #e5f6f3;
+  border-color: #b8ddd7;
 }
 
 .location-status {
