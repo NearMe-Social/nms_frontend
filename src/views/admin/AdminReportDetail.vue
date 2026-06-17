@@ -1,6 +1,6 @@
 <template>
-  <div class="p-6 flex flex-col gap-5 animate-fade-up">
-    <div class="flex items-center gap-3">
+  <div class="p-4 sm:p-6 flex flex-col gap-5 animate-fade-up">
+    <div class="flex flex-wrap items-center gap-3">
       <button
         @click="router.back()"
         class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition"
@@ -11,7 +11,7 @@
         <h1 class="text-lg font-bold text-gray-800">Report #{{ report?.reportId || route.params.id }}</h1>
         <ReportStatusBadge v-if="report" :status="reportStatus" />
       </div>
-      <p v-if="report" class="text-xs text-gray-400 ml-1">
+      <p v-if="report" class="text-xs text-gray-400 sm:ml-1">
         {{ targetLabel }} report opened {{ timeAgo(report.createdAt) }}
       </p>
     </div>
@@ -31,10 +31,10 @@
       </button>
     </div>
 
-    <div v-else-if="report" class="flex gap-5 items-start">
+    <div v-else-if="report" class="flex flex-col xl:flex-row gap-5 items-stretch xl:items-start">
       <div class="flex-1 flex flex-col gap-4 min-w-0">
         <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-          <div class="flex items-center justify-between px-5 py-3.5 border-b border-gray-100">
+          <div class="flex flex-wrap items-center justify-between gap-2 px-5 py-3.5 border-b border-gray-100">
             <div class="flex items-center gap-2">
               <Eye class="w-4 h-4 text-gray-400" />
               <span class="text-sm font-semibold text-gray-700">Reported Target</span>
@@ -124,7 +124,7 @@
         </div>
       </div>
 
-      <div class="w-72 shrink-0 flex flex-col gap-4">
+      <div class="w-full xl:w-72 shrink-0 flex flex-col gap-4">
         <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
           <div class="px-5 py-4 border-b border-gray-100">
             <div class="flex items-center gap-2">

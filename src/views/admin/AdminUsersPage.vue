@@ -1,23 +1,24 @@
 <template>
-  <div class="p-6 flex flex-col gap-5">
-    <div class="flex items-center justify-between gap-4 animate-fade-down">
+  <div class="p-4 sm:p-6 flex flex-col gap-5">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 animate-fade-down">
       <div>
         <h1 class="text-xl font-bold text-gray-800">User Management</h1>
         <p class="text-gray-400 text-sm mt-0.5">Manage accounts, roles, and user statuses across the platform.</p>
       </div>
       <div class="flex items-center gap-2">
-        <button class="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-gray-600 bg-white border border-gray-200 hover:bg-gray-50 transition-all duration-200 shadow-sm">
-          <Filter class="w-4 h-4" />
-          Filters
-        </button>
-        <button class="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white bg-blue-600 border border-blue-600 hover:bg-blue-700 transition-all duration-200 shadow-sm">
-          <Plus class="w-4 h-4" />
-          Invite User
+        <button
+          type="button"
+          @click="fetchUsers"
+          :disabled="isLoading"
+          class="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-gray-600 bg-white border border-gray-200 hover:bg-gray-50 transition-all duration-200 shadow-sm disabled:opacity-60"
+        >
+          <RefreshCw :class="['w-4 h-4', isLoading ? 'animate-spin' : '']" />
+          Refresh users
         </button>
       </div>
     </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3 animate-fade-up">
+    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 animate-fade-up">
       <div
         v-for="stat in stats"
         :key="stat.label"
@@ -43,7 +44,12 @@
       <div v-if="drawerUser" class="drawer-overlay" @click.self="drawerUser = null">
         <div class="drawer">
           <div class="drawer-header">
-            <div class="drawer-avatar" :style="{ background: drawerUser.avatarColor }">{{ drawerUser.initials }}</div>
+            <UserAvatar
+              :src="drawerUser.profileImage"
+              :username="drawerUser.username || drawerUser.name"
+              :alt="`${drawerUser.name} profile`"
+              class="drawer-avatar"
+            />
             <div class="drawer-info">
               <h3 class="drawer-name">{{ drawerUser.name }}</h3>
               <p class="drawer-email">{{ drawerUser.email }}</p>
@@ -93,12 +99,12 @@ import {
   UserCheck,
   Ban,
   Flag,
-  Filter,
-  Plus,
+  RefreshCw,
 } from 'lucide-vue-next'
 import AdminUsersTable from './UserTable.vue'
 import UserStatusBadge from './UserStatusBadge.vue'
 import SuspendActivateControls from './SuspendActivateControls.vue'
+import UserAvatar from '@/components/UserAvatar.vue'
 import { adminReportsApi, adminUsersApi } from '@/services/api'
 
 const XIcon        = { template: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>` }
@@ -321,7 +327,7 @@ onMounted(fetchUsers)
 }
 
 .drawer { 
-    width: 360px; 
+    width: min(360px, 100vw); 
     background: #fff; 
     height: 100%; 
     overflow-y: auto; 
@@ -342,11 +348,7 @@ onMounted(fetchUsers)
     width: 52px; 
     height: 52px; 
     border-radius: 50%; 
-    color: #fff; 
     font-size: 18px; 
-    font-weight: 700; 
-    display: grid; 
-    place-items: center; 
     flex-shrink: 0; 
 }
 
@@ -429,6 +431,28 @@ onMounted(fetchUsers)
     color: #9aa0b0; 
     text-transform: uppercase; 
     letter-spacing: .05em; 
+}
+
+@media (max-width: 640px) {
+    .drawer-overlay {
+        justify-content: center;
+    }
+
+    .drawer {
+        width: 100vw;
+    }
+
+    .drawer-header {
+        padding: 20px;
+    }
+
+    .drawer-body {
+        padding: 18px 20px;
+    }
+
+    .detail-grid {
+        grid-template-columns: 1fr;
+    }
 }
 
 </style>

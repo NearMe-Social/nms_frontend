@@ -25,7 +25,6 @@ import AdminLayout from '@/views/admin/AdminLayout.vue'
 import AdminDashboard from '@/views/admin/AdminDashboard.vue'
 import AdminReportDetail from '@/views/admin/AdminReportDetail.vue'
 import AdminUsersPage from '@/views/admin/AdminUsersPage.vue'
-import AdminModerationPage from '@/views/admin/AdminModerationPage.vue'
 import OtpPage from '@/views/auth/OtpPage.vue'
 
 const routes = [
@@ -194,11 +193,6 @@ const routes = [
         path: 'users',
         name: 'AdminUsers',
         component: AdminUsersPage,
-      },
-      {
-        path: 'moderation',
-        name: 'AdminModeration',
-        component: AdminModerationPage,
       },
     ],
   },
