@@ -45,7 +45,7 @@ const privacyMode = ref<'Visible Nearby' | 'Browse Privately'>(
 const manualLocationRefresh = ref(false)
 let backgroundLocationRefreshInFlight = false
 
-const radiusOptions = [50, 100, 200]
+const radiusOptions = [50, 100, 200, 500]
 
 const filteredUsers = computed(() => {
   const inRadius = nearbyStore.users.filter((user) => user.distance_m <= radius.value)
@@ -89,6 +89,7 @@ function approximateDistance(meters: number) {
   if (meters <= 50) return 'within 50m'
   if (meters <= 100) return 'within 100m'
   if (meters <= 200) return 'within 200m'
+  if (meters <= 500) return 'within 500m'
   return 'outside radius'
 }
 
