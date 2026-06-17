@@ -244,7 +244,7 @@ onMounted(loadPosts)
               v-if="post.images.length"
               :images="post.images"
               :alt="post.title"
-              variant="compact"
+              variant="feed"
             />
 
             <div class="post-content">
@@ -518,7 +518,7 @@ h1 {
 }
 
 .post-grid {
-  max-width: 1040px;
+  width: min(100%, 760px);
   display: flex;
   flex-direction: column;
   gap: 18px;
@@ -602,12 +602,16 @@ h1 {
 }
 
 .post-copy h2 {
+  display: -webkit-box;
+  overflow: hidden;
   margin: 0;
   color: #172b3e;
   font-size: 1.06rem;
   font-weight: 850;
   letter-spacing: -0.015em;
   line-height: 1.35;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .post-copy p {

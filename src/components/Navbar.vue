@@ -100,7 +100,9 @@
       </button>
       <RouterLink to="/notifications" class="icon-link" title="Notifications">
         <Bell class="icon" />
-        <span class="notification-dot"></span>
+        <span v-if="unreadNotifications > 0" class="notification-count">
+          {{ unreadNotifications > 99 ? '99+' : unreadNotifications }}
+        </span>
       </RouterLink>
       <RouterLink to="/settings" class="icon-link" title="Settings">
         <Settings class="icon" />
@@ -132,11 +134,13 @@ import BrandLogo from '@/components/BrandLogo.vue'
 import UserAvatar from '@/components/UserAvatar.vue'
 import { useGeolocation } from '@/composables/useGeolocation'
 import { clearNearbyPresence } from '@/utils/nearbyPresence'
+import { useNotificationStore } from '@/stores/notificationStore'
 
 const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
 const geo = useGeolocation()
+const notificationStore = useNotificationStore()
 const searchArea = ref<HTMLElement | null>(null)
 const searchInput = ref<HTMLInputElement | null>(null)
 const searchQuery = ref('')
@@ -150,6 +154,7 @@ let searchTimer: ReturnType<typeof setTimeout> | null = null
 let searchRequestId = 0
 
 const username = computed(() => auth.user?.username || 'neighbor')
+const unreadNotifications = computed(() => notificationStore.unreadCount)
 const hasResults = computed(() => searchUsers.value.length > 0 || searchPosts.value.length > 0)
 const showSearchResults = computed(
   () => searchFocused.value && searchQuery.value.trim().length >= 2,
@@ -226,7 +231,10 @@ function handleLogout() {
   router.replace('/login')
 }
 
-onMounted(() => document.addEventListener('click', handleDocumentClick))
+onMounted(() => {
+  document.addEventListener('click', handleDocumentClick)
+  void notificationStore.fetchNotifications()
+})
 onBeforeUnmount(() => {
   if (searchTimer) clearTimeout(searchTimer)
   document.removeEventListener('click', handleDocumentClick)
@@ -483,15 +491,23 @@ onBeforeUnmount(() => {
   height: 18px;
 }
 
-.notification-dot {
+.notification-count {
   position: absolute;
-  top: 8px;
-  right: 8px;
-  width: 8px;
-  height: 8px;
+  top: 2px;
+  left: 2px;
+  min-width: 17px;
+  height: 17px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border: 2px solid #fff;
   border-radius: 999px;
   background: #ef4444;
+  color: #fff;
+  font-size: 0.58rem;
+  font-weight: 900;
+  line-height: 1;
+  padding: 0 4px;
 }
 
 .nav-avatar {
@@ -524,8 +540,7 @@ onBeforeUnmount(() => {
   }
 
   .search-area,
-  .nav-links,
-  .actions .icon-link[title='Settings'] {
+  .nav-links {
     display: none;
   }
 

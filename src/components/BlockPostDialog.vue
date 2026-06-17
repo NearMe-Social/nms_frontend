@@ -43,10 +43,9 @@ async function confirmBlock() {
   try {
     blockLoading.value = true
 
-    const blockerId = auth.user?.userId ?? auth.user?.user_id
     const blockedUserId = Number(props.userId)
 
-    if (!blockerId) {
+    if (!auth.user) {
       throw new Error('Please log in again before blocking this user.')
     }
 
@@ -55,7 +54,6 @@ async function confirmBlock() {
     }
 
     await blockApi.create({
-      blocker_id: blockerId,
       blocked_user_id: blockedUserId,
     })
 

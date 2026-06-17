@@ -209,8 +209,17 @@ export interface CreateReportPayload {
 }
 
 export interface CreateBlockPayload {
-  blocker_id: number
   blocked_user_id: number
+}
+
+export interface BlockedUser {
+  user_block_id: number
+  blocked_user_id: number
+  username: string
+  first_name: string
+  last_name: string
+  profile_image: string | null
+  created_at: string
 }
 
 export interface CreatePostPayload {
@@ -543,6 +552,16 @@ export const blockApi = {
       body: JSON.stringify(payload),
     })
   },
+
+  listMine(): Promise<BlockedUser[]> {
+    return request<BlockedUser[]>('/blocks/me')
+  },
+
+  unblock(blockedUserId: number): Promise<{ message: string }> {
+    return request<{ message: string }>(`/blocks/me/${blockedUserId}`, {
+      method: 'DELETE',
+    })
+  },
 }
 
 export interface UserProfile {
@@ -554,19 +573,13 @@ export interface UserProfile {
   first_name: string
   last_name: string
   bio?: string
-  location?: string
-  website?: string
-  twitter_handle?: string
-  telegram_handle?: string
-  instagram_handle?: string
-  linkedin_url?: string
-  tags?: string[]
   profile_image?: string | null
   profile_completed?: boolean
   onboarding_completed?: boolean
   current_latitude?: number | string | null
   current_longitude?: number | string | null
   location_updated_at?: string | null
+  created_at?: string
 }
 
 export interface UpdateProfilePayload {
