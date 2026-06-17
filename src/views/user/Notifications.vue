@@ -170,8 +170,12 @@ function fetchNotifications() {
   store.fetchNotifications()
 }
 
-function markAllRead() {
-  store.markAllRead()
+async function markAllRead() {
+  try {
+    await store.markAllRead()
+  } catch {
+    // The store keeps the visible error message and rolls back optimistic changes.
+  }
 }
 
 async function openNotification(notification: NotificationData) {

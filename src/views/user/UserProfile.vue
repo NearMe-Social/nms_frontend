@@ -23,48 +23,30 @@
                 :alt="`${displayName} profile photo`"
                 class="avatar"
               />
-              <span class="status-dot" />
             </div>
 
             <div class="summary-copy">
-              <p class="eyebrow">Verified neighbor</p>
+              <p class="eyebrow">{{ profileLabel }}</p>
               <h1>{{ displayName }}</h1>
               <p class="handle">@{{ username }}</p>
-              <p class="bio">{{ bio }}</p>
+              <p v-if="hasBio" class="bio">{{ bio }}</p>
+              <p v-else class="bio bio-empty">
+                {{
+                  isOwnProfile
+                    ? 'Add a short bio so nearby people know a little about you.'
+                    : 'No bio added yet.'
+                }}
+              </p>
 
               <div class="meta-row">
-                <span v-if="locationDisplay">
-                  <MapPin class="icon" />
-                  {{ locationDisplay }}
-                </span>
-                <span v-if="websiteUrl">
-                  <Globe class="icon" />
-                  <a
-                    :href="websiteUrl"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    class="web-link"
-                    >{{ websiteUrl }}</a
-                  >
-                </span>
                 <span>
                   <ShieldCheck class="icon" />
                   Approximate radius only
                 </span>
-              </div>
-
-              <div v-if="socialLinks.length > 0" class="social-links-row">
-                <a
-                  v-for="social in socialLinks"
-                  :key="social.url"
-                  :href="social.url"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  class="social-link"
-                >
-                  <component :is="social.icon" class="icon-sm" />
-                  {{ social.label }}
-                </a>
+                <span v-if="joinedDisplay">
+                  <CalendarDays class="icon" />
+                  Joined {{ joinedDisplay }}
+                </span>
               </div>
             </div>
 
@@ -106,12 +88,19 @@
                 <p class="eyebrow">About</p>
                 <h2>Community profile</h2>
               </div>
+              <RouterLink v-if="isOwnProfile && !hasBio" to="/profile/edit">Add bio</RouterLink>
             </div>
 
-            <p class="panel-text">{{ bio }}</p>
+            <p class="panel-text" :class="{ muted: !hasBio }">{{ bio }}</p>
 
-            <div class="tag-row" v-if="customTags.length > 0">
-              <span v-for="tag in customTags" :key="tag">#{{ tag }}</span>
+            <div class="profile-facts">
+              <div v-for="fact in profileFacts" :key="fact.label">
+                <component :is="fact.icon" class="fact-icon" />
+                <p>
+                  <strong>{{ fact.label }}</strong>
+                  <span>{{ fact.value }}</span>
+                </p>
+              </div>
             </div>
           </section>
 
@@ -162,16 +151,12 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import {
   ClipboardList,
+  CalendarDays,
   Heart,
-  MapPin,
   MessageSquare,
   Plus,
   ShieldCheck,
   Users,
-  Globe,
-  Send,
-  Instagram,
-  Linkedin,
 } from 'lucide-vue-next'
 import Navbar from '@/components/Navbar.vue'
 import AppSidebar from '@/components/AppSidebar.vue'
@@ -218,59 +203,37 @@ const displayName = computed(() => {
 
 const profileImage = computed(() => profile.value?.profile_image || null)
 
-const bio = computed(
-  () =>
-    profile.value?.bio ||
-    'Sharing useful local updates, nearby questions, and quick notices for neighbors in the commons.',
-)
+const hasBio = computed(() => Boolean(profile.value?.bio?.trim()))
+const bio = computed(() => profile.value?.bio?.trim() || 'No bio added yet.')
 
-const customTags = computed(() => {
-  return profile.value?.tags && profile.value.tags.length > 0
-    ? profile.value.tags
-    : ['Local updates', 'Safety aware', 'Community helper']
+const profileLabel = computed(() => {
+  if (profile.value?.role === 'ADMIN') return 'Admin profile'
+  return isOwnProfile.value ? 'Your profile' : 'Neighbor profile'
 })
 
-const locationDisplay = computed(() => profile.value?.location || null)
-
-const websiteUrl = computed(() => profile.value?.website || null)
-
-const socialLinks = computed(() => {
-  const links = []
-
-  if (profile.value?.telegram_handle) {
-    links.push({
-      icon: Send,
-      url: `https://t.me/${profile.value.telegram_handle.replace('@', '')}`,
-      label: profile.value.telegram_handle,
-    })
-  } else if (profile.value?.twitter_handle) {
-    links.push({
-      icon: Send,
-      url: `https://t.me/${profile.value.twitter_handle.replace('@', '')}`,
-      label: profile.value.twitter_handle,
-    })
-  }
-
-  if (profile.value?.instagram_handle) {
-    links.push({
-      icon: Instagram,
-      url: `https://instagram.com/${profile.value.instagram_handle.replace('@', '')}`,
-      label: profile.value.instagram_handle,
-    })
-  }
-  if (profile.value?.linkedin_url) {
-    let url = profile.value.linkedin_url
-    if (!url.startsWith('http')) {
-      url = `https://${url}`
-    }
-    links.push({
-      icon: Linkedin,
-      url: url,
-      label: 'LinkedIn',
-    })
-  }
-  return links
+const joinedDisplay = computed(() => {
+  if (!profile.value?.created_at) return null
+  const date = new Date(profile.value.created_at)
+  if (Number.isNaN(date.getTime())) return null
+  return date.toLocaleDateString([], { month: 'short', year: 'numeric' })
 })
+const profileFacts = computed(() => [
+  {
+    label: 'Profile type',
+    value: profile.value?.role === 'ADMIN' ? 'Admin account' : 'Community member',
+    icon: ShieldCheck,
+  },
+  {
+    label: 'Posts shared',
+    value: `${profilePosts.value.length}`,
+    icon: ClipboardList,
+  },
+  {
+    label: 'Member since',
+    value: joinedDisplay.value || 'Not available',
+    icon: CalendarDays,
+  },
+])
 
 const recentPosts = computed(() => profilePosts.value.slice(0, 3))
 const stats = computed(() => [
@@ -468,17 +431,6 @@ watch(() => route.params.userId, loadProfile)
   font-size: 2.4rem;
 }
 
-.status-dot {
-  position: absolute;
-  right: 9px;
-  bottom: 9px;
-  width: 16px;
-  height: 16px;
-  border: 3px solid #fff;
-  border-radius: 999px;
-  background: #0f8a7c;
-}
-
 .summary-copy {
   min-width: 0;
   padding-top: 0;
@@ -531,9 +483,14 @@ h2 {
   font-size: 0.92rem;
 }
 
+.bio-empty,
+.panel-text.muted {
+  color: #8aa0b1;
+  font-style: italic;
+}
+
 .meta-row,
 .actions,
-.tag-row,
 .panel-header,
 .activity-item,
 .stat-card {
@@ -652,19 +609,45 @@ h2 {
   font-size: 0.9rem;
 }
 
-.tag-row {
-  flex-wrap: wrap;
-  gap: 8px;
+.profile-facts {
   margin-top: 16px;
+  display: grid;
+  gap: 10px;
 }
 
-.tag-row span {
-  border-radius: 999px;
-  background: #e8f7f4;
-  padding: 7px 10px;
-  color: #0f766e;
-  font-size: 0.76rem;
+.profile-facts > div {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid #e7eef4;
+  border-radius: 13px;
+  background: #f8fbff;
+  padding: 11px 12px;
+}
+
+.fact-icon {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  color: #0f8a7c;
+}
+
+.profile-facts p {
+  margin: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.profile-facts strong {
+  color: #263f52;
+  font-size: 0.78rem;
   font-weight: 850;
+}
+
+.profile-facts span {
+  color: #7890a2;
+  font-size: 0.74rem;
+  font-weight: 700;
 }
 
 .activity-list {
@@ -730,38 +713,6 @@ h2 {
   color: #7890a2;
   font-size: 0.8rem;
   font-weight: 700;
-}
-
-.web-link {
-  color: #0f8a7c;
-  text-decoration: none;
-}
-.web-link:hover {
-  text-decoration: underline;
-}
-
-.social-links-row {
-  display: flex;
-  gap: 12px;
-  margin-top: 12px;
-}
-
-.social-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 0.8rem;
-  color: #4f687d;
-  text-decoration: none;
-  font-weight: 600;
-}
-.social-link:hover {
-  color: #0f8a7c;
-}
-
-.icon-sm {
-  width: 14px;
-  height: 14px;
 }
 
 @media (max-width: 900px) {

@@ -188,7 +188,7 @@
         </div>
 
         <!-- POSTS -->
-        <TransitionGroup v-else name="post" tag="section" class="flex flex-col gap-4">
+        <TransitionGroup v-else name="post" tag="section" class="feed-post-list flex flex-col gap-4">
           <div
             v-for="post in posts"
             :key="post.post_id"
@@ -257,12 +257,12 @@
             <!-- Post content -->
             <div>
               <h2
-                class="text-base font-black text-gray-900 group-hover:text-teal-700 transition-colors duration-200 leading-snug"
+                class="line-clamp-2 text-base font-black text-gray-900 group-hover:text-teal-700 transition-colors duration-200 leading-snug"
               >
                 {{ post.title }}
               </h2>
 
-              <p class="mt-1.5 text-sm text-gray-600 leading-relaxed line-clamp-3 font-medium">
+              <p class="mt-1.5 text-sm text-gray-600 leading-relaxed line-clamp-4 font-medium">
                 {{ post.content }}
               </p>
             </div>
@@ -313,7 +313,7 @@
 
       <!-- RIGHT PANEL -->
       <aside
-        class="hidden lg:flex w-56 xl:w-64 shrink-0 flex-col gap-4 py-5 pr-4 md:pr-6 animate-fade-up"
+        class="feed-side-panel hidden lg:flex w-56 xl:w-64 shrink-0 flex-col gap-4 py-5 pr-4 md:pr-6 animate-fade-up"
       >
         <div class="flex items-center gap-2">
           <p class="text-xs font-black uppercase tracking-widest text-gray-400">Feed at a glance</p>
@@ -686,9 +686,41 @@ onBeforeUnmount(() => {
   transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
+.feed-post-list {
+  width: min(100%, 760px);
+  align-self: center;
+}
+
+.feed-side-panel {
+  position: sticky;
+  top: 5.25rem;
+  align-self: flex-start;
+  max-height: calc(100vh - 6rem);
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+
+.feed-side-panel::-webkit-scrollbar {
+  display: none;
+}
+
 .line-clamp-3 {
   display: -webkit-box;
   -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.line-clamp-4 {
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
