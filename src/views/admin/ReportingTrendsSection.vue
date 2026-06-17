@@ -1,7 +1,7 @@
 <template>
-  <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+  <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-6">
     <!-- Header -->
-    <div class="flex items-center justify-between mb-6">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
       <div>
         <h2 class="text-base font-bold text-gray-800">Reporting Trends</h2>
         <p class="text-xs text-gray-400 mt-0.5">Report submissions over time</p>
@@ -25,7 +25,7 @@
     </div>
 
     <!-- Stats row -->
-    <div class="grid grid-cols-4 gap-3 mb-6">
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
       <div
         v-for="stat in stats"
         :key="stat.label"
@@ -106,7 +106,7 @@
     </div>
 
     <!-- Legend -->
-    <div class="flex items-center gap-4 mt-4 pt-4 border-t border-gray-100">
+    <div class="flex flex-wrap items-center gap-3 sm:gap-4 mt-4 pt-4 border-t border-gray-100">
       <div v-for="item in legend" :key="item.label" class="flex items-center gap-1.5">
         <span class="w-2.5 h-2.5 rounded-sm" :class="item.color"></span>
         <span class="text-xs text-gray-500 font-medium">{{ item.label }}</span>
