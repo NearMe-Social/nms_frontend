@@ -21,12 +21,9 @@
           <option value="suspended">Suspended</option>
         </select>
 
-        <button
-          class="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-semibold text-gray-600 bg-white border border-gray-200 hover:bg-gray-50 transition-all duration-200"
-        >
-          <Download class="w-4 h-4" />
-          Export
-        </button>
+        <span class="text-xs text-gray-400">
+          {{ filteredUsers.length }} visible
+        </span>
       </div>
     </div>
 
@@ -109,12 +106,12 @@
               </td>
               <td class="px-5 py-4">
                 <div class="flex items-center gap-2.5">
-                  <div
-                    class="w-7 h-7 rounded-full text-white text-xs font-bold flex items-center justify-center ring-2 ring-transparent group-hover:ring-blue-200 transition-all duration-300 ease-out"
-                    :style="{ background: user.avatarColor }"
-                  >
-                    {{ user.initials }}
-                  </div>
+                  <UserAvatar
+                    :src="user.profileImage"
+                    :username="user.username || user.name"
+                    :alt="`${user.name} profile`"
+                    class="admin-user-avatar ring-2 ring-transparent group-hover:ring-blue-200 transition-all duration-300 ease-out"
+                  />
                   <div class="min-w-0">
                     <p class="font-medium text-gray-700 truncate">{{ user.name }}</p>
                     <p class="text-xs text-gray-400">{{ user.displayId }}</p>
@@ -182,7 +179,8 @@
 
 <script setup>
 import { computed, ref } from 'vue'
-import { ArrowUpDown, ChevronLeft, ChevronRight, Download, Search } from 'lucide-vue-next'
+import { ArrowUpDown, ChevronLeft, ChevronRight, Search } from 'lucide-vue-next'
+import UserAvatar from '@/components/UserAvatar.vue'
 
 const props = defineProps({
   users: { type: Array, default: () => [] },
@@ -311,5 +309,12 @@ function statusClass(status) {
 
 .row-move {
   transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.admin-user-avatar {
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
 }
 </style>

@@ -4,7 +4,7 @@
     <div class="dashboard-header">
       <div class="header-content">
         <h1 class="page-title">Dashboard</h1>
-        <p class="page-subtitle">Overview of platform activity and content moderation metrics</p>
+        <p class="page-subtitle">Overview of platform activity, reports, and account health.</p>
       </div>
 
       <div class="header-actions">
@@ -86,11 +86,7 @@
           <ul class="info-list">
             <li><RouterLink to="/admin/reports" class="info-link">View All Reports</RouterLink></li>
             <li><RouterLink to="/admin/users" class="info-link">Manage Users</RouterLink></li>
-            <li>
-              <RouterLink to="/admin/moderation" class="info-link">
-                Review Moderation Queue
-              </RouterLink>
-            </li>
+            <li><RouterLink to="/admin/reports" class="info-link">Review Flagged Content</RouterLink></li>
           </ul>
         </div>
 

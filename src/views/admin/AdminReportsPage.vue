@@ -1,23 +1,27 @@
 <template>
-  <div class="p-6 flex flex-col gap-5">
-    <div class="flex items-center justify-between gap-4 animate-fade-down">
+  <div class="p-4 sm:p-6 flex flex-col gap-5">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 animate-fade-down">
       <div>
         <h1 class="text-xl font-bold text-gray-800">Report Management</h1>
         <p class="text-gray-400 text-sm mt-0.5">Review and resolve community flagged content.</p>
       </div>
       <button
-        class="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-gray-600 bg-white border border-gray-200 hover:bg-gray-50 transition-all duration-200 shadow-sm"
+        type="button"
+        @click="fetchReports"
+        :disabled="isLoading"
+        class="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-gray-600 bg-white border border-gray-200 hover:bg-gray-50 transition-all duration-200 shadow-sm disabled:opacity-60"
       >
-        <Download class="w-4 h-4" />
-        Export Log
+        <RefreshCw :class="['w-4 h-4', isLoading ? 'animate-spin' : '']" />
+        Refresh reports
       </button>
     </div>
-      <!-- Trends -->
-      <div class="animate-fade-up">
-        <ReportingTrendsSection :reports="reports" />
-      </div>
 
-    <div class="flex flex-wrap items-center justify-between gap-3 animate-fade-up">
+    <!-- Trends -->
+    <div class="animate-fade-up">
+      <ReportingTrendsSection :reports="reports" />
+    </div>
+
+    <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 animate-fade-up">
       <ReportFilterBar
         :status="selectedStatus"
         :type="selectedType"
@@ -26,8 +30,8 @@
         @clear="clearFilters"
       />
 
-      <div class="flex items-center gap-3">
-        <div class="flex items-center bg-white border border-gray-200 rounded-xl px-3 py-2 gap-2 w-64 shadow-sm">
+      <div class="flex flex-col sm:flex-row sm:items-center gap-3">
+        <div class="flex items-center bg-white border border-gray-200 rounded-xl px-3 py-2 gap-2 w-full sm:w-64 shadow-sm">
           <Search class="w-3.5 h-3.5 text-gray-400 shrink-0" />
           <input
             v-model="search"
@@ -57,7 +61,7 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { Download, Search } from 'lucide-vue-next'
+import { RefreshCw, Search } from 'lucide-vue-next'
 import ReportFilterBar from '@/views/admin/ReportFilterBar.vue'
 import ReportTableComponent from '@/views/admin/ReportTableComponent.vue'
 import { adminReportsApi } from '@/services/api'
