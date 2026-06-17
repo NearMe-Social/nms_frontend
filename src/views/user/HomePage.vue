@@ -57,8 +57,40 @@
           @refresh="retryLocation"
         />
 
+        <!-- LOCATION LOADING STATE -->
+        <div
+          v-if="
+            loading &&
+            posts.length === 0 &&
+            (geo.status.value === 'idle' || geo.status.value === 'requesting')
+          "
+          class="home-location-card animate-fade-up"
+          aria-live="polite"
+        >
+          <div class="home-location-icon">
+            <MapPin class="h-6 w-6" />
+          </div>
+          <div class="min-w-0">
+            <p class="text-[0.68rem] font-black uppercase tracking-[0.16em] text-teal-700">
+              Finding your area
+            </p>
+            <h2 class="mt-1 text-lg font-black tracking-tight text-slate-800">
+              Preparing your nearby feed
+            </h2>
+            <p class="mt-2 max-w-xl text-sm font-medium leading-6 text-slate-400">
+              Nearme is checking your current area so only posts inside their visibility radius
+              appear here.
+            </p>
+          </div>
+          <div class="home-loading-lines" aria-hidden="true">
+            <span></span>
+            <span></span>
+            <span></span>
+          </div>
+        </div>
+
         <!-- LOADING SKELETON -->
-        <div v-if="loading" class="flex flex-col gap-4 animate-fade-up">
+        <div v-else-if="loading" class="flex flex-col gap-4 animate-fade-up">
           <div
             v-for="n in 4"
             :key="n"
@@ -82,18 +114,27 @@
         <!-- LOCATION PERMISSION STATE -->
         <div
           v-else-if="geo.status.value === 'denied'"
-          class="animate-fade-up rounded-[18px] bg-white p-8 text-center ring-1 ring-rose-100 flex flex-col items-center gap-3"
+          class="home-error-card animate-fade-up"
         >
-          <div class="w-12 h-12 bg-red-50 rounded-full flex items-center justify-center">
+          <div class="w-12 h-12 bg-red-50 rounded-2xl flex items-center justify-center shadow-[0_0_0_8px_rgba(244,63,94,0.04)]">
             <AlertCircle class="w-6 h-6 text-red-400" />
           </div>
-          <p class="text-sm font-bold text-rose-600">
-            {{ geo.errorMessage.value || 'Location access was denied. Enable it in browser settings.' }}
-          </p>
+          <div>
+            <p class="text-[0.68rem] font-black uppercase tracking-[0.16em] text-rose-500">
+              Location needed
+            </p>
+            <p class="mt-2 text-sm font-bold leading-6 text-rose-600">
+              {{
+                geo.errorMessage.value ||
+                'Location access was denied. Enable it in browser settings.'
+              }}
+            </p>
+          </div>
           <button
             @click="retryLocation"
-            class="text-xs font-bold text-teal-600 hover:underline hover:text-teal-700 transition-colors duration-200"
+            class="inline-flex items-center gap-1.5 rounded-xl bg-teal-600 px-4 py-2 text-xs font-bold text-white transition-all duration-200 hover:-translate-y-0.5 hover:bg-teal-700 hover:shadow-md hover:shadow-teal-100"
           >
+            <RefreshCw class="h-3.5 w-3.5" />
             Try again
           </button>
         </div>
@@ -101,16 +142,22 @@
         <!-- ERROR STATE -->
         <div
           v-else-if="error"
-          class="animate-fade-up rounded-[18px] bg-white p-8 text-center ring-1 ring-rose-100 flex flex-col items-center gap-3"
+          class="home-error-card animate-fade-up"
         >
-          <div class="w-12 h-12 bg-red-50 rounded-full flex items-center justify-center">
+          <div class="w-12 h-12 bg-red-50 rounded-2xl flex items-center justify-center shadow-[0_0_0_8px_rgba(244,63,94,0.04)]">
             <AlertCircle class="w-6 h-6 text-red-400" />
           </div>
-          <p class="text-sm font-bold text-rose-600">{{ error }}</p>
+          <div>
+            <p class="text-[0.68rem] font-black uppercase tracking-[0.16em] text-rose-500">
+              Feed paused
+            </p>
+            <p class="mt-2 text-sm font-bold leading-6 text-rose-600">{{ error }}</p>
+          </div>
           <button
             @click="retryLocation"
-            class="text-xs font-bold text-teal-600 hover:underline hover:text-teal-700 transition-colors duration-200"
+            class="inline-flex items-center gap-1.5 rounded-xl bg-teal-600 px-4 py-2 text-xs font-bold text-white transition-all duration-200 hover:-translate-y-0.5 hover:bg-teal-700 hover:shadow-md hover:shadow-teal-100"
           >
+            <RefreshCw class="h-3.5 w-3.5" />
             Try again
           </button>
         </div>
@@ -118,17 +165,18 @@
         <!-- EMPTY STATE -->
         <div
           v-else-if="posts.length === 0"
-          class="animate-fade-up rounded-[18px] bg-white p-12 text-center ring-1 ring-slate-200/70 flex flex-col items-center gap-4"
+          class="home-empty-card animate-fade-up"
         >
-          <div
-            class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center animate-bounce"
-          >
-            <MapPin class="w-7 h-7 text-gray-300" />
+          <div class="w-16 h-16 bg-teal-50 rounded-2xl flex items-center justify-center">
+            <MapPin class="w-7 h-7 text-teal-500" />
           </div>
           <div>
-            <p class="text-base font-black text-gray-700">No posts nearby</p>
-            <p class="text-sm text-gray-400 mt-1 font-medium">
-              Be the first to share something in your area!
+            <p class="text-[0.68rem] font-black uppercase tracking-[0.16em] text-teal-700">
+              Nothing in range yet
+            </p>
+            <p class="mt-2 text-base font-black text-gray-700">No posts nearby</p>
+            <p class="text-sm text-gray-400 mt-1 font-medium leading-6">
+              Be the first to share something useful with people around your current area.
             </p>
           </div>
           <RouterLink
@@ -643,6 +691,145 @@ onBeforeUnmount(() => {
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+
+.home-location-card,
+.home-error-card,
+.home-empty-card {
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 14px 34px rgba(38, 65, 82, 0.06);
+}
+
+.home-location-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) minmax(140px, 210px);
+  gap: 18px;
+  align-items: center;
+  border: 1px solid #dce8ee;
+  background:
+    radial-gradient(circle at top left, rgba(15, 138, 124, 0.1), transparent 34%),
+    #fff;
+  padding: 22px;
+}
+
+.home-location-icon {
+  position: relative;
+  display: inline-flex;
+  width: 58px;
+  height: 58px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 18px;
+  background: #edf8f7;
+  color: #0f8179;
+}
+
+.home-location-icon::after {
+  position: absolute;
+  inset: -8px;
+  border: 1px solid rgba(15, 129, 121, 0.24);
+  border-radius: 22px;
+  content: '';
+  animation: homeLocationPulse 1.5s ease-out infinite;
+}
+
+.home-loading-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.home-loading-lines span {
+  height: 10px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #edf3f7 25%, #f8fcfd 50%, #edf3f7 75%);
+  background-size: 220% 100%;
+  animation: homeShimmerLine 1.35s ease-in-out infinite;
+}
+
+.home-loading-lines span:nth-child(2) {
+  width: 78%;
+  animation-delay: 0.1s;
+}
+
+.home-loading-lines span:nth-child(3) {
+  width: 52%;
+  animation-delay: 0.2s;
+}
+
+.home-error-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  border: 1px solid #fee2e2;
+  background:
+    radial-gradient(circle at top, rgba(244, 63, 94, 0.08), transparent 34%),
+    #fff;
+  padding: 34px 28px;
+  text-align: center;
+}
+
+.home-empty-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  padding: 44px 28px;
+  text-align: center;
+}
+
+@keyframes homeLocationPulse {
+  0% {
+    opacity: 0.9;
+    transform: scale(0.88);
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(1.18);
+  }
+}
+
+@keyframes homeShimmerLine {
+  0% {
+    background-position: 220% 0;
+  }
+
+  100% {
+    background-position: -220% 0;
+  }
+}
+
+@media (max-width: 767px) {
+  .home-location-card {
+    grid-template-columns: 1fr;
+    gap: 14px;
+    padding: 18px;
+  }
+
+  .home-location-icon {
+    width: 54px;
+    height: 54px;
+  }
+
+  .home-loading-lines {
+    display: none;
+  }
+
+  .home-error-card,
+  .home-empty-card {
+    padding: 28px 18px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-location-icon::after,
+  .home-loading-lines span {
+    animation: none;
+  }
 }
 
 </style>
