@@ -53,8 +53,26 @@ export const useNotificationStore = defineStore('notifications', () => {
     }
   }
 
-  function markAllRead() {
+  async function markAllRead() {
+    const previousNotifications = notifications.value.map((n) => ({ ...n }))
     notifications.value = notifications.value.map((n) => ({ ...n, is_read: true }))
+
+    try {
+      const token = localStorage.getItem('token')
+      const res = await fetch(`${API_URL}/notifications/read-all`, {
+        method: 'PATCH',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      })
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    } catch (err: unknown) {
+      notifications.value = previousNotifications
+      const message = err instanceof Error ? err.message : 'Failed to mark notifications as read.'
+      error.value = message
+      throw new Error(message)
+    }
   }
 
   async function markAsRead(notificationId: number) {

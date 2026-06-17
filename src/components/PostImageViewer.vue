@@ -182,6 +182,19 @@ onBeforeUnmount(() => {
   min-height: clamp(383px, 44vw, 623px);
 }
 
+.post-image-viewer--feed {
+  height: clamp(320px, 48vh, 460px);
+}
+
+.post-image-viewer--feed .preview-button,
+.post-image-viewer--feed .preview-image {
+  height: 100%;
+}
+
+.post-image-viewer--feed.image-count-3 .preview-button:first-child .preview-image {
+  min-height: 0;
+}
+
 .post-image-viewer--detail .preview-image {
   height: clamp(280px, 48vw, 560px);
 }
@@ -314,6 +327,10 @@ onBeforeUnmount(() => {
 }
 
 @media (max-width: 640px) {
+  .post-image-viewer--feed {
+    height: clamp(240px, 64vw, 360px);
+  }
+
   .preview-image,
   .post-image-viewer--detail .preview-image,
   .post-image-viewer--compact .preview-image {
