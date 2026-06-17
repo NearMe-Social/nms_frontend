@@ -284,7 +284,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import {
   ArrowLeft,
@@ -637,6 +637,9 @@ async function loadPostDetail() {
     comments.value = commentData.filter(isActiveComment).map(toViewComment)
     if (route.query.edit === '1' && post.value.user?.user_id === currentUserId.value) {
       await router.replace(`/posts/${post.value.post_id}/edit`)
+    } else if (route.query.focus === 'comment') {
+      await nextTick()
+      focusReply()
     }
   } catch (err: unknown) {
     error.value = err instanceof Error ? err.message : 'Failed to load post discussion.'

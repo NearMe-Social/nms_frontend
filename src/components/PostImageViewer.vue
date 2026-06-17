@@ -13,7 +13,6 @@
       @click.stop="open(index)"
     >
       <img :src="image" :alt="alt" class="preview-image" loading="lazy" />
-      <span v-if="index === 0" class="preview-hint"><Maximize2 /> View image</span>
       <span v-if="index === visibleImages.length - 1 && hiddenCount > 0" class="more-overlay">
         +{{ hiddenCount }}
       </span>
@@ -60,7 +59,7 @@
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
-import { ChevronLeft, ChevronRight, Maximize2, X } from 'lucide-vue-next'
+import { ChevronLeft, ChevronRight, X } from 'lucide-vue-next'
 
 const props = withDefaults(
   defineProps<{
@@ -217,27 +216,6 @@ onBeforeUnmount(() => {
   transform: scale(1.015);
 }
 
-.preview-hint {
-  position: absolute;
-  right: 12px;
-  bottom: 12px;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  border-radius: 999px;
-  background: rgba(15, 23, 42, 0.78);
-  padding: 7px 10px;
-  color: #fff;
-  font-size: 0.7rem;
-  font-weight: 800;
-  backdrop-filter: blur(8px);
-}
-
-.preview-hint svg {
-  width: 14px;
-  height: 14px;
-}
-
 .more-overlay {
   position: absolute;
   inset: 0;
@@ -339,11 +317,6 @@ onBeforeUnmount(() => {
 
   .image-modal {
     padding: 12px;
-  }
-
-  .preview-hint {
-    right: 9px;
-    bottom: 9px;
   }
 
   .image-count-2 .preview-image,
