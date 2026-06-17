@@ -13,6 +13,7 @@ import Settings from '@/views/user/Settings.vue'
 import PermissionRequest from '@/views/user/PermissionRequest.vue'
 import DiscussionDetail from '@/views/user/DiscussionDetail.vue'
 import CreateDiscussion from '@/views/user/CreateDiscussion.vue'
+import EditPostPage from '@/views/user/EditPostPage.vue'
 import NearbyView from '@/views/NearbyView.vue'
 import CreatePostPage from '@/views/CreatePostPage.vue'
 import DiscussionsPage from '@/views/DiscussionsPage.vue'
@@ -65,6 +66,12 @@ const routes = [
     path: '/discussion',
     name: 'DiscussionDetail',
     component: DiscussionDetail,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/posts/:postId/edit',
+    name: 'EditPost',
+    component: EditPostPage,
     meta: { requiresAuth: true },
   },
   {

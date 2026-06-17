@@ -496,7 +496,12 @@ function contentWithoutImageUrls(content: string, imageUrls: string[]) {
   }, content)
 }
 
-function openEditPost() {
+function openEditPost(postId = post.value?.post_id) {
+  if (!postId || !isPostOwner.value) return
+  router.push(`/posts/${postId}/edit`)
+}
+
+function openEditPostModal() {
   if (!post.value || !isPostOwner.value) return
 
   clearEditImageSelection()
@@ -631,7 +636,7 @@ async function loadPostDetail() {
     }
     comments.value = commentData.filter(isActiveComment).map(toViewComment)
     if (route.query.edit === '1' && post.value.user?.user_id === currentUserId.value) {
-      openEditPost()
+      await router.replace(`/posts/${post.value.post_id}/edit`)
     }
   } catch (err: unknown) {
     error.value = err instanceof Error ? err.message : 'Failed to load post discussion.'
@@ -708,7 +713,9 @@ watch(() => route.params.postId, loadPostDetail)
 watch(
   () => route.query.edit,
   (editMode) => {
-    if (editMode === '1') openEditPost()
+    if (editMode === '1' && post.value?.post_id) {
+      void router.replace(`/posts/${post.value.post_id}/edit`)
+    }
   },
 )
 </script>
