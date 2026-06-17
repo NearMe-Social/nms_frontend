@@ -4,8 +4,8 @@
       class="sticky top-0 z-50 bg-white/95 backdrop-blur border-b border-slate-200 min-h-14 flex flex-wrap items-center px-4 py-3 sm:px-6 sm:py-0 gap-3 sm:gap-4"
     >
       <div class="flex items-center gap-2 sm:w-44 shrink-0">
-        <div class="w-8 h-8 bg-blue-600 rounded-xl flex items-center justify-center shrink-0 shadow-sm shadow-blue-100">
-          <span class="text-white font-black text-sm">N</span>
+        <div class="admin-brand-symbol" aria-hidden="true">
+          <img :src="nearmeLogo" alt="" />
         </div>
         <div>
           <p class="text-sm font-bold text-gray-800 leading-none">NearMe Admin</p>
@@ -130,6 +130,7 @@ import {
   Flag,
   Users,
 } from 'lucide-vue-next'
+import nearmeLogo from '@/assets/icons/main_logo.svg'
 import { useAuthStore } from '@/stores/auth'
 import UserAvatar from '@/components/UserAvatar.vue'
 
@@ -169,6 +170,30 @@ function isActive(path) {
 </script>
 
 <style scoped>
+.admin-brand-symbol {
+  width: 34px;
+  height: 34px;
+  position: relative;
+  flex: 0 0 34px;
+  overflow: hidden;
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow:
+    0 0 0 1px rgba(14, 165, 233, 0.18),
+    0 8px 18px rgba(14, 165, 233, 0.12);
+}
+
+.admin-brand-symbol img {
+  width: 166%;
+  height: 166%;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: block;
+  object-fit: cover;
+  transform: translate(-50%, -50%);
+}
+
 .admin-top-avatar {
   width: 32px;
   height: 32px;
