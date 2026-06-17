@@ -279,17 +279,23 @@
                 <button
                   type="button"
                   class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm text-gray-400 hover:bg-red-50 hover:text-red-400 hover:scale-105 active:scale-95 transition-all duration-200 font-semibold"
-                  @click.stop
+                  :class="{ 'bg-red-50 text-red-500': post.user_reacted }"
+                  :disabled="reactingPostId === post.post_id"
+                  @click.stop="toggleReaction(post)"
+                  :aria-pressed="post.user_reacted ? 'true' : 'false'"
+                  aria-label="Like post"
                 >
-                  <Heart class="w-4 h-4 transition-transform duration-200 hover:scale-110" />
-                  <span class="text-xs font-bold">{{
-                    post.reactions?.length ?? post.reactions_count ?? 0
-                  }}</span>
+                  <Heart
+                    class="w-4 h-4 transition-transform duration-200 hover:scale-110"
+                    :class="{ 'fill-current': post.user_reacted }"
+                  />
+                  <span class="text-xs font-bold">{{ postReactionCount(post) }}</span>
                 </button>
                 <button
                   type="button"
                   class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm text-gray-400 hover:bg-teal-50 hover:text-teal-500 hover:scale-105 active:scale-95 transition-all duration-200"
-                  @click.stop
+                  @click.stop="navigateToComments(post.post_id)"
+                  aria-label="Open comments"
                 >
                   <MessageCircle
                     class="w-4 h-4 transition-transform duration-200 hover:scale-110"
@@ -436,7 +442,7 @@ import PostOptionsMenu from '@/components/PostOptionsMenu.vue'
 import UserAvatar from '@/components/UserAvatar.vue'
 import PostImageViewer from '@/components/PostImageViewer.vue'
 import LocationFallbackNotice from '@/components/LocationFallbackNotice.vue'
-import { postApi, userApi, type ApiPost } from '@/services/api'
+import { postApi, reactionApi, userApi, type ApiPost } from '@/services/api'
 import { useNearbyLocation } from '@/composables/useNearbyLocation'
 import {
   MapPin,
@@ -456,14 +462,12 @@ const posts = ref<ApiPost[]>([])
 const loading = ref(true)
 const error = ref('')
 const sortMode = ref<'latest' | 'active'>('latest')
+const reactingPostId = ref<number | null>(null)
 let locationPermission: PermissionStatus | null = null
 
 const activePosts = computed(() => posts.value.filter((p) => !isExpired(p.expires_at)).length)
 const totalReactions = computed(() =>
-  posts.value.reduce(
-    (total, post) => total + (post.reactions?.length ?? post.reactions_count ?? 0),
-    0,
-  ),
+  posts.value.reduce((total, post) => total + postReactionCount(post), 0),
 )
 const totalComments = computed(() =>
   posts.value.reduce(
@@ -477,6 +481,10 @@ function navigateToPost(postId: number) {
   router.push(`/posts/${postId}`)
 }
 
+function navigateToComments(postId: number) {
+  router.push({ path: `/posts/${postId}`, query: { focus: 'comment' } })
+}
+
 function navigateToPostEdit(postId: number) {
   router.push(`/posts/${postId}/edit`)
 }
@@ -487,6 +495,26 @@ function removePostFromFeed(postId: number) {
 
 function postImageUrls(post: ApiPost) {
   return post.image_urls?.length ? post.image_urls : post.image_url ? [post.image_url] : []
+}
+
+function postReactionCount(post: ApiPost) {
+  return post.reactions_count ?? post.reactions?.length ?? 0
+}
+
+async function toggleReaction(post: ApiPost) {
+  if (reactingPostId.value) return
+
+  reactingPostId.value = post.post_id
+  try {
+    const result = await reactionApi.togglePost(post.post_id)
+    post.user_reacted = result.liked
+    post.reactions_count = result.reactions_count
+    post.reactions = undefined
+  } catch (err: unknown) {
+    error.value = err instanceof Error ? err.message : 'Could not update reaction.'
+  } finally {
+    reactingPostId.value = null
+  }
 }
 
 function profileRoute(userId?: number | null) {

@@ -77,6 +77,7 @@ export interface ApiPost {
   reactions?: unknown[]
   comments_count?: number
   reactions_count?: number
+  user_reacted?: boolean
   distance_m?: number
   distance_label?: string
 }
@@ -441,6 +442,17 @@ export const commentApi = {
       method: 'POST',
       body: JSON.stringify(payload),
     })
+  },
+}
+
+export const reactionApi = {
+  togglePost(postId: number): Promise<{ liked: boolean; reactions_count: number }> {
+    return request<{ liked: boolean; reactions_count: number }>(
+      `/reactions/posts/${postId}/toggle`,
+      {
+        method: 'POST',
+      },
+    )
   },
 }
 
