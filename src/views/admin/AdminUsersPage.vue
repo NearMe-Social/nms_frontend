@@ -125,7 +125,7 @@ const stats = computed(() => {
     {
       label: 'Total Users',
       value: total.toLocaleString(),
-      delta: 'Live backend data',
+      delta: `${active.toLocaleString()} active`,
       trend: 'up',
       icon: Users,
       iconBg: '#eff6ff',

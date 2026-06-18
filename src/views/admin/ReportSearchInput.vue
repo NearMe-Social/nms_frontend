@@ -1,57 +1,62 @@
 <template>
-  <div
-    :class="[
-      'flex items-center bg-white border rounded-xl px-3 py-2 gap-2 shadow-sm transition-all duration-300 ease-out',
-      isFocused
-        ? 'border-teal-400 ring-2 ring-teal-100 shadow-md'
-        : 'border-gray-200'
-    ]"
-  >
-    <Search class="w-4 h-4 text-gray-400 shrink-0 transition-colors duration-300" />
+  <label class="report-search">
+    <Search class="search-icon" />
     <input
-      type="text"
       :value="modelValue"
-      @input="$emit('update:modelValue', $event.target.value)"
-      @focus="isFocused = true"
-      @blur="isFocused = false"
-      placeholder="Search by name or reason..."
-      class="text-sm text-gray-600 outline-none w-full placeholder-gray-400 bg-transparent"
+      type="text"
+      placeholder="Search reports, users..."
+      class="search-input"
+      @input="onInput"
     />
-    <Transition name="pop">
-      <button
-        v-if="modelValue"
-        @click="$emit('update:modelValue', '')"
-        class="shrink-0 text-gray-300 hover:text-gray-500 transition-colors duration-200"
-      >
-        <X class="w-3.5 h-3.5" />
-      </button>
-    </Transition>
-  </div>
+  </label>
 </template>
 
-<script setup>
-import { ref } from 'vue'
-import { Search, X } from 'lucide-vue-next'
+<script setup lang="ts">
+import { Search } from 'lucide-vue-next'
 
-defineProps({
-  modelValue: { type: String, default: '' },
-})
+defineProps<{
+  modelValue: string
+}>()
 
-defineEmits(['update:modelValue'])
+const emit = defineEmits<{
+  'update:modelValue': [value: string]
+}>()
 
-const isFocused = ref(false)
+function onInput(event: Event) {
+  emit('update:modelValue', (event.target as HTMLInputElement).value)
+}
 </script>
 
 <style scoped>
-.pop-enter-active {
-  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+.report-search {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.75rem;
+  background: #fff;
+  padding: 0.5rem 0.75rem;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
 }
-.pop-leave-active {
-  transition: all 0.15s ease-out;
+
+.search-icon {
+  width: 0.875rem;
+  height: 0.875rem;
+  flex-shrink: 0;
+  color: #9ca3af;
 }
-.pop-enter-from,
-.pop-leave-to {
-  opacity: 0;
-  transform: scale(0.7);
+
+.search-input {
+  width: 100%;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #4b5563;
+  font-size: 0.75rem;
+}
+
+.search-input::placeholder {
+  color: #9ca3af;
 }
 </style>

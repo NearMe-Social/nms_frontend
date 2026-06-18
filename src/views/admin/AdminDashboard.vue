@@ -28,53 +28,36 @@
     <!-- Summary Cards Section -->
     <div v-else class="summary-section">
       <div class="summary-grid">
-        <!-- Total Users Card -->
-        <div class="summary-card users-card">
-          <div class="card-header">
-            <h3 class="card-title">Total Users</h3>
-            <Users class="card-icon users-icon" />
-          </div>
-          <div class="card-content">
-            <div class="card-value">{{ stats.totalUsers }}</div>
-            <div class="card-change">{{ stats.activeUsers }} active accounts</div>
-          </div>
-        </div>
-
-        <!-- Active Posts Card -->
-        <div class="summary-card posts-card">
-          <div class="card-header">
-            <h3 class="card-title">Active Posts</h3>
-            <FileText class="card-icon posts-icon" />
-          </div>
-          <div class="card-content">
-            <div class="card-value">{{ stats.activePosts }}</div>
-            <div class="card-change">Currently visible in the feed</div>
-          </div>
-        </div>
-
-        <!-- Reported Content Card -->
-        <div class="summary-card reports-card">
-          <div class="card-header">
-            <h3 class="card-title">Pending Reports</h3>
-            <Flag class="card-icon reports-icon" />
-          </div>
-          <div class="card-content">
-            <div class="card-value">{{ stats.pendingReports }}</div>
-            <div class="card-change negative">{{ stats.totalReports }} total reports</div>
-          </div>
-        </div>
-
-        <!-- Blocked Users Card -->
-        <div class="summary-card blocked-card">
-          <div class="card-header">
-            <h3 class="card-title">Suspended Users</h3>
-            <Ban class="card-icon blocked-icon" />
-          </div>
-          <div class="card-content">
-            <div class="card-value">{{ stats.suspendedUsers }}</div>
-            <div class="card-change negative">Inactive accounts</div>
-          </div>
-        </div>
+        <DashboardStatCard
+          title="Total Users"
+          :value="stats.totalUsers"
+          :icon="Users"
+          icon-class="users-icon"
+          :note="`${stats.activeUsers} active accounts`"
+        />
+        <DashboardStatCard
+          title="Active Posts"
+          :value="stats.activePosts"
+          :icon="FileText"
+          icon-class="posts-icon"
+          note="All active posts on the platform"
+        />
+        <DashboardStatCard
+          title="Pending Reports"
+          :value="stats.pendingReports"
+          :icon="Flag"
+          icon-class="reports-icon"
+          :note="`${stats.totalReports} total reports`"
+          negative
+        />
+        <DashboardStatCard
+          title="Suspended Users"
+          :value="stats.suspendedUsers"
+          :icon="Ban"
+          icon-class="blocked-icon"
+          note="Inactive accounts"
+          negative
+        />
       </div>
     </div>
 
@@ -82,12 +65,73 @@
     <div v-if="!loading && !error" class="info-section">
       <div class="info-grid">
         <div class="info-card">
-          <h3 class="info-title">Quick Actions</h3>
-          <ul class="info-list">
-            <li><RouterLink to="/admin/reports" class="info-link">View All Reports</RouterLink></li>
-            <li><RouterLink to="/admin/users" class="info-link">Manage Users</RouterLink></li>
-            <li><RouterLink to="/admin/reports" class="info-link">Review Flagged Content</RouterLink></li>
-          </ul>
+          <h3 class="info-title">Highest Risk Reports</h3>
+          <p v-if="!primaryPriorityReport" class="empty-activity">
+            No reports currently pass the high-risk threshold.
+          </p>
+          <div v-else class="priority-report-stack">
+            <RouterLink
+              :to="`/admin/reports/${primaryPriorityReport.actionReportId}`"
+              class="priority-report priority-report-main"
+            >
+              <span class="priority-count" :class="{ danger: primaryPriorityReport.isHighRisk }">
+                <strong>{{ primaryPriorityReport.count }}</strong>
+                <small>reports</small>
+              </span>
+              <span class="priority-copy">
+                <strong>{{ primaryPriorityReport.targetType }} #{{ primaryPriorityReport.targetId }}</strong>
+                <small>{{ primaryPriorityReport.reasonSummary }}</small>
+                <small>
+                  {{ primaryPriorityReport.pendingCount > 0 ? 'Next pending' : 'Latest report' }}
+                  · {{ formatDate(primaryPriorityReport.actionCreatedAt) }}
+                </small>
+                <small>
+                  First reported {{ formatDate(primaryPriorityReport.firstCreatedAt) }}
+                </small>
+                <span class="priority-detail-grid">
+                  <span>
+                    <b>{{ primaryPriorityReport.riskScore }}</b>
+                    Risk score
+                  </span>
+                  <span>
+                    <b>{{ primaryPriorityReport.uniqueReporterCount }}</b>
+                    Reporters
+                  </span>
+                  <span>
+                    <b>{{ primaryPriorityReport.seriousReasonCount }}</b>
+                    Serious reasons
+                  </span>
+                  <span>
+                    <b>{{ primaryPriorityReport.ageLabel }}</b>
+                    Waiting
+                  </span>
+                </span>
+              </span>
+              <span class="priority-type">
+                {{ primaryPriorityReport.riskLevel }}
+              </span>
+            </RouterLink>
+
+            <div v-if="secondaryPriorityReports.length" class="priority-mini-grid">
+              <RouterLink
+                v-for="group in secondaryPriorityReports"
+                :key="group.key"
+                :to="`/admin/reports/${group.actionReportId}`"
+                class="priority-mini"
+              >
+                <span>
+                  <strong>{{ group.targetType }} #{{ group.targetId }}</strong>
+                  <small>{{ group.count }} reports · {{ group.pendingCount }} pending</small>
+                  <small>By {{ group.latestReporter }}</small>
+                  <small>
+                    {{ group.pendingCount > 0 ? 'Next' : 'Latest' }}
+                    {{ formatDate(group.actionCreatedAt) }}
+                  </small>
+                </span>
+                <span class="priority-mini-type">{{ group.targetType }}</span>
+              </RouterLink>
+            </div>
+          </div>
         </div>
 
         <div class="info-card">
@@ -120,6 +164,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import { Ban, FileText, Flag, Users } from 'lucide-vue-next'
+import DashboardStatCard from '@/views/admin/DashboardStatCard.vue'
 import {
   adminReportsApi,
   adminUsersApi,
@@ -134,15 +179,17 @@ const reports = ref<ApiAdminReport[]>([])
 const posts = ref<ApiPost[]>([])
 const loading = ref(true)
 const error = ref('')
+const HIGH_RISK_THRESHOLD = 20
 
 const stats = computed(() => ({
   totalUsers: users.value.length,
   activeUsers: users.value.filter((user) => user.isActive).length,
-  activePosts: posts.value.filter(
-    (post) => post.status === 'ACTIVE' && new Date(post.expires_at).getTime() > Date.now(),
-  ).length,
+  activePosts: posts.value.filter((post) => post.status === 'ACTIVE').length,
   pendingReports: reports.value.filter((report) => report.status === 'PENDING').length,
   totalReports: reports.value.length,
+  flaggedAccounts: new Set(
+    reports.value.filter((report) => report.targetType === 'USER').map((report) => report.targetId),
+  ).size,
   suspendedUsers: users.value.filter((user) => !user.isActive).length,
 }))
 
@@ -151,6 +198,127 @@ const recentReports = computed(() =>
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
     .slice(0, 5),
 )
+
+interface PriorityReportGroup {
+  key: string
+  targetType: ApiAdminReport['targetType']
+  targetId: number
+  count: number
+  pendingCount: number
+  seriousReasonCount: number
+  uniqueReporterCount: number
+  riskScore: number
+  riskLevel: string
+  isHighRisk: boolean
+  actionReportId: number
+  actionCreatedAt: string
+  latestReportId: number
+  latestCreatedAt: string
+  firstCreatedAt: string
+  ageLabel: string
+  latestReporter: string
+  reasonSummary: string
+}
+
+const priorityReports = computed<PriorityReportGroup[]>(() => {
+  const grouped = new Map<string, ApiAdminReport[]>()
+
+  reports.value.forEach((report) => {
+    const key = `${report.targetType}:${report.targetId}`
+    grouped.set(key, [...(grouped.get(key) ?? []), report])
+  })
+
+  return [...grouped.entries()]
+    .map(([key, groupReports]) => toPriorityGroup(key, groupReports))
+    .filter((group) => group.pendingCount > 0 && group.riskScore >= HIGH_RISK_THRESHOLD)
+    .sort(
+      (a, b) =>
+        b.riskScore - a.riskScore ||
+        new Date(a.firstCreatedAt).getTime() - new Date(b.firstCreatedAt).getTime(),
+    )
+    .slice(0, 3)
+})
+
+const primaryPriorityReport = computed(() => priorityReports.value[0] ?? null)
+
+const secondaryPriorityReports = computed(() => priorityReports.value.slice(1, 3))
+
+function toPriorityGroup(key: string, groupReports: ApiAdminReport[]): PriorityReportGroup {
+  const sortedReports = [...groupReports].sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+  )
+  const pendingReports = groupReports
+    .filter((report) => report.status === 'PENDING')
+    .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+  const latestReport = sortedReports[0]
+  const firstReport = sortedReports[sortedReports.length - 1]
+  const actionReport = pendingReports[0] ?? latestReport
+  const pendingCount = pendingReports.length
+  const seriousReasonCount = groupReports.filter((report) => isSeriousReason(report.reason)).length
+  const uniqueReporterCount = new Set(
+    groupReports.map((report) => report.reporter?.userId ?? report.reporter?.email ?? 'unknown'),
+  ).size
+  const reasonSummary = summarizeReasons(groupReports)
+  const reporterName =
+    latestReport.reporter?.username || latestReport.reporter?.email || 'Unknown reporter'
+  const riskScore = groupReports.length * 10 + pendingCount * 5 + seriousReasonCount * 6
+
+  return {
+    key,
+    targetType: latestReport.targetType,
+    targetId: latestReport.targetId,
+    count: groupReports.length,
+    pendingCount,
+    seriousReasonCount,
+    uniqueReporterCount,
+    riskScore,
+    riskLevel: riskScore >= 45 ? 'Critical' : riskScore >= 30 ? 'High' : 'Watch',
+    isHighRisk: groupReports.length >= 3 || seriousReasonCount > 0,
+    actionReportId: actionReport.reportId,
+    actionCreatedAt: actionReport.createdAt,
+    latestReportId: latestReport.reportId,
+    latestCreatedAt: latestReport.createdAt,
+    firstCreatedAt: firstReport.createdAt,
+    ageLabel: ageLabel(firstReport.createdAt),
+    latestReporter: reporterName,
+    reasonSummary,
+  }
+}
+
+function isSeriousReason(reason: string) {
+  const normalizedReason = reason.toLowerCase()
+  const seriousKeywords = [
+    'self-harm',
+    'illegal',
+    'hate',
+    'harassment',
+    'explicit',
+    'adult',
+    'threat',
+    'violence',
+    'scam',
+  ]
+
+  return seriousKeywords.some((keyword) => normalizedReason.includes(keyword))
+}
+
+function summarizeReasons(groupReports: ApiAdminReport[]) {
+  const reasons = [...new Set(groupReports.map((report) => report.reason).filter(Boolean))]
+
+  if (reasons.length === 0) return 'No reason provided'
+  if (reasons.length <= 2) return reasons.join('; ')
+
+  return `${reasons.slice(0, 2).join('; ')} +${reasons.length - 2} more`
+}
+
+function ageLabel(value: string) {
+  const diffMs = Date.now() - new Date(value).getTime()
+  const minutes = Math.max(0, Math.floor(diffMs / 60000))
+  if (minutes < 60) return `${minutes}m`
+  const hours = Math.floor(minutes / 60)
+  if (hours < 48) return `${hours}h`
+  return `${Math.floor(hours / 24)}d`
+}
 
 async function loadDashboard() {
   loading.value = true
@@ -273,86 +441,6 @@ onMounted(loadDashboard)
   gap: 0.75rem;
 }
 
-.summary-card {
-  background: white;
-  border: 1px solid #e5e7eb;
-  border-radius: 1rem;
-  padding: 1rem 1.25rem;
-  transition: all 0.2s;
-}
-
-.summary-card:hover {
-  border-color: #bfdbfe;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-}
-
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 0.6rem;
-}
-
-.card-title {
-  font-size: 0.78rem;
-  font-weight: 600;
-  color: #6b7280;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.card-icon {
-  width: 1.25rem;
-  height: 1.25rem;
-  color: #d1d5db;
-}
-
-.users-icon {
-  color: #3b82f6;
-}
-
-.posts-icon {
-  color: #8b5cf6;
-}
-
-.reports-icon {
-  color: #ef4444;
-}
-
-.blocked-icon {
-  color: #f59e0b;
-}
-
-.card-content {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.card-value {
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: #1f2937;
-}
-
-.card-change {
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-  font-size: 0.75rem;
-  font-weight: 500;
-  color: #059669;
-}
-
-.card-change.negative {
-  color: #dc2626;
-}
-
-.trend-icon {
-  width: 0.875rem;
-  height: 0.875rem;
-}
-
 .dashboard-message {
   border: 1px solid #e5e7eb;
   border-radius: 0.75rem;
@@ -392,12 +480,14 @@ onMounted(loadDashboard)
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   gap: 2rem;
+  align-items: stretch;
 }
 
 .info-card {
   display: flex;
   flex-direction: column;
   gap: 1rem;
+  min-height: 22rem;
 }
 
 .info-title {
@@ -406,25 +496,230 @@ onMounted(loadDashboard)
   color: #1f2937;
 }
 
-.info-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
+.priority-report-stack {
+  flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.7rem;
 }
 
-.info-link {
-  color: #2563eb;
+.priority-report {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.8rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.9rem;
+  background: #f8fafc;
+  padding: 0.72rem 0.8rem;
+  color: #1f2937;
   text-decoration: none;
-  font-size: 0.875rem;
-  transition: color 0.2s;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
 }
 
-.info-link:hover {
-  color: #1d4ed8;
-  text-decoration: underline;
+.priority-report:hover {
+  border-color: #fecaca;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+  transform: translateY(-1px);
+}
+
+.priority-count {
+  width: 2.65rem;
+  height: 2.65rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  border-radius: 0.85rem;
+  background: #fff7ed;
+  color: #ea580c;
+  line-height: 1;
+}
+
+.priority-count.danger {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+.priority-count strong {
+  font-size: 0.95rem;
+  font-weight: 900;
+}
+
+.priority-count small {
+  margin-top: 0.15rem;
+  font-size: 0.58rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.priority-copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.priority-copy strong {
+  overflow: hidden;
+  color: #111827;
+  font-size: 0.84rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.priority-copy small {
+  overflow: hidden;
+  color: #6b7280;
+  font-size: 0.74rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.priority-type {
+  border-radius: 999px;
+  background: white;
+  border: 1px solid #e5e7eb;
+  padding: 0.3rem 0.55rem;
+  color: #475569;
+  font-size: 0.7rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.priority-report-main {
+  flex: 1;
+  min-height: 14rem;
+  align-items: start;
+  padding: 1rem;
+  background:
+    linear-gradient(135deg, rgba(254, 242, 242, 0.9), rgba(255, 255, 255, 0.96)),
+    #ffffff;
+}
+
+.priority-report-main .priority-count {
+  width: 3.35rem;
+  height: 3.35rem;
+}
+
+.priority-report-main .priority-count strong {
+  font-size: 1.15rem;
+}
+
+.priority-report-main .priority-copy {
+  gap: 0.28rem;
+}
+
+.priority-report-main .priority-copy strong {
+  font-size: 0.98rem;
+}
+
+.priority-report-main .priority-copy small {
+  font-size: 0.78rem;
+}
+
+.priority-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.5rem;
+  margin-top: 0.45rem;
+}
+
+.priority-detail-grid span {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.12rem;
+  border: 1px solid rgba(254, 202, 202, 0.75);
+  border-radius: 0.75rem;
+  background: rgba(255, 255, 255, 0.68);
+  padding: 0.55rem;
+  color: #8a4b2a;
+  font-size: 0.66rem;
+  font-weight: 800;
+}
+
+.priority-detail-grid b {
+  overflow: hidden;
+  color: #111827;
+  font-size: 0.88rem;
+  font-weight: 950;
+  line-height: 1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.priority-mini-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.7rem;
+}
+
+.priority-mini {
+  display: flex;
+  min-height: 5.45rem;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.7rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.85rem;
+  background: #f8fafc;
+  padding: 0.75rem;
+  color: #1f2937;
+  text-decoration: none;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
+}
+
+.priority-mini:hover {
+  border-color: #fed7aa;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.07);
+  transform: translateY(-1px);
+}
+
+.priority-mini span:first-child {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.priority-mini strong,
+.priority-mini small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.priority-mini strong {
+  color: #111827;
+  font-size: 0.8rem;
+}
+
+.priority-mini small {
+  color: #6b7280;
+  font-size: 0.7rem;
+}
+
+.priority-mini-type {
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: #fff7ed;
+  padding: 0.25rem 0.45rem;
+  color: #ea580c;
+  font-size: 0.62rem;
+  font-weight: 900;
+}
+
+.priority-report-main .priority-type,
+.priority-mini-type {
+  align-self: flex-start;
 }
 
 .status-list {
@@ -540,6 +835,31 @@ onMounted(loadDashboard)
   .info-grid {
     grid-template-columns: 1fr;
     gap: 1rem;
+  }
+
+  .info-card {
+    min-height: 0;
+  }
+
+  .priority-report {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .priority-report-main {
+    min-height: 12rem;
+  }
+
+  .priority-detail-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .priority-type {
+    grid-column: 2;
+    justify-self: start;
+  }
+
+  .priority-mini-grid {
+    grid-template-columns: 1fr;
   }
 }
 

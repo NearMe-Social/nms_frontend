@@ -22,7 +22,6 @@
             ref="reasonSelector"
             report-type="post"
             allow-custom-reason
-            @reason-selected="onReasonSelected"
             @submit="handleReportSubmit"
             @success="onSuccessReport"
           />
@@ -59,10 +58,6 @@ const reasonSelector = ref()
 const successToast = ref()
 const toastTitle = ref('Report Submitted')
 const toastMessage = ref('Thank you for helping keep our community safe.')
-
-function onReasonSelected(reason: any) {
-  console.log('Report post reason selected:', reason)
-}
 
 function onSuccessReport(message: string) {
   toastMessage.value = message

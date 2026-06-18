@@ -176,6 +176,10 @@ const routes = [
     children: [
       {
         path: '',
+        redirect: '/admin/dashboard',
+      },
+      {
+        path: 'dashboard',
         name: 'AdminDashboard',
         component: AdminDashboard,
       },
@@ -196,10 +200,6 @@ const routes = [
       },
     ],
   },
-  {
-    path: '/admin/dashboard',
-    redirect: '/admin',
-  },
 ]
 
 const router = createRouter({
@@ -213,7 +213,7 @@ router.beforeEach((to, from, next) => {
 
   // If already logged in, don't allow user to go back to login/register
   if ((to.name === 'Login' || to.name === 'Register') && hasValidSession) {
-    next({ name: 'HomePage' })
+    next(getPostAuthPath(auth.user))
     return
   }
 
