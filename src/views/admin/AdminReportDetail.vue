@@ -33,15 +33,10 @@
 
     <div v-else-if="report" class="flex flex-col xl:flex-row gap-5 items-stretch xl:items-start">
       <div class="flex-1 flex flex-col gap-4 min-w-0">
-        <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-          <div class="flex flex-wrap items-center justify-between gap-2 px-5 py-3.5 border-b border-gray-100">
-            <div class="flex items-center gap-2">
-              <Eye class="w-4 h-4 text-gray-400" />
-              <span class="text-sm font-semibold text-gray-700">Reported Target</span>
-            </div>
-            <span class="text-xs font-semibold text-gray-400">{{ targetIdLabel }}</span>
-          </div>
-
+        <ReportDetailPanel title="Reported Target" :meta="targetIdLabel">
+          <template #icon>
+            <Eye class="w-4 h-4 text-gray-400" />
+          </template>
           <div class="p-5 flex flex-col gap-4">
             <div class="flex items-center gap-3">
               <div class="w-9 h-9 rounded-full bg-blue-50 text-blue-700 flex items-center justify-center text-sm font-bold">
@@ -78,7 +73,7 @@
               </div>
             </div>
           </div>
-        </div>
+        </ReportDetailPanel>
 
         <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
           <div class="flex items-center gap-2 px-5 py-3.5 border-b border-gray-100">
@@ -155,33 +150,19 @@
                 class="w-full text-sm text-gray-700 placeholder-gray-400 bg-gray-50 border border-gray-200 rounded-xl p-3 outline-none resize-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all duration-200"
               ></textarea>
             </div>
-            <div class="flex flex-col gap-2">
-              <button
-                @click="saveReportStatus"
-                :disabled="actionLoading"
-                class="w-full py-2.5 rounded-xl text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 active:scale-95 transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-60"
-              >
-                <Loader2 v-if="actionLoading" class="w-4 h-4 animate-spin" />
-                <CheckCircle2 v-else class="w-4 h-4" />
-                Save Review Status
-              </button>
-              <button
-                v-if="canModerateTarget"
-                @click="removeTarget"
-                :disabled="contentActionLoading"
-                class="w-full py-2.5 rounded-xl text-sm font-semibold text-red-600 bg-red-50 border border-red-200 hover:bg-red-100 active:scale-95 transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-60"
-              >
-                <Loader2 v-if="contentActionLoading" class="w-4 h-4 animate-spin" />
-                <Trash2 v-else class="w-4 h-4" />
-                Remove {{ targetLabel }}
-              </button>
-              <button
-                @click="router.push({ name: 'AdminReports' })"
-                class="w-full py-2.5 rounded-xl text-sm font-semibold text-gray-600 bg-gray-50 border border-gray-200 hover:bg-gray-100 active:scale-95 transition-all duration-200"
-              >
-                Back to Reports
-              </button>
-            </div>
+            <ReportActionButtons
+              :loading="actionLoading"
+              :content-action-loading="contentActionLoading"
+              :user-action-loading="userActionLoading"
+              :can-moderate-target="canModerateTarget"
+              :can-moderate-user="canModerateUser"
+              :target-label="targetLabel"
+              :target-user-is-active="targetUserIsActive"
+              @save="saveReportStatus"
+              @remove-target="removeTarget"
+              @toggle-user="toggleTargetUserStatus"
+              @back="router.push({ name: 'AdminReports' })"
+            />
           </div>
         </div>
 
@@ -233,20 +214,20 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   ArrowLeft,
-  CheckCircle2,
   ChevronDown,
   Clock,
   Eye,
   Loader2,
-  Trash2,
   Zap,
 } from 'lucide-vue-next'
+import ReportActionButtons from '@/views/admin/ReportActionButtons.vue'
+import ReportDetailPanel from '@/views/admin/ReportDetailPanel.vue'
 import ReportStatusBadge from '@/views/admin/ReportStatusBadge.vue'
-import { adminContentApi, adminReportsApi } from '@/services/api'
+import { adminContentApi, adminReportsApi, adminUsersApi } from '@/services/api'
 
 const router = useRouter()
 const route = useRoute()
@@ -256,6 +237,7 @@ const target = ref(null)
 const isLoading = ref(false)
 const actionLoading = ref(false)
 const contentActionLoading = ref(false)
+const userActionLoading = ref(false)
 const errorMessage = ref('')
 const currentStatus = ref('PENDING')
 const internalNote = ref('')
@@ -273,6 +255,8 @@ const userActiveLabel = computed(() => {
   return target.value.isActive ? 'Active' : 'Suspended'
 })
 const canModerateTarget = computed(() => ['POST', 'COMMENT'].includes(report.value?.targetType))
+const canModerateUser = computed(() => report.value?.targetType === 'USER')
+const targetUserIsActive = computed(() => target.value?.isActive !== false)
 
 const targetTitle = computed(() => {
   if (!target.value) return 'Target snapshot unavailable'
@@ -383,6 +367,10 @@ async function saveReportStatus() {
 
   try {
     actionLoading.value = true
+    const previousStatus = report.value.status
+    const currentReportId = report.value.reportId
+    const currentTargetType = report.value.targetType
+    const currentTargetId = report.value.targetId
     const updated = await adminReportsApi.updateStatus(report.value.reportId, {
       status: currentStatus.value,
       moderatorNote: internalNote.value,
@@ -390,11 +378,42 @@ async function saveReportStatus() {
     report.value = updated
     currentStatus.value = updated.status
     internalNote.value = updated.moderatorNote || ''
+
+    if (previousStatus === 'PENDING' && updated.status === 'REVIEWED') {
+      await navigateToNextPendingReportInGroup(currentReportId, currentTargetType, currentTargetId)
+    }
   } catch (error) {
     console.error('Failed to update report status:', error)
     errorMessage.value = error instanceof Error ? error.message : 'Failed to update report status'
   } finally {
     actionLoading.value = false
+  }
+}
+
+async function navigateToNextPendingReportInGroup(currentReportId, targetType, targetId) {
+  try {
+    const allReports = await adminReportsApi.list()
+    const pendingReports = allReports
+      .filter(
+        (item) =>
+          item.status === 'PENDING' &&
+          item.reportId !== currentReportId &&
+          item.targetType === targetType &&
+          item.targetId === targetId,
+      )
+      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+
+    if (pendingReports.length > 0) {
+      await router.replace({
+        name: 'AdminReportDetail',
+        params: { id: pendingReports[0].reportId },
+      })
+      return
+    }
+
+    await router.replace({ name: 'AdminDashboard' })
+  } catch (error) {
+    console.warn('Failed to find the next pending report in this group:', error)
   }
 }
 
@@ -409,6 +428,34 @@ async function removeTarget() {
     errorMessage.value = error instanceof Error ? error.message : 'Failed to remove reported target'
   } finally {
     contentActionLoading.value = false
+  }
+}
+
+async function toggleTargetUserStatus() {
+  if (!report.value || !canModerateUser.value) return
+
+  try {
+    userActionLoading.value = true
+    const updatedUser = targetUserIsActive.value
+      ? await adminUsersApi.suspend(report.value.targetId)
+      : await adminUsersApi.activate(report.value.targetId)
+
+    target.value = {
+      ...(target.value ?? {}),
+      type: 'USER',
+      id: updatedUser.userId,
+      username: updatedUser.username,
+      email: updatedUser.email,
+      role: updatedUser.role,
+      isActive: updatedUser.isActive,
+      createdAt: target.value?.createdAt ?? updatedUser.createdAt,
+      updatedAt: updatedUser.updatedAt,
+    }
+  } catch (error) {
+    console.error('Failed to update reported user status:', error)
+    errorMessage.value = error instanceof Error ? error.message : 'Failed to update reported user'
+  } finally {
+    userActionLoading.value = false
   }
 }
 
@@ -467,6 +514,13 @@ function timelineBadgeClass(state) {
 }
 
 onMounted(fetchReportDetail)
+
+watch(
+  () => route.params.id,
+  () => {
+    fetchReportDetail()
+  },
+)
 </script>
 
 <style scoped>

@@ -17,7 +17,7 @@
         <tbody v-if="isLoading">
           <tr>
             <td colspan="7" class="px-5 py-12 text-center text-sm text-gray-400">
-              Loading reports...
+              <ReportLoadingState />
             </td>
           </tr>
         </tbody>
@@ -41,14 +41,14 @@
         <tbody v-else-if="reports.length === 0">
           <tr>
             <td colspan="7" class="px-5 py-12 text-center text-sm text-gray-400">
-              No reports found
+              <ReportEmptyState />
             </td>
           </tr>
         </tbody>
 
         <TransitionGroup v-else name="row" tag="tbody" class="divide-y divide-gray-50">
           <tr
-            v-for="report in reports"
+            v-for="report in paginatedReports"
             :key="report.id"
             class="hover:bg-teal-50/20 transition-colors duration-200 ease-out cursor-pointer group"
             @click="$emit('selectReport', report)"
@@ -98,18 +98,41 @@
     </div>
 
     <!-- Footer -->
-    <div class="px-5 py-3 border-t border-gray-100 flex items-center justify-between">
+    <div class="px-5 py-3 border-t border-gray-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
       <p class="text-xs text-gray-400">
-        Showing <span class="font-semibold text-gray-600">{{ reports.length }}</span> reports
+        Showing
+        <span class="font-semibold text-gray-600">{{ paginationStart }}</span>-<span class="font-semibold text-gray-600">{{ paginationEnd }}</span>
+        of <span class="font-semibold text-gray-600">{{ reports.length }}</span> reports
       </p>
-      <div class="flex items-center gap-1">
-        <button class="w-7 h-7 flex items-center justify-center rounded-lg border border-gray-200 text-gray-400 hover:bg-gray-50 transition-all duration-200">
+      <div v-if="totalPages > 1" class="flex items-center gap-1">
+        <button
+          type="button"
+          :disabled="currentPage === 1"
+          class="w-7 h-7 flex items-center justify-center rounded-lg border border-gray-200 text-gray-400 hover:bg-gray-50 transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed"
+          @click="goToPage(currentPage - 1)"
+        >
           <ChevronLeft class="w-4 h-4" />
         </button>
-        <button class="w-7 h-7 flex items-center justify-center rounded-lg bg-teal-600 text-white text-xs font-semibold">
-          1
+        <button
+          v-for="page in visiblePageNumbers"
+          :key="page"
+          type="button"
+          :class="[
+            'w-7 h-7 flex items-center justify-center rounded-lg border text-xs font-semibold transition-all duration-200',
+            page === currentPage
+              ? 'bg-teal-600 text-white border-teal-600'
+              : 'border-gray-200 text-gray-500 hover:bg-gray-50',
+          ]"
+          @click="goToPage(page)"
+        >
+          {{ page }}
         </button>
-        <button class="w-7 h-7 flex items-center justify-center rounded-lg border border-gray-200 text-gray-400 hover:bg-gray-50 transition-all duration-200">
+        <button
+          type="button"
+          :disabled="currentPage === totalPages"
+          class="w-7 h-7 flex items-center justify-center rounded-lg border border-gray-200 text-gray-400 hover:bg-gray-50 transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed"
+          @click="goToPage(currentPage + 1)"
+        >
           <ChevronRight class="w-4 h-4" />
         </button>
       </div>
@@ -119,16 +142,65 @@
 </template>
 
 <script setup>
+import { computed, ref, watch } from 'vue'
 import { Eye, ChevronLeft, ChevronRight } from 'lucide-vue-next'
+import ReportEmptyState from './ReportEmptyState.vue'
+import ReportLoadingState from './ReportLoadingState.vue'
 import ReportStatusBadge from './ReportStatusBadge.vue'
 
-defineProps({
+const props = defineProps({
   reports: { type: Array, default: () => [] },
   isLoading: { type: Boolean, default: false },
   error: { type: String, default: '' },
 })
 
 defineEmits(['selectReport', 'retry'])
+
+const currentPage = ref(1)
+const pageSize = 10
+
+const totalPages = computed(() => Math.max(1, Math.ceil(props.reports.length / pageSize)))
+
+const paginatedReports = computed(() => {
+  const start = (currentPage.value - 1) * pageSize
+  return props.reports.slice(start, start + pageSize)
+})
+
+const paginationStart = computed(() => {
+  if (props.reports.length === 0) return 0
+  return (currentPage.value - 1) * pageSize + 1
+})
+
+const paginationEnd = computed(() =>
+  Math.min(currentPage.value * pageSize, props.reports.length),
+)
+
+const visiblePageNumbers = computed(() => {
+  const maxButtons = 5
+  const total = totalPages.value
+  const half = Math.floor(maxButtons / 2)
+  let start = Math.max(1, currentPage.value - half)
+  const end = Math.min(total, start + maxButtons - 1)
+
+  start = Math.max(1, end - maxButtons + 1)
+
+  return Array.from({ length: end - start + 1 }, (_, index) => start + index)
+})
+
+watch(
+  () => props.reports,
+  () => {
+    currentPage.value = 1
+  },
+)
+
+watch(totalPages, (pages) => {
+  if (currentPage.value > pages) currentPage.value = pages
+})
+
+function goToPage(page) {
+  currentPage.value = Math.min(Math.max(page, 1), totalPages.value)
+}
 
 function formatDate(date) {
   return new Date(date).toLocaleDateString('en-US', {

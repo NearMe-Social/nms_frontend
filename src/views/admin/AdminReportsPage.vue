@@ -31,14 +31,8 @@
       />
 
       <div class="flex flex-col sm:flex-row sm:items-center gap-3">
-        <div class="flex items-center bg-white border border-gray-200 rounded-xl px-3 py-2 gap-2 w-full sm:w-64 shadow-sm">
-          <Search class="w-3.5 h-3.5 text-gray-400 shrink-0" />
-          <input
-            v-model="search"
-            type="text"
-            placeholder="Search reports, users..."
-            class="bg-transparent text-xs text-gray-600 outline-none w-full placeholder-gray-400"
-          />
+        <div class="w-full sm:w-64">
+          <ReportSearchInput v-model="search" />
         </div>
         <span class="text-xs text-gray-400 whitespace-nowrap">
           Showing {{ filteredReports.length }} of {{ reports.length }}
@@ -61,8 +55,9 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { RefreshCw, Search } from 'lucide-vue-next'
+import { RefreshCw } from 'lucide-vue-next'
 import ReportFilterBar from '@/views/admin/ReportFilterBar.vue'
+import ReportSearchInput from '@/views/admin/ReportSearchInput.vue'
 import ReportTableComponent from '@/views/admin/ReportTableComponent.vue'
 import { adminReportsApi } from '@/services/api'
 import ReportingTrendsSection from '@/views/admin/ReportingTrendsSection.vue'

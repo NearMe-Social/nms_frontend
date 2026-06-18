@@ -138,7 +138,7 @@ const route = useRoute()
 const auth = useAuthStore()
 
 const navItems = [
-  { to: '/admin', label: 'Dashboard', icon: LayoutDashboard },
+  { to: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/admin/reports', label: 'Reports', icon: Flag },
   { to: '/admin/users', label: 'Users', icon: Users },
 ]
@@ -164,7 +164,9 @@ const profileImage = computed(() => {
 })
 
 function isActive(path) {
-  if (path === '/admin') return route.path === '/admin'
+  if (path === '/admin/dashboard') {
+    return route.path === '/admin' || route.path === '/admin/dashboard'
+  }
   return route.path.startsWith(path)
 }
 </script>
