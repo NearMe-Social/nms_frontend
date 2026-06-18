@@ -1,42 +1,58 @@
 <template>
-  <div class="bg-white rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center justify-center py-20 px-6 text-center animate-fade-up">
-
-    <div class="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mb-5">
-      <FolderOpen class="w-9 h-9 text-gray-300" />
+  <div class="report-state">
+    <Inbox class="state-icon" />
+    <div>
+      <p class="state-title">{{ title }}</p>
+      <p class="state-copy">{{ copy }}</p>
     </div>
-
-    <h3 class="text-base font-semibold text-gray-700 mb-1">{{ title }}</h3>
-    <p class="text-sm text-gray-400 max-w-xs leading-relaxed">{{ message }}</p>
-
-    <button
-      v-if="showClear"
-      @click="$emit('clear')"
-      class="mt-5 flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-teal-600 bg-teal-50 border border-teal-100 hover:bg-teal-100 transition-all duration-200"
-    >
-      <X class="w-4 h-4" /> Clear filters
-    </button>
-
   </div>
 </template>
 
-<script setup>
-import { FolderOpen, X } from 'lucide-vue-next'
+<script setup lang="ts">
+import { Inbox } from 'lucide-vue-next'
 
-defineProps({
-  title: { type: String, default: 'No reports found' },
-  message: { type: String, default: 'There are no reports matching your current filters.' },
-  showClear: { type: Boolean, default: false },
-})
-
-defineEmits(['clear'])
+withDefaults(
+  defineProps<{
+    title?: string
+    copy?: string
+  }>(),
+  {
+    title: 'No reports found',
+    copy: 'Try another search or filter.',
+  },
+)
 </script>
 
 <style scoped>
-.animate-fade-up {
-  animation: fadeUp 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+.report-state {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  color: #6b7280;
 }
-@keyframes fadeUp {
-  from { opacity: 0; transform: translateY(16px); }
-  to { opacity: 1; transform: translateY(0); }
+
+.state-icon {
+  width: 2.25rem;
+  height: 2.25rem;
+  flex-shrink: 0;
+  border-radius: 0.9rem;
+  background: #ecfeff;
+  color: #0f9488;
+  padding: 0.55rem;
+}
+
+.state-title {
+  color: #374151;
+  font-size: 0.875rem;
+  font-weight: 700;
+  text-align: left;
+}
+
+.state-copy {
+  margin-top: 0.125rem;
+  color: #9ca3af;
+  font-size: 0.75rem;
+  text-align: left;
 }
 </style>

@@ -6,7 +6,7 @@ import AppSidebar from '@/components/AppSidebar.vue'
 import MobileBottomNav from '@/components/MobileBottomNav.vue'
 import PostOptionsMenu from '@/components/PostOptionsMenu.vue'
 import PostImageViewer from '@/components/PostImageViewer.vue'
-import { postApi, type ApiPost } from '@/services/api'
+import { postApi, reactionApi, type ApiPost } from '@/services/api'
 import { useAuthStore } from '@/stores/auth'
 import {
   AlertCircle,
@@ -31,9 +31,9 @@ type MyPost = {
   timeLabel: string
   likes: number
   comments: number
-  category: string
   images: string[]
   active: boolean
+  userReacted: boolean
 }
 
 const tabs: Array<{ key: PostFilter; label: string }> = [
@@ -49,6 +49,7 @@ const searchTerm = ref('')
 const posts = ref<ApiPost[]>([])
 const loading = ref(true)
 const error = ref('')
+const reactingPostId = ref<number | null>(null)
 
 const myPosts = computed<MyPost[]>(() => {
   const userId = auth.user?.userId ?? auth.user?.user_id
@@ -64,9 +65,9 @@ const myPosts = computed<MyPost[]>(() => {
       timeLabel: timeAgo(post.created_at),
       likes: post.reactions?.length ?? post.reactions_count ?? 0,
       comments: post.comments?.length ?? post.comments_count ?? 0,
-      category: post.status,
       images: post.image_urls?.length ? post.image_urls : post.image_url ? [post.image_url] : [],
       active: new Date(post.expires_at).getTime() > Date.now(),
+      userReacted: post.user_reacted === true,
     }))
 })
 
@@ -81,8 +82,7 @@ const filteredPosts = computed(() => {
     const matchesSearch =
       !needle ||
       post.title.toLowerCase().includes(needle) ||
-      post.body.toLowerCase().includes(needle) ||
-      post.category.toLowerCase().includes(needle)
+      post.body.toLowerCase().includes(needle)
 
     return matchesTab && matchesSearch
   })
@@ -126,8 +126,37 @@ function openEditPost(postId: number) {
   router.push(`/posts/${postId}/edit`)
 }
 
+function openPostComments(postId: number) {
+  router.push({ path: `/posts/${postId}`, query: { focus: 'comment' } })
+}
+
 function removePostFromList(postId: number) {
   posts.value = posts.value.filter((post) => post.post_id !== postId)
+}
+
+async function toggleReaction(postId: number) {
+  if (reactingPostId.value) return
+
+  reactingPostId.value = postId
+  error.value = ''
+
+  try {
+    const result = await reactionApi.togglePost(postId)
+    posts.value = posts.value.map((post) => {
+      if (post.post_id !== postId) return post
+
+      return {
+        ...post,
+        user_reacted: result.liked,
+        reactions_count: result.reactions_count,
+        reactions: undefined,
+      }
+    })
+  } catch (err: unknown) {
+    error.value = err instanceof Error ? err.message : 'Could not update reaction.'
+  } finally {
+    reactingPostId.value = null
+  }
 }
 
 onMounted(loadPosts)
@@ -253,7 +282,6 @@ onMounted(loadPosts)
                   <span class="status-chip" :class="{ expired: !post.active }">
                     {{ post.active ? 'Active' : 'Expired' }}
                   </span>
-                  <span class="category-label">{{ post.category }}</span>
                 </div>
                 <PostOptionsMenu
                   :post-id="post.id"
@@ -276,8 +304,25 @@ onMounted(loadPosts)
 
               <footer class="post-footer">
                 <div class="engagement">
-                  <span><Heart /> {{ post.likes }}</span>
-                  <span><MessageSquare /> {{ post.comments }}</span>
+                  <button
+                    type="button"
+                    class="engagement-action like-action"
+                    :class="{ reacted: post.userReacted }"
+                    :disabled="reactingPostId === post.id"
+                    :aria-pressed="post.userReacted ? 'true' : 'false'"
+                    aria-label="Like post"
+                    @click.stop="toggleReaction(post.id)"
+                  >
+                    <Heart :class="{ filled: post.userReacted }" /> {{ post.likes }}
+                  </button>
+                  <button
+                    type="button"
+                    class="engagement-action comment-action"
+                    aria-label="Open comments"
+                    @click.stop="openPostComments(post.id)"
+                  >
+                    <MessageSquare /> {{ post.comments }}
+                  </button>
                 </div>
                 <RouterLink :to="`/posts/${post.id}`">Open discussion</RouterLink>
               </footer>
@@ -584,16 +629,6 @@ h1 {
   color: #778895;
 }
 
-.category-label {
-  overflow: hidden;
-  color: #91a0ad;
-  font-size: 0.68rem;
-  font-weight: 750;
-  text-overflow: ellipsis;
-  text-transform: capitalize;
-  white-space: nowrap;
-}
-
 .post-copy {
   display: block;
   margin-top: 15px;
@@ -635,7 +670,7 @@ h1 {
 }
 
 .post-meta span,
-.engagement span {
+.engagement-action {
   display: inline-flex;
   align-items: center;
   gap: 5px;
@@ -660,6 +695,44 @@ h1 {
   color: #7890a2;
   font-size: 0.75rem;
   font-weight: 750;
+}
+
+.engagement-action {
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  padding: 6px 8px;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  transition:
+    background 0.2s ease,
+    color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.engagement-action:hover {
+  transform: translateY(-1px);
+}
+
+.engagement-action:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.like-action:hover,
+.like-action.reacted {
+  background: #fff1f2;
+  color: #e11d48;
+}
+
+.comment-action:hover {
+  background: #e6f5f5;
+  color: #0d7478;
+}
+
+.engagement-action svg.filled {
+  fill: currentColor;
 }
 
 .post-footer > a {

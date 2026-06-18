@@ -90,7 +90,7 @@
 
           <TransitionGroup v-else name="row" tag="tbody" class="divide-y divide-gray-50">
             <tr
-              v-for="user in filteredUsers"
+              v-for="user in paginatedUsers"
               :key="user.id"
               class="hover:bg-blue-50/30 transition-colors duration-200 ease-out cursor-pointer group"
               @click="emit('open-user', user)"
@@ -156,19 +156,45 @@
         </table>
       </div>
 
-      <div class="px-5 py-3 border-t border-gray-100 flex items-center justify-between">
+      <div class="px-5 py-3 border-t border-gray-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <p class="text-xs text-gray-400">
-          Showing <span class="font-semibold text-gray-600">{{ filteredUsers.length }}</span> of
-          <span class="font-semibold text-gray-600">{{ users.length }}</span> users
+          Showing
+          <span class="font-semibold text-gray-600">{{ paginationStart }}</span>-<span class="font-semibold text-gray-600">{{ paginationEnd }}</span>
+          of <span class="font-semibold text-gray-600">{{ filteredUsers.length }}</span>
+          <span v-if="filteredUsers.length !== users.length">
+            filtered from <span class="font-semibold text-gray-600">{{ users.length }}</span>
+          </span>
+          users
         </p>
-        <div class="flex items-center gap-1">
-          <button class="w-7 h-7 flex items-center justify-center rounded-lg border border-gray-200 text-gray-400 hover:bg-gray-50 transition-all duration-200">
+        <div v-if="totalPages > 1" class="flex items-center gap-1">
+          <button
+            type="button"
+            :disabled="currentPage === 1"
+            class="w-7 h-7 flex items-center justify-center rounded-lg border border-gray-200 text-gray-400 hover:bg-gray-50 transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed"
+            @click="goToPage(currentPage - 1)"
+          >
             <ChevronLeft class="w-4 h-4" />
           </button>
-          <button class="w-7 h-7 flex items-center justify-center rounded-lg bg-blue-600 text-white text-xs font-semibold">
-            1
+          <button
+            v-for="page in visiblePageNumbers"
+            :key="page"
+            type="button"
+            :class="[
+              'w-7 h-7 flex items-center justify-center rounded-lg border text-xs font-semibold transition-all duration-200',
+              page === currentPage
+                ? 'bg-blue-600 text-white border-blue-600'
+                : 'border-gray-200 text-gray-500 hover:bg-gray-50',
+            ]"
+            @click="goToPage(page)"
+          >
+            {{ page }}
           </button>
-          <button class="w-7 h-7 flex items-center justify-center rounded-lg border border-gray-200 text-gray-400 hover:bg-gray-50 transition-all duration-200">
+          <button
+            type="button"
+            :disabled="currentPage === totalPages"
+            class="w-7 h-7 flex items-center justify-center rounded-lg border border-gray-200 text-gray-400 hover:bg-gray-50 transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed"
+            @click="goToPage(currentPage + 1)"
+          >
             <ChevronRight class="w-4 h-4" />
           </button>
         </div>
@@ -178,7 +204,7 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { ArrowUpDown, ChevronLeft, ChevronRight, Search } from 'lucide-vue-next'
 import UserAvatar from '@/components/UserAvatar.vue'
 
@@ -195,6 +221,8 @@ const filterStatus = ref('')
 const sortKey = ref('name')
 const sortDir = ref(1)
 const selectedIds = ref([])
+const currentPage = ref(1)
+const pageSize = 10
 
 const sortableColumns = [
   { key: 'name', label: 'User' },
@@ -230,10 +258,46 @@ const filteredUsers = computed(() => {
   })
 })
 
+const totalPages = computed(() => Math.max(1, Math.ceil(filteredUsers.value.length / pageSize)))
+
+const paginatedUsers = computed(() => {
+  const start = (currentPage.value - 1) * pageSize
+  return filteredUsers.value.slice(start, start + pageSize)
+})
+
+const paginationStart = computed(() => {
+  if (filteredUsers.value.length === 0) return 0
+  return (currentPage.value - 1) * pageSize + 1
+})
+
+const paginationEnd = computed(() =>
+  Math.min(currentPage.value * pageSize, filteredUsers.value.length),
+)
+
+const visiblePageNumbers = computed(() => {
+  const maxButtons = 5
+  const total = totalPages.value
+  const half = Math.floor(maxButtons / 2)
+  let start = Math.max(1, currentPage.value - half)
+  const end = Math.min(total, start + maxButtons - 1)
+
+  start = Math.max(1, end - maxButtons + 1)
+
+  return Array.from({ length: end - start + 1 }, (_, index) => start + index)
+})
+
 const allSelected = computed(() => (
-  filteredUsers.value.length > 0 &&
-  filteredUsers.value.every((user) => selectedIds.value.includes(user.id))
+  paginatedUsers.value.length > 0 &&
+  paginatedUsers.value.every((user) => selectedIds.value.includes(user.id))
 ))
+
+watch([search, filterStatus, sortKey, sortDir], () => {
+  currentPage.value = 1
+})
+
+watch(totalPages, (pages) => {
+  if (currentPage.value > pages) currentPage.value = pages
+})
 
 function sortBy(key) {
   if (sortKey.value === key) {
@@ -248,12 +312,12 @@ function sortBy(key) {
 function toggleAll() {
   if (allSelected.value) {
     selectedIds.value = selectedIds.value.filter(
-      (id) => !filteredUsers.value.some((user) => user.id === id),
+      (id) => !paginatedUsers.value.some((user) => user.id === id),
     )
     return
   }
 
-  const visibleIds = filteredUsers.value.map((user) => user.id)
+  const visibleIds = paginatedUsers.value.map((user) => user.id)
   selectedIds.value = [...new Set([...selectedIds.value, ...visibleIds])]
 }
 
@@ -264,6 +328,10 @@ function toggleSelect(id) {
   }
 
   selectedIds.value = [...selectedIds.value, id]
+}
+
+function goToPage(page) {
+  currentPage.value = Math.min(Math.max(page, 1), totalPages.value)
 }
 
 function roleClass(role) {

@@ -23,7 +23,7 @@ export interface AuthUser {
 }
 
 export function getPostAuthPath(user: AuthUser | null): string {
-  if (user?.role === 'ADMIN') return '/admin/reports'
+  if (user?.role === 'ADMIN') return '/admin/dashboard'
   if (user?.profile_completed !== true) return '/select-profile'
   if (user?.onboarding_completed !== true) return '/permission-request'
   return '/'
